@@ -60,8 +60,4 @@ make build
 make preview
 ```
 
-ビルド成果物は `frontend/dist/` に出力され、Git の管理対象から除外されます。
-依存関係を更新した際は `frontend/package-lock.json` をコミットしてください。
-インストールするバージョンを再現するには、`task frontend-install` または `make frontend-install` を使用します。
-
 参考：[Vite 入門ガイド](https://vite.dev/guide/)
