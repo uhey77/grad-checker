@@ -1,40 +1,40 @@
 # grad-checker
 
-## Task Runner Commands
+## タスクランナーのコマンド
 
-Run these commands from the repository root. Use either Go Task
-(`Taskfile.yml`) or Make (`Makefile`); both provide the same commands.
+以下のコマンドはリポジトリのルートで実行してください。Go Task
+（`Taskfile.yml`）または Make（`Makefile`）を使用できます。どちらも同じ操作に対応しています。
 
-| Operation | Task | Make |
+| 操作 | Task | Make |
 | --- | --- | --- |
-| List commands | `task` | `make` |
-| Install all dependencies | `task setup` | `make setup` |
-| Install frontend dependencies | `task frontend-install` | `make frontend-install` |
-| Install backend dependencies | `task backend-install` | `make backend-install` |
-| Start frontend development server | `task dev` | `make dev` |
-| Build frontend | `task build` | `make build` |
-| Preview frontend build | `task preview` | `make preview` |
+| コマンド一覧を表示 | `task` | `make` |
+| すべての依存関係をインストール | `task setup` | `make setup` |
+| フロントエンドの依存関係をインストール | `task frontend-install` | `make frontend-install` |
+| バックエンドの依存関係をインストール | `task backend-install` | `make backend-install` |
+| フロントエンドの開発サーバーを起動 | `task dev` | `make dev` |
+| フロントエンドをビルド | `task build` | `make build` |
+| フロントエンドのビルド結果をプレビュー | `task preview` | `make preview` |
 
-Install dependencies before starting development or building, and run `build`
-before `preview`. Backend setup requires uv and uses `backend/uv.lock` with
-`uv sync --locked`. Backend server and test commands will be added when their
-entry point and tests are implemented.
+開発やビルドを始める前に依存関係をインストールし、`preview` の前に `build`
+を実行してください。バックエンドのセットアップには uv が必要です。
+`uv sync --locked` を使用して、`backend/uv.lock` に基づく依存関係をインストールします。
+バックエンドのサーバー起動とテストのコマンドは、エントリーポイントとテストの実装後に追加予定です。
 
-## Frontend Development Environment
+## フロントエンドの開発環境
 
-The frontend uses Vite for HTML, CSS, and JavaScript development. The UI
-framework, screens, application logic, and API integration are not implemented.
-The HTML entry point is intentionally blank.
+フロントエンドでは、HTML・CSS・JavaScript の開発に Vite を使用しています。
+UI フレームワーク、画面、アプリケーションのロジック、API 連携は未実装です。
+HTML のエントリーポイントは意図的に空にしています。
 
-### Prerequisites
+### 前提条件
 
-- Node.js: 20.19+ in the 20.x series, or 22.12+ (Vite requirement).
-- npm: 11.12.1 was used to generate the lock file.
-- Verified locally with Node.js 25.9.0 and npm 11.12.1.
+- Node.js：20.x 系では 20.19 以上、または 22.12 以上（Vite の要件）。
+- npm：ロックファイルの生成には 11.12.1 を使用しています。
+- ローカルでは Node.js 25.9.0 と npm 11.12.1 で動作確認済みです。
 
-### Setup
+### セットアップ
 
-Run from the repository root:
+リポジトリのルートから、以下を実行してください。
 
 ```sh
 cd frontend
@@ -42,11 +42,11 @@ npm ci
 npm run dev
 ```
 
-The development URL is printed in the terminal (normally
-http://127.0.0.1:5173). An empty page is expected until implementation starts.
+開発サーバーの URL はターミナルに表示されます（通常は
+http://127.0.0.1:5173）。実装を始めるまでは空のページが表示されます。
 
-On Windows PowerShell, use `npm.cmd` instead of `npm` if the execution policy
-blocks `npm.ps1`:
+Windows PowerShell で実行ポリシーによって `npm.ps1` がブロックされる場合は、
+`npm` の代わりに `npm.cmd` を使用してください。
 
 ```powershell
 cd frontend
@@ -54,15 +54,15 @@ npm.cmd ci
 npm.cmd run dev
 ```
 
-### Build and Preview
+### ビルドとプレビュー
 
 ```sh
 npm run build
 npm run preview
 ```
 
-Build artifacts are written to `frontend/dist/` and excluded from Git.
-Commit `frontend/package-lock.json` when updating dependencies and use `npm ci`
-to reproduce the installed versions.
+ビルド成果物は `frontend/dist/` に出力され、Git の管理対象から除外されます。
+依存関係を更新した際は `frontend/package-lock.json` をコミットしてください。
+インストールするバージョンを再現するには `npm ci` を使用します。
 
-Reference: [Vite Getting Started](https://vite.dev/guide/).
+参考：[Vite 入門ガイド](https://vite.dev/guide/)
