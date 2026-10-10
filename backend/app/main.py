@@ -14,7 +14,7 @@ from app.presentation.health import router as health_router
 def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        engine = create_database_engine((settings or Settings.from_env()).database_url)
+        engine = create_database_engine((settings or Settings()).database_url)
         try:
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
