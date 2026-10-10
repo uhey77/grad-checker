@@ -1,136 +1,69 @@
 # 卒業要件判定ロジック設計
 
-## 1. 対象と根拠
+文書版：1.3。[RDD](RDD.md)第6〜7章が基準。Pythonの共通判定関数をFastAPIのチェック・ダッシュボードから利用し、pytestで検証する。本書は設計であり実装済みを意味しない。
 
-[RDD](RDD.md)第6〜7章を基準に、2026年度・先進情報専攻・人工知能コースの卒業単位要件のみを判定する。根拠は[学生便覧](2026hcgakuseibinran.pdf)冊子61、83、85〜88、93〜94ページ（PDFは冊子ページ+2）。入学年度による切替、進級、GPA、正式な卒業認定、単位認定Rは対象外。科目・要件はマスタから読み、一般的な式評価エンジンは作らない。
+## 1. 入力と出力
 
-## 2. 要件コードと必要値
+入力は、本人の保存済み所属・適用カリキュラム、成績版、成績履歴、課程別科目・条件・算入規則の整合したスナップショット。科目単位数は正の整数、必要値・上限は非負整数。CS先進情報の20条件・総124単位を全課程へ固定しない。
 
-コードはDB・API・テストで共通に使用する。大分類コードは `practical`、`foundation`、`specialized` とする。
+成功結果は `result: pass / fail`。画面では達成／未達成と表示する。条件別もpass/fail。成績記号のS/A/B/C/D/Xとは別の値である。設定不足や未確認規則は成功したfailではなくエラーにする。
 
-| コード | 条件 | 必要単位 | 大分類 |
-|---|---|---:|---|
-| total | 総修得 | 124 | 全体 |
-| practical_total | 大分類合計 | 38 | practical |
-| foundation_total | 大分類合計 | 42 | foundation |
-| specialized_total | 大分類合計 | 44 | specialized |
-| practical_required | 全必修科目の修得 | 16 | practical |
-| foundation_required | 全必修科目の修得 | 21 | foundation |
-| specialized_required | 全必修科目の修得 | 21 | specialized |
-| liberal_selective | 総合・人文・社会・自然科学・ウェルビーイング | 10 | practical |
-| foreign_selective | 外国語の選択必修 | 2 | practical |
-| information_selective | 情報・数理の選択必修 | 2 | practical |
-| math_selective | 数理の選択必修 | 4 | foundation |
-| management_selective | マネジメントの選択必修 | 2 | foundation |
-| computing_selective | コンピュータ・ビジネスの選択必修 | 12 | foundation |
-| core_selective | 人工知能コースのコア選択必修 | 12 | specialized |
-| seminar_selective | 知能の専門演習の選択必修 | 3 | specialized |
-| humanities_min | liberal_selective内の人文 | 2 | practical |
-| society_min | liberal_selective内の社会 | 2 | practical |
-| practical_elective | 直接選択+同一大分類の超過換算 | 8 | practical |
-| foundation_elective | 同上 | 3 | foundation |
-| specialized_elective | 同上 | 8 | specialized |
+出力は課程・規則版・成績版・判定時刻、総必要・総修得・総算入・総不足、分類別と条件別の内訳、未修得必修、換算、他学部算入、おすすめ。科目名・分類・条件名・必要値・推薦理由は結果に含め、履歴再取得時に現在のマスタを参照して置き換えない。
 
-必修58、選択必修47、選択19は上記の小計であり、追加の独立条件として重複登録しない。人文・社会は親10単位の一部。自然科学・ウェルビーイング等に独自の最低値を設定しない。
+## 2. 成績と重複排除
 
-## 3. 処理フロー
-
-```mermaid
-flowchart TD
-    A["認証した本人と共通カリキュラム"] --> B["同一DBスナップショットでマスタ・成績を読む"]
-    B --> C{"マスタ・履歴が有効か"}
-    C -->|いいえ| X["判定不能・理由を返す"]
-    C -->|はい| D["科目IDごとに代表履歴と修得状態を決定"]
-    D --> E["必修・選択必修群・人文社会の内訳を判定"]
-    E --> F["選択必修への配分と超過候補を計算"]
-    F --> G{"内訳未達成の群に超過ありか"}
-    G -->|はい| H["Q02: 当該換算と依存値をnull"]
-    G -->|いいえ| I["同一大分類の選択へ換算"]
-    H --> J["大分類・総修得を実単位で集計"]
-    I --> J
-    J --> K["全条件のAND・判定不能優先で結果を返す"]
-```
-
-## 4. 成績と代表履歴
-
-成績は確定時のみS・A・B・C・D・X。S/A/B/Cを修得済み、D/Xを未修得とする。未確定は履歴あり・成績null、未履修は履歴なし。Xの意味は便覧で未受験による不合格と確認済み。修得フラグや「修得単位」列は独立保存せず導出する。
-
-同一科目の履歴を `attempt_no` 順に扱う。修得済み履歴が1つでもあれば最新の修得済み履歴を代表にし、後続のD/X/未確定で修得を取り消さない。修得済みがなければ最新回次を代表にする。成績・年度・学期は同じ履歴から採用する。複数合格でも科目の単位数を1回のみ算入し、成績の最高評価を選ぶ処理は行わない。訂正は履歴の既存行をシード等で更新する前提。取消・特殊な認定は対象外とする。
-
-科目の単位数は科目マスタ、種別・分類は課程別定義を使用する。科目名の一致で履歴をまとめない。Rや未知の記号、履歴矛盾を検出した場合は0単位に黙って読み替えず判定不能にする。
-
-## 5. 判定と配分
-
-必修は対象大分類の必修科目集合と修得済み集合の差を取り、未修得科目名・単位数を返す。単位数だけが一致しても、全必修科目の修得を代替できない。
-
-選択必修は課程別種別が `selective` の科目のみ、群ごとに重複を除いて集計する。別群の超過を不足群へ移さない。人文・社会は親群に属する修得済み科目集合の部分集合から計算する。
-
-```text
-raw[g] = 群gに属する修得済み選択必修科目の実単位合計
-allocated[g] = min(raw[g], required[g])
-deficit[g] = max(required[g] - raw[g], 0)
-excess_candidate[g] = max(raw[g] - required[g], 0)
-converted[g] = excess_candidate[g]  # Q02の対象以外
-elective[m] = 大分類mの直接修得選択単位 + sum(converted[g] for g in m)
-major_earned[m] = 大分類mの修得済み科目の実単位合計
-total_earned = 全修得済み科目の実単位合計
-deficit[condition] = max(required[condition] - credited[condition], 0)
-```
-
-換算は実単位の配分であり新たな修得ではない。 `raw[g] = allocated[g] + converted[g]` を保つ。大分類の実単位は、必修実単位+選択必修raw+直接選択に等しく、配分済み選択必修+換算後選択を使っても同じ値になる。親子の内訳値、換算値を総修得に追加しない。
-
-総合等で人文または社会が未達成、かつ `excess_candidate > 0` の場合はQ02未解決のため `converted=null`、実学基礎の `elective/deficit/status` はnull/null/indeterminateとする。総実単位、群10単位条件、人文・社会の判定は計算できる。超過0なら換算0であり、この未確定仕様に依存しない。全体は未達成条件が既知でも、判定不能条件があればindeterminateを優先する。これは安全な表示上の扱いであり、大学の換算禁止を確定したものではない。
-
-## 6. 擬似コード
-
-```text
-evaluate(student, snapshot):
-    curriculum, definitions, requirements, attempts = read_same_snapshot(student)
-    issues = validate(curriculum, definitions, requirements, attempts)
-    if issues:
-        return indeterminate(issues, numeric_results=null)
-
-    earned = set()
-    rows = []
-    for definition in definitions:
-        history = attempts.for_course(definition.course_id)
-        passed = history.where(finalized and grade in [S, A, B, C])
-        representative = latest_attempt(passed if passed else history)
-        state = earned if passed else pending_or_failed_or_not_taken(representative)
-        rows.append(course_row(definition, representative, state))
-        if passed: earned.add(definition.course_id)
-
-    required_results = compare_all_required_courses(definitions, earned)
-    group_results = sum_selective_by_disjoint_groups(definitions, earned)
-    sub_results = sum_subsets(group_results, earned, humanities_min, society_min)
-    allocations = allocate_minimum_and_excess(group_results)
-    if liberal_excess_positive and any_liberal_subcondition_unmet:
-        allocations.liberal.converted = null
-        issues.add(UNRESOLVED_CONVERSION)
-    elective_results = direct_electives_plus_same_major_conversions(earned, allocations)
-    major_results = sum_actual_credits_by_major(earned)
-    total = sum_actual_credits_once(earned)
-    results = required_results + group_results + sub_results + elective_results + major_results + total
-    overall = indeterminate if any_indeterminate(results) else (met if all_met(results) else unmet)
-    return rows, results, allocations, overall, issues
-```
-
-## 7. 具体例
-
-| 入力 | 計算 | 結果 |
+| 入力 | 修得状態 | 実単位 |
 |---|---|---|
-| 外国語選択必修4、必要2 | 選択必修算入2、超過換算2 | 外国語由来の総修得は4のまま |
-| 実学基礎必修16、総合等10、外国語4、情報2、直接選択6 | 実単位38、選択必修算入14、換算2、選択算入8 | 人文・社会各2以上なら実学基礎達成 |
-| 同上、人文0・社会2、総合等12、直接選択4 | 実単位38、総合等超過候補2、外国語換算2 | 人文は未達成、総合等換算null、選択算入null、全体判定不能 |
-| 総合等10、人文0・社会2 | 超過0、換算0 | 人文未達成。ほかが達成でも全体未達成 |
-| 2単位科目にD→B→A | 最新合格Aを表示、科目ID1つ | 修得2単位。4単位としない |
-| 総修得124、必修2単位科目が未修得 | 総不足0、必修不足2 | 全体未達成。余剰選択で代替しない |
-| 総修得123/124 | 総不足1/0 | 123は未達成。124は他条件も全て達成したときのみ達成 |
+| finalized + S/A/B/C | earned（修得済み） | 科目単位 |
+| finalized + D | not_earned（不合格） | 0 |
+| finalized + X | not_earned（未受験による不合格） | 0 |
+| pending + grade=null | pending（未確定） | 0 |
+| 記録なし | not_taken（未履修） | 0 |
 
-## 8. マスタ・履歴検証とエラー
+同一科目の合格履歴があれば最新の合格履歴を代表とし、なければ最新の履修回次を代表にする。代表成績・年度・学期は同一履歴から取る。同じ科目の複数合格を重複加算しない。入力取消は本人の履歴を削除して再計算する操作であり、大学の公式成績変更ではない。
 
-必須の20条件が存在し、必要値・課程・分類・換算先が上表と一致することを検証する。全必修の単位合計16/21/21、選択必修最低合計14/18/15を確認する。分類の循環、同一群の重なる範囲、複数選択必修群への同一科目所属、別大分類への換算、対象科目の欠落、負数、未知の種別・記号、成績と確定状態の矛盾、対象外Rを拒否する。親の内訳条件による重なりは許すが追加配分しない。
+未知科目・未知記号・finalized+null・pending+成績記号・回次重複は入力エラー。認定Rは今回の学生入力対象外。0単位やDへ黙って読み替えない。
 
-マスタ不整合は `MASTER_INCONSISTENT`、対象外・未知成績は `UNSUPPORTED_GRADE`、履歴不整合は `GRADE_INCONSISTENT` とし、数値をnullとして判定不能を返す。全selective科目が必ず1つの選択必修群に所属することも検証し、所属先のない科目を集計から黙って除外しない。正常な成績0件は全科目未履修・修得0・未達成。DB接続失敗は判定不能JSONではなくAPIの503取得失敗。整合したスナップショットを取得できない場合も成功結果を返さない。
+## 3. 条件と配分
 
-関連：[DB](database_design.md)、[API](api_specification.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
+必修は対象科目集合の全修得を確認する。選択・選択必修の余剰で必修を補わない。選択必修は課程別の群・内訳を独立判定し、別群の余剰で不足を補わない。条件の親子集合は重なりを表示できるが総単位に重複加算しない。
+
+確認済み規則が同区分超過換算の場合：
+
+```text
+群への算入 = min(群の修得単位, 群の必要単位)
+超過候補 = max(群の修得単位 - 群の必要単位, 0)
+選択への算入 = 直接選択の対象単位 + 規則で許された超過換算 + 対象他学部科目の配分
+条件別不足 = max(条件必要単位 - 条件算入単位, 0)
+総不足 = max(総必要単位 - 重複排除・上限適用後の総算入単位, 0)
+```
+
+換算は実単位を増やさない。別科目区分への換算や、独自の最低値を追加しない。実単位が124でも上限等で総算入が122なら、必要124の総不足は2単位。
+
+## 4. 他学部科目
+
+開講元の学部・学科、授業形態、課程別分類・種別、所属先の適用規則から対象と算入先を決める。修得した全科目の実単位と、卒業に数える算入単位を分ける。
+
+冊子53の4学部共通規則では対象他学部講義の合計上限は6。専門基礎は所属先の専門基礎選択へ、専門教育は専門教育選択へ算入し、超過分は自由科目。区分ごとに6ずつ数えない。8単位なら最大6算入・2非算入。演習・実習・実験など対象外科目を自動算入しない。他課程には確認した規則だけを適用する。
+
+複数算入先にまたがる上限超過の優先配分はQ09で確認する。根拠のない入力順・最適化で配分しない。内訳不足時の選択必修超過換算Q02も未確定のため、依存ケースは理由付きエラーで全体の確定判定を止める。
+
+## 5. 全体判定とおすすめ
+
+総算入、全必修、全選択必修・内訳、選択算入、分類合計の全条件を満たせばpass。1条件でも不足ならfail。総不足だけで判定しない。正常な成績0件は0単位のfailで、設定エラーではない。
+
+おすすめは、未修得の既知科目のうち、不足した必修・条件へ算入可能な候補を返す。まず未修得必修を優先し、次にマスタの開講学期順、同順位は安定した科目ID順とする。同一科目が複数条件に寄与する場合は候補を重複させず理由を併記する。不合格・未確定は修得済みではないので候補になり得るが、履修中など状態を表示する。
+
+開講学期はマスタの順序キーであり、現在受講可能・将来開講予定の保証ではない。学期不明は末尾に表示する。未知の算入規則が必要な推薦は確定しない。機械学習・協調フィルタリングは初期実装に要求しない。
+
+## 6. 保存と再利用
+
+`GET /api/me/dashboard` は共通判定関数で最新の保存成績を計算するが履歴を作らない。`POST /api/checks` は同じ関数で計算し、入力・結果・課程と規則版・成績版・推薦をcheck_resultsへ保存してから結果IDを返す。保存失敗なら成功を返さない。
+
+`GET /api/checks/{id}` は所有者を確認して保存済みJSONを返し、再計算しない。後日の成績訂正・マスタ改訂・所属変更でも過去結果は変わらない。現在の判定へ使うマスタが不整合でも、読み出せる過去結果はそのまま取得できる。
+
+## 7. エラーと検証
+
+分類循環、必修集合・必要値不足、課程不一致、重複する群配分、未知の算入先、非整数単位、成績矛盾、未確認規則を検出する。設定不足はAPI409、未知科目は400、不正形式は422、DB障害は503として[API仕様](api_specification.md)に従う。成功resultに第3の状態はない。
+
+関連：[DB](database_design.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。

@@ -1,273 +1,131 @@
 # API基本設計
 
+文書版：1.3。[RDD](RDD.md)に基づきFastAPI / SQLModel / SQLiteを使用する。React / TypeScriptからJSONで通信する。接頭辞は `/api`。現時点で `/v1` は付けない。本書は設計契約であり、エンドポイント・Swagger UIの実装は未完了。
+
 ## 1. 共通仕様
 
-REST、JSON、接頭辞 `/api/v1`。実装コード・OpenAPI生成は次フェーズとする。全データ取得は認証セッションのstudent_idから本人を決定し、学生IDを指定するパス・クエリ・ボディを受け付けない。S00〜S03に必要なAPIだけを設け、学生向け成績更新API、管理者API、履歴詳細APIは作らない。
+IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
-成功レスポンスの日時はUTCのISO 8601、IDはUUID、単位はJSON number。 `met / unmet / indeterminate` は達成/未達成/判定不能、 `earned / not_earned / pending / not_taken` は修得済み/未修得/成績未確定/未履修。course_typeはrequired/selective/elective。数値不明はnullであり0ではない。label/nameは画面表示用で、判定はcodeで行う。
+未履修は履歴なし。未確定・不合格を修得へ加算しない。科目単位や換算規則を学生のリクエストから採用しない。本人は認証セッションから決定し、本人IDを自由に指定するパラメータは受け付けない。全個人データ・認証レスポンスにCache-Control: no-storeを返す。
 
-S01/S03は同一の判定関数から結果を生成する。各リクエスト内は同一DBスナップショット、画面を切り替えた別リクエストはその時点の最新状態として再取得する。 `evaluated_at` は計算時刻、 `curriculum_revision` はDB版。異なる画面間の原子的スナップショット保存や自動ポーリングはMVPに追加しない。全認証関連・個人データに `Cache-Control: no-store` を返す。
-
-### 共通エラー
+### エラー形式
 
 ```json
-{
-  "error": {
-    "code": "SESSION_EXPIRED",
-    "message": "セッションの有効期限が切れました。再度ログインしてください。",
-    "details": []
-  }
-}
+{"detail": "選択した科目が見つかりません。科目一覧を再読み込みしてください。"}
 ```
 
-| HTTP | code | 使用場面 |
-|---|---|---|
-| 400 | INVALID_JSON | JSON構文不正 |
-| 401 | INVALID_CREDENTIALS | ログイン失敗。存在しない学籍番号・誤パスワード・無効アカウントを区別しない |
-| 401 | UNAUTHENTICATED / SESSION_EXPIRED | セッションなし・期限切れ・失効 |
-| 403 | INVALID_ORIGIN / CSRF_FAILED | 不正なOrigin、ログアウトのCSRF失敗 |
-| 404 | NOT_FOUND | 未定義のパス。他学生の存在は返さない |
-| 405 | METHOD_NOT_ALLOWED | 本人用読取パスへの更新メソッド |
-| 409 | DATA_INCONSISTENT | S02で安全に全科目の表示を生成できないマスタ/成績不整合 |
-| 415 | UNSUPPORTED_MEDIA_TYPE | POSTのContent-Typeがapplication/json以外 |
-| 422 | VALIDATION_ERROR | 型・長さ・未知のパラメータ（student_id等）の検証失敗 |
-| 429 | RATE_LIMITED | ログイン試行制限。Retry-Afterを返す |
-| 500 | INTERNAL_ERROR | 予期しない障害。内部詳細は返さない |
-| 503 | DATABASE_UNAVAILABLE | DB接続・スナップショット取得失敗 |
+画面はdetailの文字列を表示する。JSON・型・値・未知フィールドの検証失敗も日本語文字列へ正規化する。内部SQL・パスワード・他人の個人情報は出力しない。
 
-detailsは公開可能なfield/codeだけ。パスワード、SQL、ハッシュ、内部例外、他学生情報を含めない。以下の各APIの「エラー」はこの形式で返す。
+| HTTP | 条件 |
+|---|---|
+| 400 | JSON構文不正、存在しない科目ID |
+| 401 | 認証失敗・未認証・期限切れ。アカウントの存在を区別しない |
+| 403 | 不正なOrigin・CSRF検証失敗、許可されないマスタ変更 |
+| 404 | 結果IDがない、または他人の結果ID。存在を区別しない |
+| 409 | 成績版競合、所属未設定、マスタ不足、未確認の換算・配分規則 |
+| 415 | JSON更新のContent-Type不正 |
+| 422 | フィールド・成績記号・数値・履修回次・フィルタの検証失敗 |
+| 429 | 認証試行制限 |
+| 500 | 予期しない障害 |
+| 503 | DB・保存処理の利用不能 |
 
-## 2. セッション・入力・通信の提案
+正常な成績0件は200、修得0・判定fail。設定・算入規則エラーをfailへ読み替えない。現在の設定不足であっても、保存済み過去結果を読める場合は当時の結果を返せる。
 
-ブラウザには256bit以上の暗号学的ランダムトークンをCookieで渡し、DBにはそのSHA-256だけを保存する。毎回期限・失効・アカウント利用状態を確認する。ログイン成功ごとに新しいトークンを生成し、既存Cookieのセッションがあれば失効する。提案値はアイドル30分、絶対8時間（Q04）。期限切れ、ログアウト、アカウント無効化、パスワード変更で失効させる。
+## 2. 認証・更新保護
 
-公開環境は同一オリジンHTTPSを前提に `__Host-grad_session` を `HttpOnly; Secure; SameSite=Lax; Path=/`、Domainなしで設定する。ローカルHTTPのみ別名 `grad_session_dev` とSecureなしを許す。公開設定でSecureを外さない。localStorageに認証トークンを保存しない。
+サーバー保存型セッションを用いる。十分なランダム値のトークンをCookieに保存し、DBにはトークンのハッシュを保持する。公開時はHttpOnly・Secure・SameSite=Lax・Path=/、同一オリジンHTTPS。ローカル開発のHTTP用Cookie設定を公開設定と分離する。
 
-POSTはapplication/jsonに限定し、Originを許可したフロントエンドの完全一致で検証する（提案方式）。ログアウトではセッションに結びついたランダムCSRFトークンを `X-CSRF-Token` に送る。ログインは未認証のためCSRFトークン不要だがOrigin検証を行う。SameSite単独でCSRF防御を完結させない。GETは成績・マスタを変更しないが、セッション確認によるlast_seen更新やCSRF再発行を許す。
+セッションの期限・失効・アカウント利用状態を各要求で検証する。ログアウトで失効させ、パスワードは平文保存せずパスワード用ハッシュ方式を使用する。旧設計のArgon2idは提案を維持し、パラメータ・期限・試行制限の運用値はQ04で決定する。自己登録・事前発行方式も未決定である。
 
-学籍番号は文字列、1〜32文字、前後空白除去後にASCII英数字のみ（公式書式の追加制限はQ06）。パスワードは1〜128文字、空白を含め原値を検証し切り詰めない。フィールドは学籍番号とpasswordのみ、型変換・未知フィールドを許さない。クエリは下記にないものを422で拒否する。SQLはパラメータ化し、HTMLを文字列連結で生成しない。
-
-パスワードはArgon2id（salt自動生成、提案下限19MiB/反復2/並列1）で保存し、実測後にパラメータを確定する。不存在の学籍番号でもダミーハッシュ照合を行い、ログインエラーを統一する。試行制限はIPと学籍番号の両方で提案5回/分、実環境値はQ04で決める。
-
-開発はVite→バックエンドへの同一オリジンプロキシを提案し、公開は同一オリジンのリバースプロキシとする。別オリジンが必要なら許可オリジン固定・credentials有効・ワイルドカード禁止を前提にQ05で確定する。プロキシ設定の実装は今回行わない。
-
-参考：[OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)、[OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)。期限・制限回数等は本設計の提案値である。
+POST/PUT/PATCH/DELETEはOriginを検証する。ログイン以外の認証済み更新はセッションに紐づくX-CSRF-Tokenを要求する。ログインにもOrigin検証を適用する。Vite開発プロキシと公開プロキシで同一オリジンを基本とする。未保存変更を判定用データとして扱わない。
 
 ## 3. API一覧
 
-| メソッド | パス | 概要・画面 | 認証 |
-|---|---|---|---|
-| POST | /auth/login | 学籍番号・パスワード認証、S00 | 不要、Origin検証 |
-| POST | /auth/logout | セッション失効、共通 | 必須、CSRF検証 |
-| GET | /auth/session | 認証状態・CSRF再取得、共通 | セッションを確認 |
-| GET | /me | 本人プロフィール、共通 | 必須 |
-| GET | /me/courses | 全科目と代表成績、S02 | 必須 |
-| GET | /me/dashboard | 判定概要、S01 | 必須 |
-| GET | /me/graduation-requirements | 判定詳細、S03 | 必須 |
+以下には全て `/api` を付ける。ログイン以外は認証必須。公開共有API・学生向けJSONファイル入出力APIは設けない。
 
-上表のパスには全て `/api/v1` を付ける。以下の例の学生・科目コードは説明用の架空コードであり、正式学籍番号や公式科目コードではない。
+| メソッド | パス | 役割 |
+|---|---|---|
+| POST | /auth/login | ログイン |
+| POST | /auth/logout | セッション終了 |
+| GET | /auth/session | 認証・CSRF情報取得 |
+| GET | /programs | 所属・カリキュラム選択肢 |
+| GET | /me | 本人プロフィール・所属・data_revision |
+| PUT | /me/program | 本人の所属・カリキュラム保存 |
+| GET | /categories | 本人課程の科目区分・科目群・要件の一覧 |
+| GET | /courses | 科目一覧・区分・学部／学科・学期絞り込み |
+| GET | /me/grades | 本人成績の全集合・data_revision |
+| PUT | /me/grades | 本人成績の全集合を原子的に保存・訂正・取消 |
+| GET | /me/dashboard | 最新保存データの判定概要。履歴を作成しない |
+| GET | /me/graduation-requirements | 最新保存データの条件別詳細とおすすめ |
+| POST | /checks | 最新保存データを判定しスナップショット保存 |
+| GET | /checks | 本人の履歴一覧 |
+| GET | /checks/{id} | 本人の保存済み過去結果 |
 
-## 4. POST /auth/login
+開発者の科目・要件管理はJSONシードによるCLI投入を基本とし、学生用のPOST /coursesやPOST /importは設けない。通常の学生は既知科目を選んで成績を入力する。
 
-リクエストボディ:
+## 4. 認証と所属
 
-```json
-{"student_number": "TEST2026001", "password": "example-only-password"}
-```
+POST /auth/loginはlogin_nameとpasswordを受け取る。ログイン識別子の正式な書式はQ04/Q06で確認し、大学アカウントとの連携であると装わない。成功200はauthenticated、本人情報、csrf_token、expires_atを返す。パスワードを返さない。
 
-200とSet-Cookieを返す。レスポンスstudentの全項目はGET /meと同じ。
+GET /auth/sessionは認証有効なら200、無効なら401。POST /auth/logoutはCSRFを確認して200 `{"authenticated": false}`。Cookieも削除する。CSRFの再取得後の再試行はログアウトや保存を無制限に繰り返さない。
 
-```json
-{
-  "authenticated": true,
-  "student": {
-    "student_number": "TEST2026001", "name": "テスト学生A",
-    "faculty": "コンピュータサイエンス学部", "specialization": "先進情報専攻",
-    "course": "人工知能コース", "admission_year": 2026,
-    "curriculum": {"code": "cs_ai_2026", "name": "2026年度先進情報・人工知能", "revision": 1}
-  },
-  "csrf_token": "example-csrf-token",
-  "expires_at": "2026-10-09T17:00:00Z"
-}
-```
+GET /programsは存在する所属階層と対象カリキュラム、整備状態を返す。未整備を利用可能と表示しない。GET /meは本人の課程とdata_revisionを返す。PUT /me/programはprogram_id、curriculum_id、expected_revisionを受け、有効な組合せを検証し、200で保存後の課程・data_revisionを返す。成績を黙って削除せず、新課程の対象範囲で再計算する。既存成績に未確認の規則が必要なら判定側で409とし、入力成績を失わせない。
 
-エラー: 400/403/415/422/429/500/503、認証失敗401 INVALID_CREDENTIALS。失敗時セッションを発行しない。パスワードをレスポンス・ログへ出力しない。
+## 5. 科目とフィルタ
 
-## 5. POST /auth/logout
+GET /coursesのクエリはcategory_id、faculty_id、department_id、semester、q。複数指定はAND。faculty/departmentは科目の開講元、categoryは本人課程での分類・既知の他学部算入先、semesterは科目の開講学期であり学生の履修実績の学期ではない。未知フィルタや不正値は422。本人課程で未確認の算入先を推測して分類しない。
 
-認証と `X-CSRF-Token` 必須、ボディなし。200、サーバーのセッションを失効し、Cookieを同じPath属性で削除する。JSONは次のとおり。
+返却科目はcourse_id、code、name、credits、開講元、授業形態、開講学期、本人課程での区分・科目群・種別、適用確認状態を持つ。他学部の表示では開講元分類と本人の算入先を区別する。GET /categoriesは本人課程の階層と必要値を返す。所属が未設定なら409。
 
-```json
-{"authenticated": false}
-```
+## 6. 成績の入力・保存
 
-エラー: 401/403/500/503。未認証・期限切れは401としてCookieを削除し、UIはS00へ移動する。POSTにボディを送る場合はapplication/jsonの空オブジェクトのみ許可する（未知フィールドは422、構文不正400、形式不正415）。
+GET /me/gradesは全成績とdata_revisionを返す。PUTは全集合を置換する。省略した履歴は取消となるため、画面は全集合を取得・編集し、削除意図と未保存変更を確認して送る。
 
-## 6. GET /auth/session
-
-リクエストパラメータなし。セッション有効なら200。CSRFトークンを再発行してセッション内のハッシュを更新する。既存トークン失効時のログアウト403は本APIで最新を取得して1度再試行できる。
+説明用リクエスト（科目IDはマスタに存在するUUIDを使用）：
 
 ```json
 {
-  "authenticated": true,
-  "student_number": "TEST2026001",
-  "csrf_token": "example-new-csrf-token",
-  "expires_at": "2026-10-09T17:00:00Z"
-}
-```
-
-セッションなし・失効・期限切れは401（共通エラー）であり、authenticated=falseの200は返さない。Cookieを削除する。エラー: 401/422/500/503。学生氏名・成績を未認証のまま返さない。
-
-## 7. GET /me
-
-認証必須、パラメータなし。200。
-
-```json
-{
-  "student_number": "TEST2026001", "name": "テスト学生A",
-  "faculty": "コンピュータサイエンス学部", "specialization": "先進情報専攻",
-  "course": "人工知能コース", "admission_year": 2026,
-  "curriculum": {"code": "cs_ai_2026", "name": "2026年度先進情報・人工知能", "revision": 1}
-}
-```
-
-エラー: 401/422/500/503。所属・課程が不正なら409 DATA_INCONSISTENT。DBはstudents→academic_programs/curriculaを結合する。内部学生ID、パスワードハッシュは返さない。
-
-## 8. GET /me/courses
-
-認証必須、パラメータなし。検索・ページング・履歴詳細は追加しない。全課程科目を返す。200の例は4件の説明用カリキュラムであり、本番シードは便覧の全科目を返す。
-
-```json
-{
-  "curriculum_code": "cs_ai_2026", "curriculum_revision": 1,
-  "evaluated_at": "2026-10-09T09:00:00Z", "record_count": 3,
-  "warnings": [],
-  "courses": [
-    {
-      "course_id": "00000000-0000-4000-8000-000000000001", "course_code": "EX001",
-      "name": "人工知能", "major": {"code": "specialized", "name": "専門教育科目"},
-      "group": {"code": "core", "name": "コア科目"}, "subcategory": null,
-      "course_type": "selective", "credits": 2, "grade_code": "A", "grade_display": "A",
-      "earned_status": "earned", "earned_credits": 2,
-      "academic_year": 2026, "term": "first", "attempt_no": 1
-    },
-    {
-      "course_id": "00000000-0000-4000-8000-000000000002", "course_code": "EX002",
-      "name": "データベース", "major": {"code": "specialized", "name": "専門教育科目"},
-      "group": {"code": "core", "name": "コア科目"}, "subcategory": null,
-      "course_type": "selective", "credits": 2, "grade_code": "X", "grade_display": "X",
-      "earned_status": "not_earned", "earned_credits": 0,
-      "academic_year": 2026, "term": "first", "attempt_no": 1
-    },
-    {
-      "course_id": "00000000-0000-4000-8000-000000000003", "course_code": "EX003",
-      "name": "自然言語処理", "major": {"code": "specialized", "name": "専門教育科目"},
-      "group": {"code": "core", "name": "コア科目"}, "subcategory": null,
-      "course_type": "selective", "credits": 2, "grade_code": null, "grade_display": "未確定",
-      "earned_status": "pending", "earned_credits": 0,
-      "academic_year": 2026, "term": "second", "attempt_no": 1
-    },
-    {
-      "course_id": "00000000-0000-4000-8000-000000000004", "course_code": "EX004",
-      "name": "データサイエンス", "major": {"code": "specialized", "name": "専門教育科目"},
-      "group": {"code": "core", "name": "コア科目"}, "subcategory": null,
-      "course_type": "selective", "credits": 2, "grade_code": null, "grade_display": "未履修",
-      "earned_status": "not_taken", "earned_credits": 0,
-      "academic_year": null, "term": null, "attempt_no": null
-    }
+  "expected_revision": 2,
+  "grades": [
+    {"course_id": "00000000-0000-4000-8000-000000000001", "attempt_no": 1, "result_status": "finalized", "grade_code": "A", "academic_year": 2026, "term_code": "first"},
+    {"course_id": "00000000-0000-4000-8000-000000000002", "attempt_no": 1, "result_status": "pending", "grade_code": null, "academic_year": 2026, "term_code": "second"}
   ]
 }
 ```
 
-record_countは本人の履歴レコード数（科目数とは異なる）。成績0件でもcoursesは全科目を含む。Dはgrade_code/displayがD、not_earned、earned_credits=0。Xの説明は確認済みの画面表示規則から付ける。代表履歴は[判定ロジック](graduation_requirement_logic.md)第4章に従う。
+成功200は保存したgradesと更新後data_revisionを返す。expected_revision不一致なら409で全体不変。未知科目なら400、不正成績・回次重複なら422で全体不変。自学部科目以外でも既知科目の入力は保存でき、卒業への算入可否は判定側が扱う。空gradesは本人の成績全取消で、画面は意図を確認してから送る。
 
-エラー: 401/409/422/500/503。Rや不正履歴は409にして黙って未履修扱いしない。S01/S03では同じ不整合を判定不能として返す。DBはcurriculum_courses→courses/classificationsを起点に本人のgrade_attemptsを対応付ける。
+## 7. 最新判定と保存判定
 
-## 9. GET /me/dashboard
+GET /me/dashboardとGET /me/graduation-requirementsは同じ判定関数を使用し、1回の要求内は同じ成績・規則スナップショット。別要求間の更新を確認できるようdata_revisionとcurriculum_revisionを含める。GETを開くだけでcheck_resultsを追加しない。
 
-認証必須、パラメータなし。200。以下は全条件達成例（外国語の超過2を実学基礎の選択へ換算し、直接選択は6）。
+POST /checksは `{"expected_revision": 3}` を受け、画面が最後に保存・取得した成績版と一致することを確認する。成功201でresultとUUIDのid・created_at・当時の入力と結果を返す。成績版不一致は409、計算・保存失敗なら履歴を作らずエラー。履歴保存が成功してから201を返す。
 
-```json
-{
-  "curriculum_code": "cs_ai_2026", "curriculum_revision": 1,
-  "evaluated_at": "2026-10-09T09:00:00Z", "overall_status": "met",
-  "total": {"required_credits": 124, "earned_credits": 124, "deficit_credits": 0, "status": "met"},
-  "majors": [
-    {"code": "practical", "kind": "elective_total", "major_code": "practical", "parent_code": null, "name": "実学基礎科目", "required_credits": 38, "earned_credits": 38, "deficit_credits": 0, "status": "met", "required_status": "met", "selective_status": "met", "elective_status": "met"},
-    {"code": "foundation", "kind": "elective_total", "major_code": "foundation", "parent_code": null, "name": "専門基礎教育科目", "required_credits": 42, "earned_credits": 42, "deficit_credits": 0, "status": "met", "required_status": "met", "selective_status": "met", "elective_status": "met"},
-    {"code": "specialized", "kind": "elective_total", "major_code": "specialized", "parent_code": null, "name": "専門教育科目", "required_credits": 44, "earned_credits": 44, "deficit_credits": 0, "status": "met", "required_status": "met", "selective_status": "met", "elective_status": "met"}
-  ],
-  "warnings": [], "issues": []
-}
-```
+共通判定結果のフィールド：
 
-majors.statusは合計だけでなく所属する必修・選択必修・内訳・選択を全て含む判定、selective_statusには人文・社会の内訳も含める。total.statusは総単位条件だけでありoverall_statusと同一とは限らない。エラー: 401/422/500/503。マスタ/成績不整合は200でoverall_status=indeterminate、totalの数値null、majorsは取得可能な分類の枠だけ返し各数値null。取得できない枠は空配列、issuesに理由を入れる。DB障害は503であり0単位を返さない。
+| フィールド | 内容 |
+|---|---|
+| result | pass/fail |
+| evaluated_at, data_revision | 計算時刻と本人成績・所属版 |
+| curriculum | 課程コード・名称・規則版・根拠情報 |
+| total | required_credits, earned_credits, credited_credits, shortage, result |
+| categories | 科目区分の必要・実単位・算入・不足・結果 |
+| requirements | 全条件のcode・name・kind・親条件・必要・実単位・算入・不足・result |
+| missing_required_courses | 未修得必修のID・名前・分類・単位 |
+| allocations | 選択必修超過の実単位・群算入・超過・換算先・換算値 |
+| cross_faculty_credits | 実単位・対象・共通上限・算入先・算入・非算入・理由 |
+| recommendations | 未修得科目・開講期・不足条件コード・推薦理由 |
 
-## 10. GET /me/graduation-requirements
+ダッシュボードは概要用にtotal・categories等を返し、詳細APIは上表全体を返す。保存するresult_jsonも上表の詳細を持ち、総修得と総算入を区別する。判定のpass/failはHTTPの成功・失敗ではない。未達成でもGET200／保存201。
 
-認証必須、パラメータなし。200。以下は前節と同じ達成例。requirementsは常に投入された全20条件を返す。
+## 8. 過去結果
 
-```json
-{
-  "curriculum_code": "cs_ai_2026", "curriculum_revision": 1,
-  "evaluated_at": "2026-10-09T09:00:00Z", "overall_status": "met",
-  "requirements": [
-    {"code": "total", "kind": "total", "major_code": null, "parent_code": null, "name": "総単位", "required_credits": 124, "earned_credits": 124, "credited_credits": 124, "deficit_credits": 0, "status": "met"},
-    {"code": "practical_total", "kind": "major_total", "major_code": "practical", "parent_code": null, "name": "実学基礎合計", "required_credits": 38, "earned_credits": 38, "credited_credits": 38, "deficit_credits": 0, "status": "met"},
-    {"code": "foundation_total", "kind": "major_total", "major_code": "foundation", "parent_code": null, "name": "専門基礎教育合計", "required_credits": 42, "earned_credits": 42, "credited_credits": 42, "deficit_credits": 0, "status": "met"},
-    {"code": "specialized_total", "kind": "major_total", "major_code": "specialized", "parent_code": null, "name": "専門教育合計", "required_credits": 44, "earned_credits": 44, "credited_credits": 44, "deficit_credits": 0, "status": "met"},
-    {"code": "practical_required", "kind": "required_courses", "major_code": "practical", "parent_code": null, "name": "実学基礎必修", "required_credits": 16, "earned_credits": 16, "credited_credits": 16, "deficit_credits": 0, "status": "met"},
-    {"code": "foundation_required", "kind": "required_courses", "major_code": "foundation", "parent_code": null, "name": "専門基礎教育必修", "required_credits": 21, "earned_credits": 21, "credited_credits": 21, "deficit_credits": 0, "status": "met"},
-    {"code": "specialized_required", "kind": "required_courses", "major_code": "specialized", "parent_code": null, "name": "専門教育必修", "required_credits": 21, "earned_credits": 21, "credited_credits": 21, "deficit_credits": 0, "status": "met"},
-    {"code": "liberal_selective", "kind": "selective_group", "major_code": "practical", "parent_code": null, "name": "総合等選択必修", "required_credits": 10, "earned_credits": 10, "credited_credits": 10, "deficit_credits": 0, "status": "met"},
-    {"code": "foreign_selective", "kind": "selective_group", "major_code": "practical", "parent_code": null, "name": "外国語選択必修", "required_credits": 2, "earned_credits": 4, "credited_credits": 2, "deficit_credits": 0, "status": "met"},
-    {"code": "information_selective", "kind": "selective_group", "major_code": "practical", "parent_code": null, "name": "情報・数理選択必修", "required_credits": 2, "earned_credits": 2, "credited_credits": 2, "deficit_credits": 0, "status": "met"},
-    {"code": "math_selective", "kind": "selective_group", "major_code": "foundation", "parent_code": null, "name": "数理選択必修", "required_credits": 4, "earned_credits": 4, "credited_credits": 4, "deficit_credits": 0, "status": "met"},
-    {"code": "management_selective", "kind": "selective_group", "major_code": "foundation", "parent_code": null, "name": "マネジメント選択必修", "required_credits": 2, "earned_credits": 2, "credited_credits": 2, "deficit_credits": 0, "status": "met"},
-    {"code": "computing_selective", "kind": "selective_group", "major_code": "foundation", "parent_code": null, "name": "コンピュータ・ビジネス選択必修", "required_credits": 12, "earned_credits": 12, "credited_credits": 12, "deficit_credits": 0, "status": "met"},
-    {"code": "core_selective", "kind": "selective_group", "major_code": "specialized", "parent_code": null, "name": "コア選択必修", "required_credits": 12, "earned_credits": 12, "credited_credits": 12, "deficit_credits": 0, "status": "met"},
-    {"code": "seminar_selective", "kind": "selective_group", "major_code": "specialized", "parent_code": null, "name": "知能専門演習選択必修", "required_credits": 3, "earned_credits": 3, "credited_credits": 3, "deficit_credits": 0, "status": "met"},
-    {"code": "humanities_min", "kind": "subminimum", "major_code": "practical", "parent_code": "liberal_selective", "name": "人文内訳", "required_credits": 2, "earned_credits": 2, "credited_credits": 2, "deficit_credits": 0, "status": "met"},
-    {"code": "society_min", "kind": "subminimum", "major_code": "practical", "parent_code": "liberal_selective", "name": "社会内訳", "required_credits": 2, "earned_credits": 2, "credited_credits": 2, "deficit_credits": 0, "status": "met"},
-    {"code": "practical_elective", "kind": "elective_total", "major_code": "practical", "parent_code": null, "name": "実学基礎選択算入", "required_credits": 8, "earned_credits": 6, "credited_credits": 8, "deficit_credits": 0, "status": "met"},
-    {"code": "foundation_elective", "kind": "elective_total", "major_code": "foundation", "parent_code": null, "name": "専門基礎教育選択算入", "required_credits": 3, "earned_credits": 3, "credited_credits": 3, "deficit_credits": 0, "status": "met"},
-    {"code": "specialized_elective", "kind": "elective_total", "major_code": "specialized", "parent_code": null, "name": "専門教育選択算入", "required_credits": 8, "earned_credits": 8, "credited_credits": 8, "deficit_credits": 0, "status": "met"}
-  ],
-  "missing_required_courses": [],
-  "allocations": [
-    {"group_code": "liberal_selective", "major_code": "practical", "raw_credits": 10, "allocated_credits": 10, "excess_candidate_credits": 0, "converted_credits": 0},
-    {"group_code": "foreign_selective", "major_code": "practical", "raw_credits": 4, "allocated_credits": 2, "excess_candidate_credits": 2, "converted_credits": 2},
-    {"group_code": "information_selective", "major_code": "practical", "raw_credits": 2, "allocated_credits": 2, "excess_candidate_credits": 0, "converted_credits": 0},
-    {"group_code": "math_selective", "major_code": "foundation", "raw_credits": 4, "allocated_credits": 4, "excess_candidate_credits": 0, "converted_credits": 0},
-    {"group_code": "management_selective", "major_code": "foundation", "raw_credits": 2, "allocated_credits": 2, "excess_candidate_credits": 0, "converted_credits": 0},
-    {"group_code": "computing_selective", "major_code": "foundation", "raw_credits": 12, "allocated_credits": 12, "excess_candidate_credits": 0, "converted_credits": 0},
-    {"group_code": "core_selective", "major_code": "specialized", "raw_credits": 12, "allocated_credits": 12, "excess_candidate_credits": 0, "converted_credits": 0},
-    {"group_code": "seminar_selective", "major_code": "specialized", "raw_credits": 3, "allocated_credits": 3, "excess_candidate_credits": 0, "converted_credits": 0}
-  ],
-  "unmet_requirement_codes": [], "warnings": [], "issues": []
-}
-```
+GET /checksはcreated_at降順、同時刻はid順で本人履歴を返す。limitは1〜100、既定20、offsetは非負整数とする。各項目はid、created_at、課程名、規則版、result、総必要・実単位・算入・不足を持つ。取得時の一覧は過去スナップショットを要約する。
 
-各条件のearned_creditsはその対象の実単位（elective_totalでは直接選択のみ）、credited_creditsは配分後に条件へ算入した単位。合計行や内訳行を足し合わせない。 `kind`、 `major_code`（totalではnull）、 `parent_code`（内訳以外はnull）は同じ20コードのDBマスタから生成する。未修得必修はcourse_id、name、credits、major_codeを持つオブジェクト配列とする。
+GET /checks/{id}は所有者を確認して当時のinputとresultを200で返す。現在の成績やマスタで再計算しない。他人のID／存在しないIDは同じ404。未認証は401。共有URLや認証不要の例外を作らない。
 
-Q02の例ではliberal_selective.converted_credits=null、practical_elective.credited_credits/deficit_credits=null、status=indeterminate、humanities_minはunmet、unmet_requirement_codesにhumanities_minを含める。issuesは次の形式とする（HTTPエラーではない）。
+## 9. ドキュメントと検証
 
-```json
-{"code": "UNRESOLVED_CONVERSION", "requirement_code": "liberal_selective", "message": "内訳未達成時の超過換算は確認が必要です。"}
-```
+実装時にPydantic/SQLModelで入力を検証し、エラー文字列を統一する。Swagger UIをFastAPIから自動生成する。pytestで正常・異常・本人認可・原子的保存・履歴不変を検証し、READMEへ起動・初期化・シード・テストの手順を記載する。
 
-マスタ不整合は計算結果の数値をnull、overall_status=indeterminateとし、取得できた条件だけをstatus=indeterminateで返す。欠落条件はissuesで明示し、空の必修一覧を「全必修達成」と解釈しない。エラー: 401/422/500/503。不正なマスタへの依存を表すissueはMASTER_INCONSISTENT、対象外RはUNSUPPORTED_GRADE、不正履歴はGRADE_INCONSISTENT。warningsは非致命的な表示上の注意のみで、issuesをwarningsに格下げしない。
-
-## 11. DBと画面の対応
-
-| データ | DB取得元・計算 | 表示 |
-|---|---|---|
-| 学籍番号・氏名・入学年度 | students | 共通・S01 |
-| 所属・適用課程 | academic_programs、curricula | 共通・S01 |
-| 全科目・科目単位 | curriculum_courses、courses | S02 |
-| 大分類・科目群・小分類・種別 | classificationsの祖先、curriculum_courses | S02 |
-| 成績・修得状態・年度学期 | grade_attemptsの代表履歴と算入規則 | S02 |
-| 必要値・範囲・親子条件 | graduation_requirements、requirement_scopes | S03 |
-| 集計・不足・換算・未修得必修 | 共通判定関数、派生値でありDB列なし | S01/S03 |
-
-関連：[画面](screen_design/student_screen_design.md)、[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
+関連：[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。

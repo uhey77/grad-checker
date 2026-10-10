@@ -1,254 +1,70 @@
 # DB基本設計
 
-## 1. 方針と記法
+文書版：1.3。[RDD](RDD.md)に基づき、SQLModel / SQLiteを採用する。DDL・モデル・マイグレーションは今後実装する。全課程のマスタが既に投入済みという意味ではない。
 
-[RDD](RDD.md)第9章を基準とするRDB論理設計。DB製品、DDL、マイグレーションは今回作成しない。全学生に共通の2026年度・先進情報専攻・人工知能コースのカリキュラムを明示的に割り当てる。入学年度はプロフィール情報であり、カリキュラム選択条件にしない。
+## 1. 型と共通制約
 
-PK=主キー、FK=外部キー、NN=NOT NULL、UQ=UNIQUE。型は論理型であり、UUIDやUTC日時の物理表現は製品選定時に確定する。以下の全IDはUUID、単位数はDECIMAL(4,1)、日時はTIMESTAMP（UTC）とする。指定なしの列もNN、nullableの列のみNULL可。削除は原則RESTRICT、運用上の履歴・学生・マスタは学生APIから変更できない。
+IDは安定したUUIDをSQLiteではTEXTとして保存する。科目単位数はINTEGERかつ正の整数、要件・上限はINTEGERかつ非負。SQLModel/Pydantic側でも小数・真偽値等を整数へ暗黙変換せず検証する。SQLiteではINTEGER宣言だけに頼らず `typeof(credits) = 'integer' AND credits > 0` 相当のCHECKを実装する。
 
-## 2. テーブル一覧
+日時はUTC ISO 8601のTEXT、JSONはTEXTとして保存しアプリ側で構造検証する。外部キーを各接続で有効化する。マスタ参照の削除は原則RESTRICT。本人の成績は更新・取消可能、保存済み判定結果は通常更新しない。
 
-| テーブル | 区分 | 役割 |
-|---|---|---|
-| academic_programs | マスタ | 学部・専攻・コースの組合せ |
-| curricula | マスタ | 適用課程、版、根拠資料 |
-| courses | マスタ | 学生と独立した科目定義 |
-| classifications | マスタ | 大分類・科目群・小分類の階層 |
-| curriculum_courses | マスタ | カリキュラム内の科目種別・分類 |
-| graduation_requirements | マスタ | 固定6種の要件と必要値 |
-| requirement_scopes | マスタ | 要件に含む分類の集合 |
-| students | 基本データ | 学籍番号・氏名・入学年度・適用課程 |
-| student_credentials | 認証データ | 学生1人につき1つのハッシュと利用状態 |
-| grade_attempts | トランザクション | 学生・科目ごとの履修回次と成績 |
-| auth_sessions | トランザクション | 失効可能なサーバー保存型セッション |
+## 2. テーブルと主要列
 
-## 3. カラムと制約
+| テーブル | 主な列・制約 |
+|---|---|
+| academic_programs | id, code一意, faculty_name, department_name?, specialization_name?, course_name?。存在しない階層はnull |
+| curricula | id, program_id FK, code一意, name, revision正整数, 適用年度範囲, source_document, source_pages, verification_status |
+| classifications | id, curriculum_id FK, code, name, parent_id?, level, display_order。課程内code一意、親は同課程 |
+| courses | id, code一意, name, credits正整数, offering_program_id FK, teaching_type（lecture/exercise/practice/experiment/other） |
+| course_offerings | course_id FK, term_code, semester_order, academic_year?。科目に複数開講学期を保持できる |
+| curriculum_courses | curriculum_id FK, course_id FK, classification_id FK, course_type（required/selective/elective）, display_order。課程・科目で一意 |
+| graduation_requirements | id, curriculum_id FK, code, name, kind, required_credits, classification_id?, parent_id?, display_order |
+| requirement_scopes | requirement_id FK, classification_id?またはcourse_id?。対象集合を表し、片方だけを指定 |
+| credit_rules | id, curriculum_id FK, code, kind, verification_status, source_pages, revision。同区分超過換算や他学部算入を定義 |
+| credit_rule_courses | rule_id FK, course_id FK, target_classification_id FK。対象科目と本人課程の算入先を明示 |
+| credit_rule_limits | id, rule_id FK, limit_group_code, max_credits非負整数。複数算入先に共通の上限を1つのグループで定義 |
+| students | id, login_name一意, program_id?, curriculum_id?, admission_year?, name?, data_revision非負整数 |
+| student_credentials | student_id PK/FK, password_hash, is_active, password_updated_at |
+| grade_attempts | id, student_id FK, course_id FK, attempt_no正整数, result_status, grade_code?, academic_year?, term_code?, updated_at |
+| check_results | id UUID PK, student_id FK, input_json, result_json, curriculum_code, curriculum_revision, data_revision, created_at |
+| auth_sessions | id, student_id FK, token_hash一意, csrf_token_hash, created_at, last_seen_at, expires_at, revoked_at? |
 
-### academic_programs
+`?` はnullable。login_nameは大学の本人確認を済ませた学籍番号であるとは限らない。アカウント発行方式はQ04で別途確認する。所属未設定でもログインは可能だが、判定前に有効な課程選択が必要。
 
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK |
-| code | VARCHAR(64) | UQ、安定した課程コード |
-| faculty_name | VARCHAR(100) | 学部名 |
-| specialization_name | VARCHAR(100) | 専攻名 |
-| course_name | VARCHAR(100) | コース名 |
+## 3. 分類と規則
 
-名称3列の組合せにもUQ。MVPでは対象課程のみ投入し、所属を自由入力させない。
+科目の開講元と、本人課程での分類・種別・算入先を別管理する。科目名だけで同一視しない。分類階層は公式資料に従い、全学部へ3大分類を強制しない。課程内code、必修集合、要件集合、規則版を整合して投入する。
 
-### curricula
+graduation_requirements.kindはtotal / classification_total / required_courses / selective_group / subminimum / elective_totalを基本とする。全課程の根拠照合で不足する条件種別は未確定事項として追加設計し、任意コードの実行や未知条件の無視は行わない。必要値0は個別最低値がないことを表せるが、表示のために架空の最低値を追加しない。
 
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK |
-| program_id | UUID | FK academic_programs.id |
-| code | VARCHAR(64) | UQ、例 cs_ai_2026 |
-| name | VARCHAR(100) | 表示名 |
-| revision | INTEGER | CHECK > 0、マスタ更新時に増加 |
-| source_document | VARCHAR(255) | docs/2026hcgakuseibinran.pdf |
-| source_pages | VARCHAR(100) | 冊子61、83、85〜88、93〜94 |
+他学部科目の対象集合・算入先は資料照合で明示し、共通上限は合計に適用する。上限値がnull・未確認なら無制限とみなさない。内訳未達成時の換算と、上限超過時の配分はQ02/Q09解決後に規則へ反映する。
 
-UQ(id, program_id)を複合FKの参照先として持つ。
+## 4. 本人成績と保存単位
 
-### courses
+UQ(student_id, course_id, attempt_no)。grade_attempts.course_idはcoursesへ参照し、本人課程のcurriculum_coursesへの必須FKにはしない。他学部の成績を保存できるようにする。判定時は本人課程の算入規則で資格を確認する。
 
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK、再履修の重複排除キー |
-| code | VARCHAR(64) | UQ、公式コード未提供なら内部コードと明記 |
-| name | VARCHAR(200) | 科目名。名称だけで同一視しない |
-| credits | DECIMAL(4,1) | CHECK > 0 |
+finalizedはgrade_codeがS/A/B/C/D/Xのいずれか、pendingはnullというCHECK。記録がない科目は未履修。成績入力を訂正・取り消せるが、単位数や分類を学生が変える列は設けない。
 
-同名でも別科目なら異なるID。MVPでは同一IDの単位数変更を認めず、履歴単位の意味が変わる変更は別科目定義・要件改訂として扱う。
+`PUT /api/me/grades` は本人の全成績集合の置換で、リクエストに含まれない履歴は取消となる。検証・置換・data_revision加算を1トランザクションで実行し、1件でも不正なら全体を保存しない。古いrevisionでの更新は409として再取得を要求する。所属変更も同じdata_revisionを使用し、古い画面が新所属を上書きしないようにする。
 
-### classifications
+## 5. 判定スナップショット
 
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK |
-| curriculum_id | UUID | FK curricula.id |
-| code | VARCHAR(64) | 同一カリキュラム内でUQ |
-| name | VARCHAR(100) | 分類名 |
-| level | VARCHAR(16) | CHECK major / group / subcategory |
-| parent_id | UUID | nullable、同一表の親 |
-| display_order | INTEGER | CHECK >= 0 |
+check_resultsは本人の入力と計算済み結果を保存する。input_jsonには本人の課程・適用カリキュラム・全成績を、result_jsonには条件・必要値・科目名・分類・実単位・算入・不足・pass/fail・換算・おすすめ・根拠版を含める。
 
-UQ(curriculum_id, id)、UQ(curriculum_id, code)。複合FK(curriculum_id, parent_id)→classifications(curriculum_id, id)で別カリキュラムの親を禁止する。majorは親なし、groupはmajorの子、subcategoryはgroupの子。循環・階層型はシード検証で確認する。総合・人文・社会・自然科学・ウェルビーイングは便覧の科目群として保持し、人文・社会の内訳条件は各科目群を直接参照する。存在しない小分類を無理に作らない。
+チェックは整合した成績・マスタ版から計算して入力と結果を保存し、作成後は不変とする。現在の科目・成績へのFKだけで過去表示を再構成しない。公開トークン・共有URL・第三者閲覧テーブルは設けない。UUIDを知ることは閲覧権限ではない。
 
-### curriculum_courses
+## 6. 索引・読取・認可
 
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| curriculum_id | UUID | PKの一部、FK curricula.id |
-| course_id | UUID | PKの一部、FK courses.id |
-| classification_id | UUID | 最も下位の所属分類 |
-| course_type | VARCHAR(16) | CHECK required / selective / elective |
-| display_order | INTEGER | CHECK >= 0 |
+本人データは認証したstudent_idで限定する。履歴は(student_id, created_at, id)、成績はUQ(student_id, course_id, attempt_no)、課程科目は(curriculum_id, classification_id, display_order)、開講期は(term_code, course_id)を主な索引候補とする。PK/UQと重複する索引は作らない。
 
-PK(curriculum_id, course_id)。複合FK(curriculum_id, classification_id)→classifications(curriculum_id, id)。親をたどって大分類・科目群・任意小分類を導出する。種別は人工知能コースでの確定種別を投入し、共通欄だけで判定しない。単位数はcoursesを参照し重複保存しない。
+ダッシュボードは保存済み成績・規則を同じ読取スナップショットで集計し、読取で履歴は作成しない。チェックの計算と保存は版の一貫性を確保するトランザクションで行う。長時間処理やSQLite競合時は成功結果を先に返さず、競合・障害を通知する。
 
-### graduation_requirements
+パスワードハッシュとセッション原値はレスポンスへ出さない。セッション原値をDBに保存せずハッシュで管理する。学生は本人の所属・成績を書き込めるが、他人の成績・マスタは変更できない。
 
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK |
-| curriculum_id | UUID | FK curricula.id |
-| code | VARCHAR(64) | 判定ロジックの20コード |
-| name | VARCHAR(200) | 表示名 |
-| kind | VARCHAR(24) | CHECK total / major_total / required_courses / selective_group / subminimum / elective_total |
-| required_credits | DECIMAL(4,1) | CHECK > 0 |
-| major_id | UUID | nullable、total以外の所属大分類 |
-| parent_requirement_id | UUID | nullable、subminimumの親選択必修条件 |
-| conversion_target_id | UUID | nullable、selective_groupの換算先大分類 |
-| conversion_policy | VARCHAR(24) | nullable、same_major / subcondition_unresolved |
-| display_order | INTEGER | CHECK >= 0 |
+## 7. 初期投入と現在の状態
 
-UQ(curriculum_id, id)、UQ(curriculum_id, code)。major_id/conversion_target_idは同一カリキュラムのclassificationsへの複合FK、parent_requirement_idは同一カリキュラムの本表への複合FK。totalはmajor/親/換算列がnull。selective_groupのみ換算列が必須で換算先=major_id。subminimumのみ親必須。他種別は親・換算列null。参照分類がmajorであること、親がselective_groupであること、循環がないことはシード検証で保証する。
+JSONシードを課程→カリキュラム→分類→科目・開講期→課程別科目→要件・規則→テストアカウントの順でコマンド1つで投入する。科目種別・授業形態・各課程の必要値・対象他学部集合・共通上限を検証し、重複投入で同一マスタを増やさない。全データ消去は通常の再投入と分けた明示的な初期化操作とする。
 
-liberal_selectiveのpolicyはsubcondition_unresolved。他7群はsame_major。Q02解決後にpolicyと仕様を同時更新する。条件式文字列、任意スクリプト、汎用ルールエンジンは保存しない。
+現在はDB・シード・モデル未実装。READMEには実装時に初期化、シード、起動、pytestの手順を記載する。添付便覧は手動確認元とし、自動取得機能は作らない。
 
-### requirement_scopes
-
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| curriculum_id | UUID | 複合FK用 |
-| requirement_id | UUID | PKの一部 |
-| classification_id | UUID | PKの一部 |
-
-PK(requirement_id, classification_id)。複合FK(curriculum_id, requirement_id)→graduation_requirements(curriculum_id, id)、複合FK(curriculum_id, classification_id)→classifications(curriculum_id, id)。selective_group/subminimumのみ使用。liberal_selectiveに5科目群を登録、人文・社会にそれぞれ1科目群を登録する。他7群にも対応群を1つ登録する。範囲は子孫科目を含む。同一条件内の親子重複は禁止、異なる選択必修群の科目集合は重複禁止、subminimumは親集合の部分集合のみ許可する。required_coursesは大分類内のrequired種別を全て対象とするため科目別条件表を増やさない。
-
-### students
-
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK |
-| student_number | VARCHAR(32) | UQ、ログイン識別子 |
-| name | VARCHAR(100) | 氏名 |
-| program_id | UUID | FK academic_programs.id |
-| curriculum_id | UUID | 共通カリキュラム |
-| admission_year | SMALLINT | CHECK 1900〜9999、判定分岐に使わない |
-
-複合FK(curriculum_id, program_id)→curricula(id, program_id)で所属と適用課程を一致させる。UQ(id, curriculum_id)は成績の複合FK用。シード検証で全学生がMVP共通カリキュラムを参照することを確認する。
-
-### student_credentials
-
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| student_id | UUID | PK、FK students.id、学生と1対0..1 |
-| password_hash | VARCHAR(255) | Argon2idのパラメータ・saltを含む符号化文字列 |
-| is_active | BOOLEAN | DEFAULT true |
-| password_updated_at | TIMESTAMP | UTC |
-
-ログイン学籍番号はstudentsから取得する。別ユーザーIDや平文パスワードを重複保持しない。無効化・パスワード変更時は既存セッションを失効させる。
-
-### grade_attempts
-
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK |
-| student_id | UUID | 学生 |
-| curriculum_id | UUID | 適用カリキュラム |
-| course_id | UUID | 科目 |
-| attempt_no | SMALLINT | CHECK > 0、同一科目内の履修回次 |
-| academic_year | SMALLINT | nullable、CHECK 1900〜9999 |
-| term | VARCHAR(16) | nullable、first / second / full_year / other |
-| result_status | VARCHAR(16) | CHECK pending / finalized |
-| grade_code | VARCHAR(1) | nullable、CHECK S / A / B / C / D / X |
-| updated_at | TIMESTAMP | UTC、訂正を記録 |
-
-UQ(student_id, curriculum_id, course_id, attempt_no)。複合FK(student_id, curriculum_id)→students(id, curriculum_id)、複合FK(curriculum_id, course_id)→curriculum_courses(curriculum_id, course_id)。これにより他課程の成績を混入させない。pendingならgrade_code IS NULL、finalizedならgrade_code IS NOT NULLのCHECKを設ける。未履修は行なし。修得状態・算入単位・代表成績は派生値で保存しない。複数学生の同一科目と同一学生の再履修を許可する。Rは対象外として投入を拒否し、既存データに現れれば判定不能とする。
-
-### auth_sessions
-
-| 列 | 型 | 制約・意味 |
-|---|---|---|
-| id | UUID | PK、内部管理用 |
-| student_id | UUID | FK student_credentials.student_id |
-| token_hash | CHAR(64) | UQ、ランダムセッショントークンのSHA-256 |
-| csrf_token_hash | CHAR(64) | ランダムCSRFトークンのSHA-256 |
-| created_at | TIMESTAMP | UTC |
-| last_seen_at | TIMESTAMP | UTC |
-| expires_at | TIMESTAMP | 絶対有効期限 |
-| revoked_at | TIMESTAMP | nullable、失効日時 |
-
-CHECK created_at <= last_seen_at <= expires_at。CSRF原値は認証済みAPIがセッションに結びつけて再発行できる設計とし、GET /auth/sessionで再発行時はcsrf_token_hashを置き換える。トークン原値はDB・ログに保存しない。複数タブは最新CSRFを再取得して再試行する。期限・失効・利用状態をリクエストごとに確認する。
-
-## 4. ER図
-
-```mermaid
-erDiagram
-    academic_programs ||--o{ curricula : defines
-    academic_programs ||--o{ students : enrolls
-    curricula ||--o{ students : applies
-    curricula ||--o{ classifications : classifies
-    classifications o|--o{ classifications : parent
-    curricula ||--o{ curriculum_courses : includes
-    courses ||--o{ curriculum_courses : defined_in
-    classifications ||--o{ curriculum_courses : assigns
-    curricula ||--o{ graduation_requirements : requires
-    classifications o|--o{ graduation_requirements : major_or_conversion_target
-    graduation_requirements o|--o{ graduation_requirements : parent
-    graduation_requirements ||--o{ requirement_scopes : covers
-    classifications ||--o{ requirement_scopes : scope
-    students ||--o| student_credentials : authenticates
-    students ||--o{ grade_attempts : attempts
-    curriculum_courses ||--o{ grade_attempts : evaluated
-    student_credentials ||--o{ auth_sessions : sessions
-    students {
-        uuid id PK
-        string student_number UK
-        uuid program_id FK
-        uuid curriculum_id FK
-        int admission_year
-    }
-    curriculum_courses {
-        uuid curriculum_id PK,FK
-        uuid course_id PK,FK
-        uuid classification_id FK
-        string course_type
-    }
-    grade_attempts {
-        uuid id PK
-        uuid student_id FK
-        uuid curriculum_id FK
-        uuid course_id FK
-        int attempt_no
-        string result_status
-        string grade_code
-    }
-    graduation_requirements {
-        uuid id PK
-        uuid curriculum_id FK
-        string code
-        string kind
-        decimal required_credits
-        uuid major_id FK
-        uuid parent_requirement_id FK
-        uuid conversion_target_id FK
-    }
-```
-
-ER図の属性は主要列のみ。複合FK、nullable、完全な列定義は第3章を優先する。
-
-## 5. インデックスと読取
-
-| 対象 | インデックス | 目的 |
-|---|---|---|
-| students | UQ student_number | ログイン検索 |
-| students | curriculum_id | 共通課程の整合検証 |
-| curriculum_courses | (curriculum_id, classification_id, display_order) | 全科目・分類表示 |
-| classifications | (curriculum_id, parent_id, display_order) | 分類階層・表示順 |
-| graduation_requirements | UQ(curriculum_id, code) | 要件読取 |
-| requirement_scopes | (curriculum_id, classification_id) | 対象範囲の逆引き |
-| grade_attempts | UQ(student_id, curriculum_id, course_id, attempt_no) | 本人成績と代表履歴の決定 |
-| auth_sessions | UQ token_hash、(student_id, revoked_at)、expires_at | 認証、全失効、期限切れ整理 |
-
-PK/UQによる索引と重複する索引は追加しない。FK単独索引は製品・実行計画に応じて補う。S02はcurriculum_coursesを起点に本人の成績をLEFT JOINまたは別取得する。成績起点では未履修科目が欠落するため使用しない。S01/S03の数値はDB保存せず同一判定関数の結果から生成する。
-
-## 6. 投入・整合性・権限
-
-シードは課程→カリキュラム→分類→科目→課程別科目→要件/範囲→学生/認証→成績の順でトランザクション投入する。便覧85〜88ページの全科目を照合し、必修16/21/21、選択必修必要値14/18/15、大分類38/42/44、総124を検証する。8つのコア選択必修と知能の専門演習3科目を確認する。分類範囲・換算先・必須20条件の検証は[判定ロジック](graduation_requirement_logic.md)に従う。
-
-学生APIのDB操作は本人の基本情報・成績・マスタの読取と認証セッションの更新だけ。成績・マスタへの書込経路は設けず、SQL/シード運用と分ける。DB製品が対応する場合はアプリ用権限でも成績・マスタの更新を制限する。セッション更新権限は必要だが成績更新権限とは別である。バックアップ・環境別接続情報はQ05で確定する。
-
-関連：[API](api_specification.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
+関連：[API](api_specification.md)、[判定](graduation_requirement_logic.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
