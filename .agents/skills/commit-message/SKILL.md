@@ -1,5 +1,5 @@
 ---
-name: japanese-commit-message
+name: commit-message
 description: Git のコミットメッセージを作成・提案・修正する際に、type と任意の scope、日本語の summary からなる1行の形式を適用する。
 ---
 
