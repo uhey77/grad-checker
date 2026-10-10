@@ -1,5 +1,25 @@
 # grad-checker
 
+## Task Runner Commands
+
+Run these commands from the repository root. Use either Go Task
+(`Taskfile.yml`) or Make (`Makefile`); both provide the same commands.
+
+| Operation | Task | Make |
+| --- | --- | --- |
+| List commands | `task` | `make` |
+| Install all dependencies | `task setup` | `make setup` |
+| Install frontend dependencies | `task frontend-install` | `make frontend-install` |
+| Install backend dependencies | `task backend-install` | `make backend-install` |
+| Start frontend development server | `task dev` | `make dev` |
+| Build frontend | `task build` | `make build` |
+| Preview frontend build | `task preview` | `make preview` |
+
+Install dependencies before starting development or building, and run `build`
+before `preview`. Backend setup requires uv and uses `backend/uv.lock` with
+`uv sync --locked`. Backend server and test commands will be added when their
+entry point and tests are implemented.
+
 ## Frontend Development Environment
 
 The frontend uses Vite for HTML, CSS, and JavaScript development. The UI
