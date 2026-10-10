@@ -1,68 +1,63 @@
 # grad-checker
 
-## Task Runner Commands
+## タスクランナーのコマンド
 
-Run these commands from the repository root. Use either Go Task
-(`Taskfile.yml`) or Make (`Makefile`); both provide the same commands.
+以下のコマンドはリポジトリのルートで実行してください。Go Task
+（`Taskfile.yml`）または Make（`Makefile`）を使用できます。どちらも同じ操作に対応しています。
 
-| Operation | Task | Make |
+| 操作 | Task | Make |
 | --- | --- | --- |
-| List commands | `task` | `make` |
-| Install all dependencies | `task setup` | `make setup` |
-| Install frontend dependencies | `task frontend-install` | `make frontend-install` |
-| Install backend dependencies | `task backend-install` | `make backend-install` |
-| Start frontend development server | `task dev` | `make dev` |
-| Build frontend | `task build` | `make build` |
-| Preview frontend build | `task preview` | `make preview` |
+| コマンド一覧を表示 | `task` | `make` |
+| すべての依存関係をインストール | `task setup` | `make setup` |
+| フロントエンドの依存関係をインストール | `task frontend-install` | `make frontend-install` |
+| バックエンドの依存関係をインストール | `task backend-install` | `make backend-install` |
+| フロントエンドの開発サーバーを起動 | `task dev` | `make dev` |
+| フロントエンドをビルド | `task build` | `make build` |
+| フロントエンドのビルド結果をプレビュー | `task preview` | `make preview` |
 
-Install dependencies before starting development or building, and run `build`
-before `preview`. Backend setup requires uv and uses `backend/uv.lock` with
-`uv sync --locked`. Backend server and test commands will be added when their
-entry point and tests are implemented.
+## セットアップ
 
-## Frontend Development Environment
+リポジトリのルートから、Task または Make のどちらかで実行してください。
 
-The frontend uses Vite for HTML, CSS, and JavaScript development. The UI
-framework, screens, application logic, and API integration are not implemented.
-The HTML entry point is intentionally blank.
-
-### Prerequisites
-
-- Node.js: 20.19+ in the 20.x series, or 22.12+ (Vite requirement).
-- npm: 11.12.1 was used to generate the lock file.
-- Verified locally with Node.js 25.9.0 and npm 11.12.1.
-
-### Setup
-
-Run from the repository root:
+Task を使用する場合：
 
 ```sh
-cd frontend
-npm ci
-npm run dev
+task frontend-install
+task dev
 ```
 
-The development URL is printed in the terminal (normally
-http://127.0.0.1:5173). An empty page is expected until implementation starts.
-
-On Windows PowerShell, use `npm.cmd` instead of `npm` if the execution policy
-blocks `npm.ps1`:
-
-```powershell
-cd frontend
-npm.cmd ci
-npm.cmd run dev
-```
-
-### Build and Preview
+Make を使用する場合：
 
 ```sh
-npm run build
-npm run preview
+make frontend-install
+make dev
 ```
 
-Build artifacts are written to `frontend/dist/` and excluded from Git.
-Commit `frontend/package-lock.json` when updating dependencies and use `npm ci`
-to reproduce the installed versions.
+バックエンドも含めてセットアップする場合は、`task setup` または `make setup` を使用してください。
 
-Reference: [Vite Getting Started](https://vite.dev/guide/).
+開発サーバーの URL はターミナルに表示されます（通常は
+http://127.0.0.1:5173）。実装を始めるまでは空のページが表示されます。
+
+Windows PowerShell でも、リポジトリのルートから上記の Task / Make コマンドを使用してください。
+補足として、npm を直接実行する際に実行ポリシーによって `npm.ps1` がブロックされる場合は、
+`npm` の代わりに `npm.cmd` を使用してください。
+
+## ビルドとプレビュー
+
+リポジトリのルートから実行してください。
+
+Task を使用する場合：
+
+```sh
+task build
+task preview
+```
+
+Make を使用する場合：
+
+```sh
+make build
+make preview
+```
+
+参考：[Vite 入門ガイド](https://vite.dev/guide/)
