@@ -24,6 +24,18 @@ tasks:
     cmds:
       - uv sync --locked
 
+  backend-dev:
+    desc: バックエンドの開発サーバーを起動
+    dir: backend
+    cmds:
+      - uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+  backend-test:
+    desc: バックエンドのテストを実行
+    dir: backend
+    cmds:
+      - uv run pytest
+
   dev:
     desc: フロントエンドの開発サーバーを起動
     dir: frontend
