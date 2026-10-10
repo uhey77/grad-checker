@@ -15,8 +15,7 @@
 | フロントエンドをビルド | `task build` | `make build` |
 | フロントエンドのビルド結果をプレビュー | `task preview` | `make preview` |
 
-開発やビルドを始める前に依存関係をインストールし、`preview` の前に `build`
-を実行してください。バックエンドのセットアップには uv が必要です。
+バックエンドのセットアップには uv が必要です。
 `task backend-install` または `make backend-install` で、`backend/uv.lock` に基づく依存関係をインストールします。
 バックエンドのサーバー起動とテストのコマンドは、エントリーポイントとテストの実装後に追加予定です。
 
