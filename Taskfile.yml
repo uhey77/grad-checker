@@ -1,0 +1,43 @@
+version: '3'
+
+tasks:
+  default:
+    desc: 利用できるタスクを表示
+    cmds:
+      - task --list
+
+  setup:
+    desc: フロントエンドとバックエンドの依存関係をインストール
+    cmds:
+      - task: frontend-install
+      - task: backend-install
+
+  frontend-install:
+    desc: フロントエンドの依存関係をロックファイルからインストール
+    dir: frontend
+    cmds:
+      - npm ci
+
+  backend-install:
+    desc: バックエンドの依存関係をロックファイルからインストール
+    dir: backend
+    cmds:
+      - uv sync --locked
+
+  dev:
+    desc: フロントエンドの開発サーバーを起動
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  build:
+    desc: フロントエンドをビルド
+    dir: frontend
+    cmds:
+      - npm run build
+
+  preview:
+    desc: フロントエンドのビルド結果をプレビュー
+    dir: frontend
+    cmds:
+      - npm run preview
