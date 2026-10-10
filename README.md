@@ -17,7 +17,7 @@
 
 開発やビルドを始める前に依存関係をインストールし、`preview` の前に `build`
 を実行してください。バックエンドのセットアップには uv が必要です。
-`uv sync --locked` を使用して、`backend/uv.lock` に基づく依存関係をインストールします。
+`task backend-install` または `make backend-install` で、`backend/uv.lock` に基づく依存関係をインストールします。
 バックエンドのサーバー起動とテストのコマンドは、エントリーポイントとテストの実装後に追加予定です。
 
 ## フロントエンドの開発環境
@@ -34,35 +34,51 @@ HTML のエントリーポイントは意図的に空にしています。
 
 ### セットアップ
 
-リポジトリのルートから、以下を実行してください。
+リポジトリのルートから、Task または Make のどちらかで実行してください。
+
+Task を使用する場合：
 
 ```sh
-cd frontend
-npm ci
-npm run dev
+task frontend-install
+task dev
 ```
+
+Make を使用する場合：
+
+```sh
+make frontend-install
+make dev
+```
+
+バックエンドも含めてセットアップする場合は、`task setup` または `make setup` を使用してください。
 
 開発サーバーの URL はターミナルに表示されます（通常は
 http://127.0.0.1:5173）。実装を始めるまでは空のページが表示されます。
 
-Windows PowerShell で実行ポリシーによって `npm.ps1` がブロックされる場合は、
+Windows PowerShell でも、リポジトリのルートから上記の Task / Make コマンドを使用してください。
+補足として、npm を直接実行する際に実行ポリシーによって `npm.ps1` がブロックされる場合は、
 `npm` の代わりに `npm.cmd` を使用してください。
-
-```powershell
-cd frontend
-npm.cmd ci
-npm.cmd run dev
-```
 
 ### ビルドとプレビュー
 
+リポジトリのルートから実行してください。
+
+Task を使用する場合：
+
 ```sh
-npm run build
-npm run preview
+task build
+task preview
+```
+
+Make を使用する場合：
+
+```sh
+make build
+make preview
 ```
 
 ビルド成果物は `frontend/dist/` に出力され、Git の管理対象から除外されます。
 依存関係を更新した際は `frontend/package-lock.json` をコミットしてください。
-インストールするバージョンを再現するには `npm ci` を使用します。
+インストールするバージョンを再現するには、`task frontend-install` または `make frontend-install` を使用します。
 
 参考：[Vite 入門ガイド](https://vite.dev/guide/)
