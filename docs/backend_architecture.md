@@ -1,7 +1,7 @@
 # バックエンドの構成
 
 `backend/api/`にHTTPの入口、`backend/modules/subjects/`に科目の業務処理を配置する。
-APIと科目はそれぞれ独立したPythonプロジェクトで、共通設定は`backend/config/`に置く。GoもAPI・科目・テストごとにモジュールを分ける。
+Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。GoもAPI・科目・テストごとにモジュールを分ける。
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
 現在の実装対象は開発用の科目一覧。卒業判定・推薦・認証・成績保存は未実装。
 
@@ -26,9 +26,8 @@ React / Vite :5173
 
 ```text
 backend/
-├── pyproject.toml / uv.lock / .venv/  # 開発ツール・共通テストの環境
+├── pyproject.toml / uv.lock / .python-version / .venv/  # Python共通環境
 ├── api/
-│   ├── pyproject.toml / uv.lock / .venv/
 │   ├── go.mod / main.go               # Goの起動・依存関係の組立て
 │   ├── presentation/subject_list.go   # 外部HTTPハンドラー
 │   └── api_service/
@@ -37,7 +36,6 @@ backend/
 ├── config/settings.py                # 共有設定。独立パッケージにはしない
 ├── modules/
 │   └── subjects/
-│       ├── pyproject.toml / uv.lock / .venv/
 │       ├── go.mod
 │       ├── application/subject_list.go
 │       ├── infrastructure/subject_list_client.go
@@ -58,39 +56,28 @@ Goのテストは`tests`パッケージから対象パッケージの公開契�
 現在は外部成功JSONと科目モデルの形が同じため、GoのDTOを重複定義しない。
 内部通信の`data`・`error`包絡形式はGoのinfrastructureで取り除き、外部には返さない。
 
-## 独立した依存関係
+## 依存管理
 
-各Pythonプロジェクトに`pyproject.toml`・`uv.lock`・`.venv`を持たせる。
-科目モジュールの依存はPydantic・SQLModel・SQLAlchemy。単体環境にはFastAPI・uvicorn・共有設定は入らない。
-共通設定は`config/settings.py`に置き、独自の依存定義・ロック・Pythonバージョン・仮想環境は持たない。
-APIは科目を編集可能なローカルpath依存で参照し、内部HTTPと設定に必要なライブラリを宣言する。
-Python内部サービスはuvicornの`--app-dir`で`backend/`を指定して共有設定を読み込む。API実行時もこの共有ソースが必要。
-投入CLIは`backend/`から`uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json`で起動する。
-科目モジュールからAPIや設定への逆依存は作らない。
+Pythonの`pyproject.toml`・`uv.lock`・`.python-version`・`.venv`は`backend/`直下の一組だけを使用する。
+API・科目・共通設定の依存と開発ツールをこの共通環境で解決する。配下に個別のPythonプロジェクトやロックは作らない。
+`backend-install`は`uv sync --locked --project backend`を一度実行する。
+
+コードはAPI・業務モジュール・設定に分け、依存方向を維持する。
+PythonのAPIは`api.api_service`、科目は`modules.subjects.grad_checker_subjects`、共通設定は`config`として参照する。
 
 ```text
 Python: API → subjects / config
-        共通テスト・CLI → API / subjects / config
+        CLI → subjects / config
 Go:     API → subjects
         tests → API / subjects
 ```
 
-`backend-install`は科目・API・開発ツールの順に、それぞれのロックで個別に同期する。
-単一ロック・仮想環境を共有するuv workspaceは使用しない。
-API環境では科目モジュールの依存もAPIの`uv.lock`でまとめて解決する。科目側のロックを継承するわけではないため、科目の依存変更後はAPIと共通テスト側のロックも更新して結合確認する。
-同じPythonプロセスでは同一ライブラリの相反するバージョンを併用できない。将来その必要が出た場合はプロセスを分ける。
+Python内部サービスは`backend/`から`uv run --locked uvicorn api.api_service.main:app`で起動する。
+投入CLIは同じ場所から`uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json`で起動する。
+APIと科目モジュールはコードの責務を分離するが、Pythonの依存バージョンや仮想環境は分離しない。
 
-特定のパッケージだけを同期する場合は、リポジトリルートで次を実行する。
-
-```sh
-uv sync --locked --project backend/modules/subjects
-uv sync --locked --project backend/api
-```
-
-Goも個別の`go.mod`を持ち、ローカル`replace`で参照先を指定する。
-Go用のworkspaceに依存せず、各ディレクトリで`go vet ./...`を実行できる。
+Goは引き続きAPI・科目・テストごとの`go.mod`を持ち、ローカル`replace`で参照先を指定する。
 現在は標準ライブラリのみのため`go.sum`は生成されない。
-独立ロックとローカルpath依存の仕様は[uv公式ドキュメント](https://docs.astral.sh/uv/concepts/projects/dependencies/#path)を参照。
 
 ## 外部APIと内部通信
 
@@ -160,11 +147,11 @@ Pythonの内部HTTPプロセスは引き続き必要。言語を分けたこと�
 
 ## 2026-10-11の分割後の検証
 
-- 科目・API・共通テスト環境をそれぞれ`uv sync --locked`で同期。
-- Pythonの46テストが成功。科目の単体環境の隔離モード検証と共有設定の保存先検証、API自身の仮想環境を使う実プロセス結合テスト3件を含む。
-- 科目環境にFastAPI・uvicorn・API・設定がなくても、DB作成と科目一覧ユースケースが動作。
+- `backend/`直下の共通Python環境を`uv sync --locked`で同期。
+- Pythonの46テストが成功。科目モジュールの逆依存検査、共有設定の保存先検証、共通環境を使う実プロセス結合テスト3件を含む。
+- 科目モジュールがAPI・設定・FastAPI・uvicornをimportしないことを確認。
 - Goの各モジュールの静的解析、共通テストの競合検出付き実行が成功。
-- TaskとMakeのバックエンドチェックが成功。両方の個別環境同期、`task check`、フロントエンド6テスト、`task build`も成功。
+- TaskとMakeのバックエンドチェックが成功。両方の共通環境同期、`task check`、フロントエンド6テスト、`task build`も成功。
 - 通常の`dev`でVite → Go → Python → 一時SQLiteの4課程・科目一覧が一致（126・126・126・120科目）。422・404の応答とCtrl+Cによる3サーバー終了・ポート解放も確認。
 
 通常の開発DBは検証に使用していない。ブラウザー操作・画面の見た目と外部OpenAPI/Swagger UIは未検証。

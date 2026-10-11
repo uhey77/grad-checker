@@ -20,14 +20,13 @@
 
 ## パッケージと依存管理
 
-- `api/`・`modules/subjects/`は各自の`pyproject.toml`・`uv.lock`・`.venv`を持つ。単一ロックを共有するuv workspaceにはしない。
-- `config/`はバックエンド直下の共有ソースとし、独自の依存定義・ロック・Pythonバージョン・仮想環境を持たせない。設定で使用するPydantic SettingsはAPIの依存として宣言する。
+- Pythonの依存定義・ロック・Pythonバージョン・仮想環境は`backend/pyproject.toml`・`backend/uv.lock`・`backend/.python-version`・`backend/.venv`に統一する。`api/`・`modules/`・`config/`に重複して置かない。
+- `api/`・`modules/`・`config/`・`scripts/`は共通環境にインストールするPythonパッケージとする。業務ごとのコード配置と層の依存方向は維持する。
 - 科目モジュールはAPI・設定を参照しない。APIとCLIが設定値と具体実装を組み合わせる。
-- APIは科目をローカルpath依存で参照する。実行環境の依存バージョンはAPI自身のロックで解決する。利用先のロックを自動的に継承するとは扱わない。
-- Python内部サービスはuvicornの`--app-dir`で`backend/`を指定して共有設定を読み込む。CLIは`backend/`から`python -m scripts.seed_subjects`で起動する。
-- `backend/pyproject.toml`とルートの`.venv`は共通の開発ツールと結合テスト用。業務用の第三者ライブラリは使用するパッケージで直接宣言する。
+- Python内部サービスは`uvicorn api.api_service.main:app`、CLIは`backend/`から`python -m scripts.seed_subjects`で起動する。
+- 業務処理・HTTP・設定と開発ツールの第三者依存はすべて`backend/pyproject.toml`に宣言し、一つのロックで解決する。
 - Goは`api/`・`modules/subjects/`・`tests/`ごとに`go.mod`を持ち、`require`とローカル`replace`で依存方向を明示する。
-- 新しい業務モジュールは`modules/<機能>/`に独立した依存定義を作り、必要になった利用側からのみ参照する。
+- 新しい業務モジュールは`modules/<機能>/`に配置し、必要になった利用側からのみ参照する。Python依存はバックエンドルートに追加する。
 
 ## 依存方向
 
