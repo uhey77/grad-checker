@@ -12,6 +12,12 @@ tasks:
       - task: backend-check
       - task: frontend-check
 
+  format:
+    desc: バックエンドとフロントエンドのlint自動修正・整形を実行
+    cmds:
+      - task: backend-format
+      - task: frontend-format
+
   backend-check:
     desc: バックエンドのlint・整形状態・型を検証
     cmds:

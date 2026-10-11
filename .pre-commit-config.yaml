@@ -1,40 +1,9 @@
 repos:
-  # uv.lock の開発依存を使い、手動実行と同じバージョンで検証する。
   - repo: local
     hooks:
-      - id: ruff-check
-        name: Ruff lint
-        entry: uv run --locked --project backend ruff check --fix
+      - id: project-check
+        name: Format and check
+        entry: node scripts/run-tasks.mjs format check
         language: system
-        files: ^backend/
-        types_or: [python, pyi]
-      - id: ruff-format
-        name: Ruff format
-        entry: uv run --locked --project backend ruff format
-        language: system
-        files: ^backend/
-        types_or: [python, pyi]
-      - id: ty-check
-        name: ty type check
-        entry: uv run --locked --project backend ty check --project backend
-        language: system
-        files: ^backend/.*\.(py|pyi|toml)$|^backend/uv\.lock$
         pass_filenames: false
-      - id: frontend-eslint
-        name: Frontend ESLint
-        entry: npm --prefix frontend run lint:fix
-        language: system
-        files: ^frontend/.*\.(js|jsx|mjs|cjs|ts|tsx|json)$
-        pass_filenames: false
-      - id: frontend-prettier
-        name: Frontend Prettier
-        entry: npm --prefix frontend run format
-        language: system
-        files: ^frontend/.*\.(js|jsx|mjs|cjs|ts|tsx|json|css|html|md|yaml|yml)$|^frontend/\.prettierignore$
-        pass_filenames: false
-      - id: frontend-typecheck
-        name: Frontend TypeScript
-        entry: npm --prefix frontend run typecheck
-        language: system
-        files: ^frontend/.*\.(ts|tsx|json)$
-        pass_filenames: false
+        always_run: true

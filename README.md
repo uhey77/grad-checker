@@ -9,6 +9,7 @@
 | --- | --- | --- |
 | コマンド一覧を表示 | `task` | `make` |
 | バックエンド・フロントのlint・整形状態・型を検証 | `task check` | `make check` |
+| バックエンド・フロントの自動修正・整形 | `task format` | `make format` |
 | バックエンドだけのlint・整形状態・型を検証 | `task backend-check` | `make backend-check` |
 | フロントだけのlint・整形状態・型を検証 | `task frontend-check` | `make frontend-check` |
 | すべての依存関係をインストール | `task setup` | `make setup` |
@@ -55,14 +56,15 @@ make dev
 
 `setup` はpre-commitのGitフックも登録します。セットアップ済みの場合は
 `task backend-install` と `task pre-commit-install`（Makeも同名）を実行してください。
-コミット時にバックエンドのPythonファイルへRuffのlint自動修正・整形を行い、
-tyでバックエンド全体の型を検証します。自動修正された場合は差分を確認し、
-再度ステージしてコミットしてください。Ruff・tyは `backend/uv.lock` のバージョンを使用します。
+コミット時は `scripts/run-tasks.mjs` がTask（未インストールならMake）を選び、
+`format` → `check` の順に両方のコードを自動修正・整形・検証します。
+Task／Makeはどちらか一方のインストールで動作します。
+自動修正された場合は差分を確認し、再度ステージしてコミットしてください。
+Ruff・tyは `backend/uv.lock` のバージョンを使用します。
 Ruffは `A`・`B`・`E`・`F`・`I`・`N`・`W`・`PL`・`UP` のルールを有効にし、
 無視する7ルールは `backend/pyproject.toml` に明記しています。
 
-フロントの変更時にはESLintの自動修正、Prettierの整形、TypeScriptの型チェックも
-フロント全体に実行します。依存は `frontend/package-lock.json` で管理します。
+フロントの依存は `frontend/package-lock.json` で管理します。
 ESLintはTypeScriptとReact Hooksのルールを検証し、整形はPrettierに任せます。
 TypeScriptはtypescript-eslintの対応範囲に合わせて6.0系を使用します。
 フロントの依存を更新した場合は `task frontend-install`（Makeも同名）を実行してください。
@@ -70,7 +72,7 @@ TypeScriptはtypescript-eslintの対応範囲に合わせて6.0系を使用し�
 両方をまとめて検証する場合は `task check` または `make check` を実行してください。
 Ruff・ESLintのlint、Ruff・Prettierの整形状態、ty・TypeScriptの型チェックを行います。
 片方だけを検証する場合は `backend-check` または `frontend-check` を使ってください。
-整形を適用する場合は `backend-format`・`frontend-format` を使ってください。
+整形を適用する場合は `format`、片方だけの場合は `backend-format`・`frontend-format` を使ってください。
 
 開発サーバーの URL はターミナルに表示されます（通常は
 http://127.0.0.1:5173）。`Ctrl+C` で両方のサーバーを終了します。

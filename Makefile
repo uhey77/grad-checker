@@ -1,9 +1,10 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help check backend-check frontend-check setup frontend-install backend-install backend-dev backend-catalog backend-test backend-lint backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format frontend-typecheck build preview
+.PHONY: help check format backend-check frontend-check setup frontend-install backend-install backend-dev backend-catalog backend-test backend-lint backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format frontend-typecheck build preview
 
 help:
 	@echo "check             バックエンドとフロントエンドのlint・整形状態・型を検証"
+	@echo "format            バックエンドとフロントエンドのlint自動修正・整形を実行"
 	@echo "backend-check     バックエンドのlint・整形状態・型を検証"
 	@echo "frontend-check    フロントエンドのlint・整形状態・型を検証"
 	@echo "setup             フロントエンドとバックエンドの依存関係をインストール"
@@ -29,6 +30,10 @@ help:
 check:
 	$(MAKE) backend-check
 	$(MAKE) frontend-check
+
+format:
+	$(MAKE) backend-format
+	$(MAKE) frontend-format
 
 backend-check:
 	$(MAKE) backend-lint
