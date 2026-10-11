@@ -13,9 +13,21 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend
+    name: Backend / ${{ matrix.check }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: lint
+            target: backend-lint
+          - check: format-check
+            target: backend-format-check
+          - check: typecheck
+            target: backend-typecheck
+          - check: test
+            target: go-api-test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -47,11 +59,8 @@ jobs:
       - name: Install dependencies
         run: make backend-install
 
-      - name: Run backend checks
-        run: make backend-check
-
-      - name: Run Go tests
-        run: make go-api-test
+      - name: Run check
+        run: make ${{ matrix.target }}
 
   frontend:
     name: Frontend / ${{ matrix.check }}
