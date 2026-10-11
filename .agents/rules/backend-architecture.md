@@ -15,14 +15,16 @@
 | `modules/subjects/application/`・`infrastructure/` | Goの取得契約と内部通信の実装 | PythonへのHTTPクライアント |
 | `api/presentation/`・`api/api_service/presentation/` | Goの外部HTTP、Pythonの内部通信アダプター | 入力検証、業務エラー変換、Session管理 |
 | `api/main.go`・`api/api_service/main.py` | 設定・起動・終了と依存関係の組立て | ハンドラー注入、DB起動終了 |
-| `config/grad_checker_config/settings.py` | Pythonの環境設定 | DB接続URL |
+| `config/settings.py` | Pythonの環境設定 | DB接続URL |
 | `scripts/seed_subjects.py` | 開発者向けCLIの入口 | 引数処理、投入処理の呼出し、終了コード |
 
 ## パッケージと依存管理
 
-- `api/`・`config/`・`modules/subjects/`は各自の`pyproject.toml`・`uv.lock`・`.venv`を持つ。単一ロックを共有するuv workspaceにはしない。
-- 科目モジュールはAPI・設定パッケージを参照しない。APIとCLIが設定値と具体実装を組み合わせる。
-- APIは科目・設定をローカルpath依存で参照する。実行環境の依存バージョンはAPI自身のロックで解決する。利用先のロックを自動的に継承するとは扱わない。
+- `api/`・`modules/subjects/`は各自の`pyproject.toml`・`uv.lock`・`.venv`を持つ。単一ロックを共有するuv workspaceにはしない。
+- `config/`はバックエンド直下の共有ソースとし、独自の依存定義・ロック・Pythonバージョン・仮想環境を持たせない。設定で使用するPydantic SettingsはAPIの依存として宣言する。
+- 科目モジュールはAPI・設定を参照しない。APIとCLIが設定値と具体実装を組み合わせる。
+- APIは科目をローカルpath依存で参照する。実行環境の依存バージョンはAPI自身のロックで解決する。利用先のロックを自動的に継承するとは扱わない。
+- Python内部サービスはuvicornの`--app-dir`で`backend/`を指定して共有設定を読み込む。CLIは`backend/`から`python -m scripts.seed_subjects`で起動する。
 - `backend/pyproject.toml`とルートの`.venv`は共通の開発ツールと結合テスト用。業務用の第三者ライブラリは使用するパッケージで直接宣言する。
 - Goは`api/`・`modules/subjects/`・`tests/`ごとに`go.mod`を持ち、`require`とローカル`replace`で依存方向を明示する。
 - 新しい業務モジュールは`modules/<機能>/`に独立した依存定義を作り、必要になった利用側からのみ参照する。
@@ -46,7 +48,7 @@
 - Sessionは処理単位で管理する。書込みのトランザクション境界を明示し、一連の処理が失敗した場合は全体をロールバックする。リクエスト終了時に自動commitしない。
 - 複数クエリで一つの結果を組み立てる場合は、読取りの一貫性を保つ。
 - 科目の同一性と、課程ごとの分類・必修区分は分ける。適用入学年度などの未確認情報は、推測で確定しない。出典・注記・確認状態を保持する。
-- Pythonの設定は`config/grad_checker_config/settings.py`の`Settings`、Goの設定は`api/main.go`の起動引数に集約し、業務処理内で環境変数を直接読まない。
+- Pythonの設定は`config/settings.py`の`Settings`、Goの設定は`api/main.go`の起動引数に集約し、業務処理内で環境変数を直接読まない。
 - 開発用科目一覧APIはGoの起動引数で明示的に有効化し、既定では無効とする。Python内部サービスはループバックで起動し、外部`/api`ルートを作らない。学生向けAPIを追加するときは開発用APIと役割・契約を分ける。
 - GoへDBモデル・SQLクエリ・卒業判定・推薦ルールを複製しない。Pythonは内部通信の形を防御的に検証するが、外部入力の日本語エラー変換はGoに集約する。
 - 集約・値オブジェクト・共通基底クラスは、対応する業務処理や共通責務が必要になった時点で導入する。

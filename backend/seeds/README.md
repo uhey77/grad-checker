@@ -16,7 +16,7 @@
 
 ```sh
 uv run python seeds/build_cs_seed.py
-uv run --locked python scripts/seed_subjects.py --file seeds/cs_2026.json
+uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
 ```
 
 | 登録内容 | 件数 |

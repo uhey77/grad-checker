@@ -28,4 +28,4 @@ make setup
 Go 1.22以上の`go`コマンドをPATHに用意してください。
 `task dev`または`make dev`で、画面・Go外部API・Python内部サービスを起動します。
 HTTP入力検証と外部応答はGo、業務処理とDBアクセスはPythonが担当します。
-バックエンドは`api/`・`config/`・`modules/subjects/`ごとに依存定義・ロック・仮想環境を分けています。`backend-install`で各環境を個別に同期します。層の配置・内部通信・確認手順は[バックエンドの構成](docs/backend_architecture.md)を参照してください。
+バックエンドは`api/`・`modules/subjects/`ごとに依存定義・ロック・仮想環境を分けています。共通設定は`backend/config/`に置きます。`backend-install`で各環境を個別に同期します。層の配置・内部通信・確認手順は[バックエンドの構成](docs/backend_architecture.md)を参照してください。
