@@ -69,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [lint, typecheck, format-check]
+        check: [lint, typecheck, format-check, test]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

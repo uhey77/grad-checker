@@ -2,7 +2,7 @@
 
 .PHONY: dev-go go-api-dev go-api-check go-api-test go-api-format backend-python-dev
 
-.PHONY: help check format backend-check frontend-check setup frontend-install backend-install backend-dev backend-subject-list backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
+.PHONY: help check test frontend-test format backend-check frontend-check setup frontend-install backend-install backend-dev backend-subject-list backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
 
 help:
 	@echo "go-api-format     Goコードを整形"
@@ -12,6 +12,8 @@ help:
 	@echo "go-api-check      Goの整形状態・静的解析を検証"
 	@echo "go-api-test       Goの入力検証・エラー変換・内部通信をテスト"
 	@echo "check             バックエンドとフロントエンドのlint・整形状態・型を検証"
+	@echo "test              バックエンドとフロントエンドの全テストを実行"
+	@echo "frontend-test     フロントエンドのテストを実行"
 	@echo "format            バックエンドとフロントエンドのlint自動修正・整形を実行"
 	@echo "backend-check     バックエンドのlint・整形状態・型を検証"
 	@echo "frontend-check    フロントエンドのlint・整形状態・型を検証"
@@ -40,6 +42,13 @@ help:
 check:
 	$(MAKE) backend-check
 	$(MAKE) frontend-check
+
+test:
+	$(MAKE) backend-test
+	$(MAKE) frontend-test
+
+frontend-test:
+	cd frontend && npm test
 
 format:
 	$(MAKE) backend-format
