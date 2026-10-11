@@ -9,7 +9,7 @@ help:
 	@echo "backend-dev       バックエンドの開発サーバーを起動"
 	@echo "backend-catalog   ローカル確認用の科目一覧APIを有効にして起動"
 	@echo "backend-test      バックエンドのテストを実行"
-	@echo "backend-seed      CS学部の便覧掲載科目マスタを追加投入"
+	@echo "backend-seed      CS学部の便覧掲載科目データを追加投入"
 	@echo "dev               フロントエンドと科目一覧APIを同時に起動"
 	@echo "frontend-dev      フロントエンドの開発サーバーを起動"
 	@echo "build             フロントエンドをビルド"

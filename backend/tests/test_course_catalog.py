@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.config import Settings
-from app.infrastructure.master_seed import load_seed, seed_master
+from app.infrastructure.course_catalog_seed import load_seed, seed_course_catalog
 from app.main import create_app
 
 SEED_PATH = Path(__file__).resolve().parents[1] / "seeds" / "cs_2026.json"
@@ -22,7 +22,7 @@ def catalog_client(tmp_path):
         )
     )
     with TestClient(app) as client:
-        seed_master(app.state.database_engine, load_seed(SEED_PATH))
+        seed_course_catalog(app.state.database_engine, load_seed(SEED_PATH))
         yield client
 
 

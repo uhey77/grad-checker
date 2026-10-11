@@ -1,4 +1,4 @@
-"""SQLiteエンジンと、実装済みマスタスキーマの生成。"""
+"""SQLiteエンジンと、課程・科目データのスキーマの生成。"""
 
 from pathlib import Path
 from sqlite3 import Connection
@@ -31,6 +31,6 @@ def create_database_engine(database_url: str) -> Engine:
 
 
 def create_database_schema(engine: Engine) -> None:
-    from app.infrastructure.master_models import MASTER_TABLES
+    from app.infrastructure.course_catalog_models import COURSE_CATALOG_TABLES
 
-    SQLModel.metadata.create_all(engine, tables=MASTER_TABLES)
+    SQLModel.metadata.create_all(engine, tables=COURSE_CATALOG_TABLES)

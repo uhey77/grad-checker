@@ -11,10 +11,10 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from app.application.errors.master_seed import SeedError
-from app.application.master_seed import MasterSeed
+from app.application.errors.course_catalog_seed import SeedError
+from app.application.course_catalog_seed import CourseCatalogSeed
 from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.master_seed import load_seed, seed_master
+from app.infrastructure.course_catalog_seed import load_seed, seed_course_catalog
 
 BACKEND = Path(__file__).resolve().parents[1]
 SEED_PATH = BACKEND / "seeds" / "cs_2026.json"
@@ -39,7 +39,7 @@ def counts(engine):
     with engine.connect() as connection:
         return {
             name: connection.execute(text(f"SELECT count(*) FROM {name}")).scalar_one()
-            for name in MasterSeed.model_fields
+            for name in CourseCatalogSeed.model_fields
         }
 
 
@@ -117,12 +117,12 @@ def test_seed_is_persistent_idempotent_and_handles_child_before_parent(engine, s
     reversed_seed = seed.model_copy(
         update={"classifications": list(reversed(seed.classifications))}
     )
-    result = seed_master(engine, reversed_seed)
+    result = seed_course_catalog(engine, reversed_seed)
     assert result == {
-        name: len(getattr(seed, name)) for name in MasterSeed.model_fields
+        name: len(getattr(seed, name)) for name in CourseCatalogSeed.model_fields
     }
     before = counts(engine)
-    assert seed_master(engine, seed) == dict.fromkeys(MasterSeed.model_fields, 0)
+    assert seed_course_catalog(engine, seed) == dict.fromkeys(CourseCatalogSeed.model_fields, 0)
     assert counts(engine) == before
     # 新しいエンジンでも同じファイルに保存されている。
     reopened = create_database_engine(str(engine.url))
@@ -137,7 +137,7 @@ def test_json_rejects_non_positive_or_coerced_credits(seed, credits):
     data = seed.model_dump(mode="json")
     data["courses"][0]["credits"] = credits
     with pytest.raises(ValidationError):
-        MasterSeed.model_validate(data)
+        CourseCatalogSeed.model_validate(data)
 
 
 @pytest.mark.parametrize(
@@ -174,12 +174,12 @@ def test_invalid_master_is_rejected_without_any_saved_rows(engine, seed, case):
     elif case == "duplicate-code":
         data["courses"][1]["code"] = data["courses"][0]["code"]
     with pytest.raises(SeedError):
-        seed_master(engine, MasterSeed.model_validate(data))
-    assert counts(engine) == dict.fromkeys(MasterSeed.model_fields, 0)
+        seed_course_catalog(engine, CourseCatalogSeed.model_validate(data))
+    assert counts(engine) == dict.fromkeys(CourseCatalogSeed.model_fields, 0)
 
 
 def test_existing_conflict_is_not_overwritten_and_new_rows_are_not_added(engine, seed):
-    seed_master(engine, seed)
+    seed_course_catalog(engine, seed)
     data = seed.model_dump(mode="json")
     data["academic_programs"].append(
         {"id": str(uuid4()), "code": "NEW", "faculty_name": "追加学部"}
@@ -187,7 +187,7 @@ def test_existing_conflict_is_not_overwritten_and_new_rows_are_not_added(engine,
     data["courses"][0]["credits"] = 10
     before = counts(engine)
     with pytest.raises(SeedError, match="既存データ"):
-        seed_master(engine, MasterSeed.model_validate(data))
+        seed_course_catalog(engine, CourseCatalogSeed.model_validate(data))
     assert counts(engine) == before
     with engine.connect() as connection:
         assert (
@@ -199,12 +199,12 @@ def test_existing_conflict_is_not_overwritten_and_new_rows_are_not_added(engine,
 
 
 def test_incremental_seed_can_reference_existing_master(engine, seed):
-    seed_master(engine, seed)
-    data = {name: [] for name in MasterSeed.model_fields}
+    seed_course_catalog(engine, seed)
+    data = {name: [] for name in CourseCatalogSeed.model_fields}
     course = seed.courses[0].model_dump(mode="json")
     course.update(id=str(uuid4()), code="NEW-COURSE", name="テスト用の追加科目")
     data["courses"] = [course]
-    assert seed_master(engine, MasterSeed.model_validate(data))["courses"] == 1
+    assert seed_course_catalog(engine, CourseCatalogSeed.model_validate(data))["courses"] == 1
     assert counts(engine)["courses"] == len(seed.courses) + 1
 
 
@@ -216,13 +216,13 @@ def test_save_failure_rolls_back_preceding_tables(engine, seed):
             )
         )
     with pytest.raises(SeedError, match="全件の変更を取り消しました"):
-        seed_master(engine, seed)
-    assert counts(engine) == dict.fromkeys(MasterSeed.model_fields, 0)
+        seed_course_catalog(engine, seed)
+    assert counts(engine) == dict.fromkeys(CourseCatalogSeed.model_fields, 0)
 
 
 @pytest.mark.parametrize("invalid", [0, -2, 1.5, "invalid"])
 def test_database_itself_rejects_invalid_credits(engine, seed, invalid):
-    seed_master(engine, seed)
+    seed_course_catalog(engine, seed)
     with engine.begin() as connection:
         with pytest.raises(IntegrityError):
             connection.execute(
@@ -234,7 +234,7 @@ def test_database_itself_rejects_invalid_credits(engine, seed, invalid):
 def test_database_enforces_same_curriculum_references_restrict_and_nullable_uniqueness(
     engine, seed
 ):
-    seed_master(engine, seed)
+    seed_course_catalog(engine, seed)
     root = str(seed.classifications[0].id)
     child = str(seed.classifications[1].id)
     foreign_root = str(seed.classifications[17].id)

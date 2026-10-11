@@ -1,4 +1,4 @@
-"""同じ読取スナップショットから課程と科目マスタを取得する。"""
+"""同じ読取スナップショットから課程と科目データを取得する。"""
 
 from collections import defaultdict
 from uuid import UUID
@@ -14,7 +14,7 @@ from app.application.course_catalog import (
     CatalogProgram,
     CourseCatalog,
 )
-from app.infrastructure.master_models import (
+from app.infrastructure.course_catalog_models import (
     AcademicProgram,
     Classification,
     Course,

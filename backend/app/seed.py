@@ -1,4 +1,4 @@
-"""開発者向けマスタ投入CLI: python -m app.seed --file PATH。"""
+"""開発者向け課程・科目データ投入CLI: python -m app.seed --file PATH。"""
 
 import argparse
 import json
@@ -7,15 +7,15 @@ from pathlib import Path
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.application.errors.master_seed import SeedError
+from app.application.errors.course_catalog_seed import SeedError
 from app.config import Settings
 from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.master_seed import load_seed, seed_master
+from app.infrastructure.course_catalog_seed import load_seed, seed_course_catalog
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="JSONマスタを検証し、全件を1トランザクションで追加投入します。"
+        description="JSONの課程・科目データを検証し、全件を1トランザクションで追加投入します。"
     )
     parser.add_argument("--file", type=Path, required=True, help="UTF-8のJSONシード")
     arguments = parser.parse_args()
@@ -24,7 +24,7 @@ def main() -> int:
         seed = load_seed(arguments.file)
         engine = create_database_engine(Settings().database_url)
         create_database_schema(engine)
-        result = seed_master(engine, seed)
+        result = seed_course_catalog(engine, seed)
     except (SeedError, SQLAlchemyError, ValueError) as error:
         message = (
             str(error)

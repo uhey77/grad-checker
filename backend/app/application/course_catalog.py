@@ -1,4 +1,4 @@
-"""科目マスタの読取契約。開発用一覧でも所属を保存・変更しない。"""
+"""科目データの読取契約。開発用一覧でも所属を保存・変更しない。"""
 
 from abc import ABC, abstractmethod
 from uuid import UUID

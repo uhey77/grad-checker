@@ -36,7 +36,7 @@ def programs(session: SessionDependency) -> list[CatalogProgram]:
     except SQLAlchemyError as error:
         raise HTTPException(
             status_code=503,
-            detail="科目マスタを読み込めません。時間をおいて再試行してください。",
+            detail="科目データを読み込めません。時間をおいて再試行してください。",
         ) from error
 
 
@@ -55,10 +55,10 @@ def catalog(curriculum_id: str, session: SessionDependency) -> CourseCatalog:
     except ValueError as error:
         raise HTTPException(
             status_code=409,
-            detail="科目分類のデータが不整合です。マスタを確認してください。",
+            detail="科目分類のデータが不整合です。課程・科目データを確認してください。",
         ) from error
     except SQLAlchemyError as error:
         raise HTTPException(
             status_code=503,
-            detail="科目マスタを読み込めません。時間をおいて再試行してください。",
+            detail="科目データを読み込めません。時間をおいて再試行してください。",
         ) from error

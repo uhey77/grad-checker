@@ -45,7 +45,7 @@ tasks:
       - uv run pytest
 
   backend-seed:
-    desc: CS学部の便覧掲載科目マスタを検証して追加投入
+    desc: CS学部の便覧掲載科目データを検証して追加投入
     dir: backend
     cmds:
       - uv run python -m app.seed --file seeds/cs_2026.json

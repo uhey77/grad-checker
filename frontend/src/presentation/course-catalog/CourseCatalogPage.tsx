@@ -108,8 +108,8 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
           </section>
         ) : noPrograms ? (
           <div className="empty" role="status">
-            <strong>科目マスタが登録されていません</strong>
-            <p>マスタを登録してから再読み込みしてください。</p>
+            <strong>科目データが登録されていません</strong>
+            <p>科目データを登録してから再読み込みしてください。</p>
             <button type="button" onClick={() => setAttempt((x) => x + 1)}>
               再読み込み
             </button>

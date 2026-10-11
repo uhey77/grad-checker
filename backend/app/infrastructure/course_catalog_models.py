@@ -1,4 +1,4 @@
-"""SQLModelのマスタテーブル。業務層の入力契約とは分離する。"""
+"""SQLModelの課程・科目テーブル。業務層の入力契約とは分離する。"""
 
 from sqlalchemy import (
     CheckConstraint,
@@ -179,7 +179,7 @@ class CurriculumCourse(SQLModel, table=True):
     display_order: int = 0
 
 
-MASTER_TABLES = [
+COURSE_CATALOG_TABLES = [
     model.__table__
     for model in (
         AcademicProgram,

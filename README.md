@@ -11,7 +11,7 @@
 | すべての依存関係をインストール | `task setup` | `make setup` |
 | フロントエンドの依存関係をインストール | `task frontend-install` | `make frontend-install` |
 | バックエンドの依存関係をインストール | `task backend-install` | `make backend-install` |
-| CS学部の科目マスタを投入 | `task backend-seed` | `make backend-seed` |
+| CS学部の科目データを投入 | `task backend-seed` | `make backend-seed` |
 | バックエンドを起動 | `task backend-dev` | `make backend-dev` |
 | ローカル確認用の科目一覧APIを起動 | `task backend-catalog` | `make backend-catalog` |
 | バックエンドのテスト | `task backend-test` | `make backend-test` |
@@ -40,7 +40,7 @@ make backend-seed
 make dev
 ```
 
-依存関係のセットアップと科目マスタの投入は初回に実行してください。次回からは `task dev` または `make dev` だけで両方を起動できます。
+依存関係のセットアップと科目データの投入は初回に実行してください。次回からは `task dev` または `make dev` だけで両方を起動できます。
 
 開発サーバーの URL はターミナルに表示されます（通常は
 http://127.0.0.1:5173）。`Ctrl+C` で両方のサーバーを終了します。

@@ -1,11 +1,11 @@
-"""JSONシードの入力契約と、マスタ集合の整合性検証。"""
+"""JSONシードの入力契約と、課程・科目データ集合の整合性検証。"""
 
 from typing import Annotated
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.application.errors.master_seed import SeedError
+from app.application.errors.course_catalog_seed import SeedError
 from app.domain.course_type import CourseType
 from app.domain.curriculum_verification_status import VerificationStatus
 from app.domain.teaching_type import TeachingType
@@ -77,7 +77,7 @@ class CurriculumCourseData(SeedRecord):
     display_order: NonnegativeInteger = 0
 
 
-class MasterSeed(SeedRecord):
+class CourseCatalogSeed(SeedRecord):
     academic_programs: list[AcademicProgramData]
     curricula: list[CurriculumData]
     classifications: list[ClassificationData]
@@ -86,7 +86,7 @@ class MasterSeed(SeedRecord):
     curriculum_courses: list[CurriculumCourseData]
 
 
-def validate_master(seed: MasterSeed) -> list[ClassificationData]:
+def validate_course_catalog_data(seed: CourseCatalogSeed) -> list[ClassificationData]:
     """DB既存分と投入分を合わせて検証し、分類を親から順に返す。"""
 
     def unique(records: list, key, label: str) -> dict:

@@ -1,4 +1,4 @@
-"""検証済みマスタの原子的な追加投入。同じ内容の再投入は変更しない。"""
+"""検証済みの課程・科目データの原子的な追加投入。同じ内容の再投入は変更しない。"""
 
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
@@ -8,18 +8,18 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
-from app.application.errors.master_seed import SeedError
-from app.application.master_seed import (
+from app.application.errors.course_catalog_seed import SeedError
+from app.application.course_catalog_seed import (
     AcademicProgramData,
     ClassificationData,
     CourseData,
     CourseOfferingData,
     CurriculumCourseData,
     CurriculumData,
-    MasterSeed,
-    validate_master,
+    CourseCatalogSeed,
+    validate_course_catalog_data,
 )
-from app.infrastructure.master_models import (
+from app.infrastructure.course_catalog_models import (
     AcademicProgram,
     Classification,
     Course,
@@ -58,9 +58,9 @@ def record_key(
     return (record.id,)
 
 
-def load_seed(path: Path) -> MasterSeed:
+def load_seed(path: Path) -> CourseCatalogSeed:
     try:
-        return MasterSeed.model_validate_json(path.read_text(encoding="utf-8"))
+        return CourseCatalogSeed.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError) as error:
         raise SeedError("シードファイルをUTF-8で読み込めません。") from error
     except ValidationError as error:
@@ -72,7 +72,7 @@ def load_seed(path: Path) -> MasterSeed:
         ) from error
 
 
-def seed_master(engine: Engine, seed: MasterSeed) -> dict[str, int]:
+def seed_course_catalog(engine: Engine, seed: CourseCatalogSeed) -> dict[str, int]:
     # 入力内の重複を先に拒否する。参照は既存DBを使えるため、ここでは検証しない。
     for name, _, _ in TABLE_MAPPING:
         keys = [record_key(record) for record in getattr(seed, name)]
@@ -105,7 +105,7 @@ def seed_master(engine: Engine, seed: MasterSeed) -> dict[str, int]:
                         new.append(record)
                 combined[name] = existing + new
                 additions[name] = new
-            ordered = validate_master(MasterSeed(**combined))
+            ordered = validate_course_catalog_data(CourseCatalogSeed(**combined))
             new_classifications = {record.id for record in additions["classifications"]}
             additions["classifications"] = [
                 record for record in ordered if record.id in new_classifications
@@ -123,6 +123,6 @@ def seed_master(engine: Engine, seed: MasterSeed) -> dict[str, int]:
             session.commit()
     except SQLAlchemyError as error:
         raise SeedError(
-            "マスタを保存できません。DB接続・制約・競合を確認してください。全件の変更を取り消しました。"
+            "課程・科目データを保存できません。DB接続・制約・競合を確認してください。全件の変更を取り消しました。"
         ) from error
     return inserted
