@@ -10,6 +10,26 @@ from uuid import NAMESPACE_URL, uuid5
 
 DIRECTORY = Path(__file__).resolve().parent
 
+# 便覧の表記から内部区分への固定対応。生成処理中の書き換えを防ぐ。
+COURSE_TYPES = frozendict(
+    {
+        "必": "required",
+        "選必": "selective",
+        "選": "elective",
+        "": "elective",
+    }
+)
+TEACHING_TYPES = frozendict(
+    {
+        "講義": "lecture",
+        "演習": "exercise",
+        "実習": "practice",
+        "実験": "experiment",
+        "実技": "other",
+        "講義・演習": "other",
+    }
+)
+
 
 def identity(kind: str, code: str) -> str:
     return str(uuid5(NAMESPACE_URL, f"grad-checker:{kind}:{code}"))
@@ -150,20 +170,6 @@ def main() -> None:
 
     group_codes = add_classifications(seed, selections)
 
-    course_types = {
-        "必": "required",
-        "選必": "selective",
-        "選": "elective",
-        "": "elective",
-    }
-    teaching_types = {
-        "講義": "lecture",
-        "演習": "exercise",
-        "実習": "practice",
-        "実験": "experiment",
-        "実技": "other",
-        "講義・演習": "other",
-    }
     by_name = {}
     offering_keys = {}
     for page in source["pages"]:
@@ -187,7 +193,7 @@ def main() -> None:
                     "name": name,
                     "credits": credit_value,
                     "offering_program_id": identity("program", offering_program),
-                    "teaching_type": teaching_types[label],
+                    "teaching_type": TEACHING_TYPES[label],
                     "teaching_type_label": label,
                 }
                 by_name[name] = course
@@ -247,7 +253,7 @@ def main() -> None:
                         "classification_id": identity(
                             "classification", program + ":" + code
                         ),
-                        "course_type": course_types[course_type],
+                        "course_type": COURSE_TYPES[course_type],
                         "display_order": booklet * 100 + order,
                     }
                 )
