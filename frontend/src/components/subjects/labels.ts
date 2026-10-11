@@ -1,5 +1,8 @@
-import type { SubjectSortOrder } from "../../application/subject-list/sortSubjects";
-import type { Program, Offering } from "../../domain/subject-list/models";
+import {
+  type SubjectSortOrder,
+  type Program,
+  type Offering,
+} from "../../modules/subjects/public.ts";
 
 export const subjectTypeLabels = {
   required: "必修",

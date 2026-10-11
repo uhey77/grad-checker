@@ -19,13 +19,18 @@ try {
       "Bundler",
       "--strict",
       "--skipLibCheck",
+      "--rootDir",
+      "src",
+      "--rewriteRelativeImportExtensions",
       "--outDir",
       directory,
-      "src/application/subject-list/filterSubjects.ts",
-      "src/application/subject-list/sortSubjects.ts",
-      "src/presentation/subject-list/labels.ts",
-      "src/application/subject-list/SubjectListUseCases.ts",
-      "src/infrastructure/subject-list/mappers.ts",
+      "src/modules/subjects/application/subject-list/filterSubjects.ts",
+      "src/modules/subjects/application/subject-list/sortSubjects.ts",
+      "src/components/subjects/labels.ts",
+      "src/modules/subjects/application/subject-list/SubjectListUseCases.ts",
+      "src/modules/subjects/infrastructure/subject-list/mappers.ts",
+      "src/modules/subjects/infrastructure/subject-list/HttpSubjectListRepository.ts",
+      "src/hooks/subjects/errors.ts",
     ],
     { stdio: "inherit" },
   );
@@ -33,7 +38,7 @@ try {
   else {
     const result = spawnSync(
       process.execPath,
-      ["--test", "tests/subject-list.test.mjs"],
+      ["--test", "tests/subject-list.test.mjs", "tests/architecture.test.mjs"],
       {
         stdio: "inherit",
         env: { ...process.env, SUBJECT_TEST_BUILD_DIRECTORY: directory },

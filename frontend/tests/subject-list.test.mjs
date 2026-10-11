@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { join } from "node:path";
@@ -10,13 +9,13 @@ async function loadModule(path) {
   );
 }
 const { filterSubjects, emptyFilters } = await loadModule(
-  "application/subject-list/filterSubjects.js",
+  "modules/subjects/application/subject-list/filterSubjects.js",
 );
 const { toSubjectList } = await loadModule(
-  "infrastructure/subject-list/mappers.js",
+  "modules/subjects/infrastructure/subject-list/mappers.js",
 );
 const { createSubjectListUseCases } = await loadModule(
-  "application/subject-list/SubjectListUseCases.js",
+  "modules/subjects/application/subject-list/SubjectListUseCases.js",
 );
 
 const program = {
@@ -137,48 +136,10 @@ test("ユースケースは注入した取得先に課程IDとキャンセル信
   await assert.rejects(failed.listPrograms(signal), /取得失敗/);
 });
 
-test("内側の層はReactや通信実装に依存せず、画面は通信実装を直接参照しない", async () => {
-  async function scan(directory) {
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      const path = new URL(
-        entry.name + (entry.isDirectory() ? "/" : ""),
-        directory,
-      );
-      if (entry.isDirectory()) await scan(path);
-      else if (/\.tsx?$/.test(entry.name)) {
-        const source = await readFile(path, "utf8");
-        const imports = [
-          ...source.matchAll(/(?:from\s+|import\s*)["']([^"']+)["']/g),
-        ].map((x) => x[1]);
-        for (const dependency of imports) {
-          if (directory.href.includes("/domain/"))
-            assert.ok(
-              !/application|infrastructure|presentation|react/.test(dependency),
-              path.pathname,
-            );
-          if (directory.href.includes("/application/"))
-            assert.ok(
-              !/infrastructure|presentation|react/.test(dependency),
-              path.pathname,
-            );
-          if (directory.href.includes("/presentation/"))
-            assert.ok(!/infrastructure/.test(dependency), path.pathname);
-        }
-        if (!directory.href.includes("/infrastructure/"))
-          assert.ok(!/\bfetch\s*\(/.test(source), path.pathname);
-      }
-    }
-  }
-  for (const layer of ["domain", "application", "presentation"])
-    await scan(new URL(`../src/${layer}/`, import.meta.url));
-});
-
 const { sortSubjects } = await loadModule(
-  "application/subject-list/sortSubjects.js",
+  "modules/subjects/application/subject-list/sortSubjects.js",
 );
-const { offeringLabels } = await loadModule(
-  "presentation/subject-list/labels.js",
-);
+const { offeringLabels } = await loadModule("components/subjects/labels.js");
 
 test("並べ替えは単位・最初の開講期を比較し、同順位の便覧順と元データを保つ", () => {
   const base = toSubjectList(dto).subjects[0];
@@ -232,4 +193,71 @@ test("同学年の両学期だけをまとめ、異なる学年の前期と後�
     ["1年次前期", "2年次後期"],
   );
   assert.deepEqual(offeringLabels([]), []);
+});
+
+const { HttpSubjectListRepository } = await loadModule(
+  "modules/subjects/infrastructure/subject-list/HttpSubjectListRepository.js",
+);
+const { SubjectListError } = await loadModule(
+  "modules/subjects/application/errors/SubjectListError.js",
+);
+const { subjectListErrorMessage } = await loadModule(
+  "hooks/subjects/errors.js",
+);
+
+test("HTTP取得先はDTOを変換し、業務エラーと通信キャンセルを区別する", async () => {
+  const originalFetch = globalThis.fetch;
+  const repository = new HttpSubjectListRepository("/api/dev/subject-list");
+  const controller = new AbortController();
+  try {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, "/api/dev/subject-list/social%2Ftest");
+      assert.equal(options.signal, controller.signal);
+      return Response.json(dto);
+    };
+    assert.deepEqual(
+      await repository.getSubjectList("social/test", controller.signal),
+      toSubjectList(dto),
+    );
+    for (const [status, code] of [
+      [404, "not-found"],
+      [409, "conflict"],
+      [503, "unavailable"],
+      [422, "unexpected"],
+    ]) {
+      globalThis.fetch = async () =>
+        Response.json({ detail: "日本語のエラー" }, { status });
+      await assert.rejects(
+        repository.listPrograms(controller.signal),
+        (error) => {
+          assert.ok(error instanceof SubjectListError);
+          assert.equal(error.code, code);
+          assert.equal(subjectListErrorMessage(error), "日本語のエラー");
+          return true;
+        },
+      );
+    }
+    globalThis.fetch = async () => {
+      throw new TypeError("network");
+    };
+    await assert.rejects(
+      repository.listPrograms(controller.signal),
+      (error) => error.code === "unavailable",
+    );
+    globalThis.fetch = async () => new Response("not json");
+    await assert.rejects(
+      repository.listPrograms(controller.signal),
+      (error) => error.code === "invalid-response",
+    );
+    const aborted = new DOMException("cancelled", "AbortError");
+    globalThis.fetch = async () => {
+      throw aborted;
+    };
+    await assert.rejects(
+      repository.listPrograms(controller.signal),
+      (error) => error === aborted,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

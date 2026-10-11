@@ -1,5 +1,5 @@
+import { type Subject } from "../../modules/subjects/public.ts";
 import { subjectTypeLabels, offeringLabels } from "./labels";
-import type { Subject } from "../../domain/subject-list/models";
 
 export function SubjectTable({ subjects }: { subjects: Subject[] }) {
   if (subjects.length === 0) {

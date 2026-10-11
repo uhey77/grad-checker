@@ -1,6 +1,7 @@
+import { SubjectListError } from "../../application/errors/SubjectListError.ts";
 import type { SubjectListRepository } from "../../application/subject-list/SubjectListRepository";
 import type { SubjectListDto, ProgramDto } from "./dto";
-import { toSubjectList, toProgram } from "./mappers";
+import { toSubjectList, toProgram } from "./mappers.ts";
 
 export class HttpSubjectListRepository implements SubjectListRepository {
   constructor(private readonly baseUrl: string) {}
@@ -30,17 +31,23 @@ export class HttpSubjectListRepository implements SubjectListRepository {
           typeof body === "object" && body !== null && "detail" in body
             ? body.detail
             : null;
-        throw new Error(
-          typeof detail === "string"
-            ? detail
-            : "科目一覧を読み込めませんでした。",
+        throw new SubjectListError(
+          response.status === 404
+            ? "not-found"
+            : response.status === 409
+              ? "conflict"
+              : response.status >= 500
+                ? "unavailable"
+                : "unexpected",
+          typeof detail === "string" ? detail : null,
         );
       }
       return body as T;
     } catch (error) {
       if (error instanceof TypeError || error instanceof SyntaxError)
-        throw new Error(
-          "科目一覧に接続できませんでした。時間をおいて再試行してください。",
+        throw new SubjectListError(
+          error instanceof SyntaxError ? "invalid-response" : "unavailable",
+          null,
           { cause: error },
         );
       throw error;

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 type Remote<T> =
   | { key: string | null; status: "loading" }
   | { key: string; status: "ready"; data: T }
-  | { key: string; status: "error"; message: string };
+  | { key: string; status: "error"; error: unknown };
 
 export function useRemote<T>(
   key: string | null,
@@ -28,10 +28,7 @@ export function useRemote<T>(
           setState({
             key: requestKey,
             status: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "科目一覧を読み込めませんでした。",
+            error,
           });
       },
     );
