@@ -26,12 +26,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.3.0
         with:
           working-directory: backend
           enable-cache: true
-          cache-dependency-glob: uv.lock
+          cache-dependency-glob: "backend/**/uv.lock"
 
       - name: Install Python
         run: uv python install
