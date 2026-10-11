@@ -13,13 +13,9 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend / ${{ matrix.check }}
+    name: Backend
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        check: [lint, typecheck, format-check]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -38,6 +34,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
 
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
+
       - name: Install Python
         run: uv python install
         working-directory: backend
@@ -45,36 +47,11 @@ jobs:
       - name: Install dependencies
         run: make backend-install
 
-      - name: Run check
-        run: make backend-${{ matrix.check }}
+      - name: Run backend checks
+        run: make backend-check
 
-  go-api:
-    name: Backend Go / ${{ matrix.check }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        check: [check, test]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.mod
-
-      - name: Run check
-        run: make go-api-${{ matrix.check }}
+      - name: Run Go tests
+        run: make go-api-test
 
   frontend:
     name: Frontend / ${{ matrix.check }}
