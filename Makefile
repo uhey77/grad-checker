@@ -77,6 +77,7 @@ backend-python-dev:
 
 backend-test:
 	cd backend && uv run --locked pytest
+	$(MAKE) go-api-test
 
 backend-lint:
 	cd backend && uv run --locked ruff check .

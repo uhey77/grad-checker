@@ -67,10 +67,11 @@ tasks:
       - uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
   backend-test:
-    desc: バックエンドのテストを実行
+    desc: Python・結合テストとGoの競合検出付きテストを実行
     dir: backend
     cmds:
       - uv run --locked pytest
+      - task: go-api-test
 
   backend-lint:
     desc: Ruffとgo vetでバックエンドのlintを検証

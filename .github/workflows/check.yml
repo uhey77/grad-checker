@@ -27,7 +27,7 @@ jobs:
           - check: typecheck
             target: backend-typecheck
           - check: test
-            target: go-api-test
+            target: backend-test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
