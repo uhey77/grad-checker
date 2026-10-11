@@ -4,25 +4,19 @@
 
 ## セットアップ
 
-リポジトリのルートから、Task または Make のどちらかで実行してください。
+リポジトリのルートで、Task または Make のどちらかを使って依存関係をセットアップしてください。
 
 Task を使用する場合：
 
 ```sh
 task setup
-task backend-seed
-task dev
 ```
 
 Make を使用する場合：
 
 ```sh
 make setup
-make backend-seed
-make dev
 ```
-
-依存関係のセットアップと科目データの投入は初回に実行してください。次回からは `task dev` または `make dev` だけで両方を起動できます。
 
 ## タスクランナーのコマンド
 
