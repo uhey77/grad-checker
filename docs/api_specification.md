@@ -129,3 +129,15 @@ GET /checks/{id}は所有者を確認して当時のinputとresultを200で返�
 実装時にPydantic/SQLModelで入力を検証し、エラー文字列を統一する。Swagger UIをFastAPIから自動生成する。pytestで正常・異常・本人認可・原子的保存・履歴不変を検証し、READMEへ起動・初期化・シード・テストの手順を記載する。
 
 関連：[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
+
+## ローカル確認用の実装（2026年10月11日）
+
+ユーザー確認に基づき、ログイン実装前にCS学部の科目マスタを閲覧できる開発用経路を追加した。
+`GET /api/dev/course-catalog/programs` は登録済みカリキュラムの確認用一覧、
+`GET /api/dev/course-catalog/{curriculum_id}` は課程別科目・分類階層・開講期・原文注記を返す。
+未確認カリキュラムも確認用として表示するが、適用入学年度が未確認であることを画面に示す。
+本人課程の設定・成績保存・卒業判定・認証を代替する経路ではない。
+
+`ENABLE_CATALOG_PREVIEW` は既定falseで、無効時は404。ローカル確認時だけtrueにして
+127.0.0.1へバインドする。GETのみ・no-store・DBからの読取のみで、学生データは扱わない。
+公開環境にはこの設定を引き継がない。学生向けの `/api/courses` 等は引き続き認証必須として実装する。

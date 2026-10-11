@@ -16,3 +16,6 @@ class Settings(BaseSettings):
         default=f"sqlite:///{Path(__file__).resolve().parents[1] / 'data' / 'grad_checker.db'}",
         validation_alias="DATABASE_URL",
     )
+    enable_subject_list_preview: bool = Field(
+        default=False, validation_alias="ENABLE_CATALOG_PREVIEW"
+    )

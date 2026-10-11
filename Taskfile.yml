@@ -30,13 +30,32 @@ tasks:
     cmds:
       - uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
+  backend-catalog:
+    desc: ローカル確認用の科目一覧APIを有効にして起動
+    dir: backend
+    env:
+      ENABLE_CATALOG_PREVIEW: 'true'
+    cmds:
+      - uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
   backend-test:
     desc: バックエンドのテストを実行
     dir: backend
     cmds:
       - uv run pytest
 
+  backend-seed:
+    desc: CS学部の便覧掲載科目データを検証して追加投入
+    dir: backend
+    cmds:
+      - uv run python -m app.seed --file seeds/cs_2026.json
+
   dev:
+    desc: フロントエンドと科目一覧APIを同時に起動
+    cmds:
+      - node scripts/dev.mjs
+
+  frontend-dev:
     desc: フロントエンドの開発サーバーを起動
     dir: frontend
     cmds:

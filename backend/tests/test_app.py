@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from app.config import Settings
 from app.main import create_app
@@ -19,6 +19,14 @@ def test_startup_health_and_openapi(tmp_path: Path) -> None:
         assert client.get("/docs").status_code == 200
         schema = client.get("/openapi.json").json()
         assert "/api/health" in schema["paths"]
+        assert set(inspect(application.state.database_engine).get_table_names()) == {
+            "academic_programs",
+            "curricula",
+            "classifications",
+            "courses",
+            "course_offerings",
+            "curriculum_courses",
+        }
         with application.state.database_engine.connect() as connection:
             assert connection.execute(text("SELECT 1")).scalar_one() == 1
 
