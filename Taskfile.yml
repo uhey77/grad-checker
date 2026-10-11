@@ -91,7 +91,7 @@ tasks:
     cmds:
       - uv run --locked ruff check --fix .
       - uv run --locked ruff format .
-      - node ../scripts/go-modules.mjs fmt
+      - go fmt ./...
 
   backend-typecheck:
     desc: tyでバックエンドの型を検証
@@ -135,25 +135,25 @@ tasks:
     desc: Go外部APIだけを起動（科目一覧有効）
     dir: backend
     cmds:
-      - go -C api run . -subject-list-preview
+      - go run ./api -subject-list-preview
 
   go-api-check:
     desc: Goの整形状態・静的解析を検証
     cmds:
       - node scripts/check-go-format.mjs
-      - node scripts/go-modules.mjs vet
+      - go -C backend vet ./...
 
   go-api-format:
     desc: Goコードを整形
     dir: backend
     cmds:
-      - node ../scripts/go-modules.mjs fmt
+      - go fmt ./...
 
   go-api-test:
     desc: Goの入力検証・エラー変換・内部通信をテスト
     dir: backend
     cmds:
-      - node ../scripts/go-modules.mjs test -race
+      - go test -race ./...
 
   frontend-lint:
     desc: ESLintでフロントエンドのlintを検証

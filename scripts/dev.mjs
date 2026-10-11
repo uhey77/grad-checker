@@ -94,10 +94,10 @@ start(
   "go",
   [
     "run",
-    ".",
+    "./api",
     ...(subjectListPreview ? ["-subject-list-preview"] : []),
   ],
-  "backend/api/",
+  "backend/",
 );
 if (!backendOnly)
   start(

@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"time"
 
-	"grad-checker/subjects/application"
+	"grad-checker/backend/modules/subjects/application"
 )
 
 type PythonSubjectListClient struct {

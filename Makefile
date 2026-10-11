@@ -88,7 +88,7 @@ backend-format-check:
 backend-format:
 	cd backend && uv run --locked ruff check --fix .
 	cd backend && uv run --locked ruff format .
-	node scripts/go-modules.mjs fmt
+	cd backend && go fmt ./...
 
 backend-typecheck:
 	cd backend && uv run --locked ty check
@@ -109,17 +109,17 @@ dev-go:
 	$(MAKE) dev
 
 go-api-dev:
-	cd backend/api && go run . -subject-list-preview
+	cd backend && go run ./api -subject-list-preview
 
 go-api-check:
 	node scripts/check-go-format.mjs
-	node scripts/go-modules.mjs vet
+	cd backend && go vet ./...
 
 go-api-format:
-	node scripts/go-modules.mjs fmt
+	cd backend && go fmt ./...
 
 go-api-test:
-	node scripts/go-modules.mjs test -race
+	cd backend && go test -race ./...
 
 frontend-dev:
 	cd frontend && npm run dev

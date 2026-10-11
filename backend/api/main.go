@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"grad-checker/api/presentation"
-	"grad-checker/subjects/infrastructure"
+	"grad-checker/backend/api/presentation"
+	"grad-checker/backend/modules/subjects/infrastructure"
 )
 
 func main() {

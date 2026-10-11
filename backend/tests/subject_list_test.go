@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"grad-checker/api/presentation"
-	"grad-checker/subjects/application"
+	"grad-checker/backend/api/presentation"
+	"grad-checker/backend/modules/subjects/application"
 )
 
 type fakeSubjectList struct {

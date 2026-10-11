@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"grad-checker/subjects/application"
+	"grad-checker/backend/modules/subjects/application"
 )
 
 func writeJSON(w http.ResponseWriter, status int, value any) {

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"grad-checker/subjects/application"
-	"grad-checker/subjects/infrastructure"
+	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/infrastructure"
 )
 
 func TestInternalProtocol(t *testing.T) {
