@@ -16,7 +16,7 @@
 
 ```sh
 uv run python seeds/build_cs_seed.py
-uv run python -m app.seed --file seeds/cs_2026.json
+uv run --locked python scripts/seed_subjects.py --file seeds/cs_2026.json
 ```
 
 | 登録内容 | 件数 |
@@ -83,8 +83,8 @@ UUID・必須文字列・正整数／非負整数を検証し、未知フィー�
 
 ## 実装ファイル
 
-- `app/application/subject_data_validation.py`：投入する課程・科目データの型と整合性検証。
-- `app/infrastructure/subject_data_import.py`：JSONの読み込みと、DBへの原子的な追加投入。
-- `app/infrastructure/subject_models.py`：課程・科目データを保存する6テーブル。
-- `app/application/errors/subject_data.py`：投入処理の例外。
-- `app/presentation/subject_list.py`：科目一覧を取得するAPI。
+- `modules/subjects/grad_checker_subjects/application/subject_data_validation.py`：投入する課程・科目データの型と整合性検証。
+- `modules/subjects/grad_checker_subjects/infrastructure/subject_data_import.py`：JSONの読み込みと、DBへの原子的な追加投入。
+- `modules/subjects/grad_checker_subjects/infrastructure/subject_models.py`：課程・科目データを保存する6テーブル。
+- `modules/subjects/grad_checker_subjects/application/errors/subject_data.py`：投入処理の例外。
+- `api/presentation/subject_list.go`：科目一覧を取得するAPI。
