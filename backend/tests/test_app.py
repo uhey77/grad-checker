@@ -1,24 +1,24 @@
 from pathlib import Path
 
+from api_service.main import create_app
+from api_service.presentation.dependencies import SessionDependency
 from fastapi.testclient import TestClient
+from grad_checker_config.settings import Settings
 from sqlalchemy import inspect, text
 
-from app.config import Settings
-from app.main import create_app
-from app.presentation.dependencies import SessionDependency
 
-
-def test_startup_health_and_openapi(tmp_path: Path) -> None:
+def test_startup_and_internal_service(tmp_path: Path) -> None:
     database_path = tmp_path / "data" / "test.db"
     application = create_app(Settings(database_url=f"sqlite:///{database_path}"))
 
     with TestClient(application) as client:
-        response = client.get("/api/health")
+        response = client.post(
+            "/internal/subject-list", json={"operation": "list_programs"}
+        )
         assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
-        assert client.get("/docs").status_code == 200
-        schema = client.get("/openapi.json").json()
-        assert "/api/health" in schema["paths"]
+        assert response.json() == {"data": []}
+        assert client.get("/docs").status_code == 404
+        assert client.get("/openapi.json").status_code == 404
         assert set(inspect(application.state.database_engine).get_table_names()) == {
             "academic_programs",
             "curricula",

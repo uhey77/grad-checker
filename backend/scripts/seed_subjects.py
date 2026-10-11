@@ -1,16 +1,21 @@
-"""開発者向け課程・科目データ投入CLI: python -m app.seed --file PATH。"""
+"""開発者向け課程・科目データ投入CLI: python scripts/seed_subjects.py --file PATH。"""
 
 import argparse
 import json
 import sys
 from pathlib import Path
 
+from grad_checker_config.settings import Settings
+from grad_checker_subjects.application.errors.subject_data import SeedError
+from grad_checker_subjects.infrastructure.database import (
+    create_database_engine,
+    create_database_schema,
+)
+from grad_checker_subjects.infrastructure.subject_data_import import (
+    import_subject_data,
+    load_seed,
+)
 from sqlalchemy.exc import SQLAlchemyError
-
-from app.application.errors.subject_data import SeedError
-from app.config import Settings
-from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.subject_data_import import import_subject_data, load_seed
 
 
 def main() -> int:

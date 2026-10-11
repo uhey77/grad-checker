@@ -1,8 +1,7 @@
 from uuid import UUID
 
 import pytest
-
-from app.application.subject_list import (
+from grad_checker_subjects.application.subject_list import (
     SubjectList,
     SubjectListProgram,
     SubjectListRepository,

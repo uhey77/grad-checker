@@ -8,8 +8,8 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
-from app.application.errors.subject_data import SeedError
-from app.application.subject_data_validation import (
+from grad_checker_subjects.application.errors.subject_data import SeedError
+from grad_checker_subjects.application.subject_data_validation import (
     AcademicProgramData,
     ClassificationData,
     CurriculumData,
@@ -19,7 +19,7 @@ from app.application.subject_data_validation import (
     SubjectOfferingData,
     validate_subject_data,
 )
-from app.infrastructure.subject_models import (
+from grad_checker_subjects.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
     Curriculum,

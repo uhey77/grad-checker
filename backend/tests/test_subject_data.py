@@ -8,14 +8,19 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from grad_checker_subjects.application.errors.subject_data import SeedError
+from grad_checker_subjects.application.subject_data_validation import SubjectDataSeed
+from grad_checker_subjects.infrastructure.database import (
+    create_database_engine,
+    create_database_schema,
+)
+from grad_checker_subjects.infrastructure.subject_data_import import (
+    import_subject_data,
+    load_seed,
+)
 from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
-
-from app.application.errors.subject_data import SeedError
-from app.application.subject_data_validation import SubjectDataSeed
-from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.subject_data_import import import_subject_data, load_seed
 
 BACKEND = Path(__file__).resolve().parents[1]
 SEED_PATH = BACKEND / "seeds" / "cs_2026.json"
@@ -274,7 +279,7 @@ def test_database_enforces_same_curriculum_references_restrict_and_nullable_uniq
 def test_cli_and_japanese_input_errors(tmp_path):
     db = tmp_path / "cli.db"
     environment = dict(os.environ, DATABASE_URL=f"sqlite:///{db}")
-    command = [sys.executable, "-m", "app.seed", "--file", str(SEED_PATH)]
+    command = [sys.executable, "scripts/seed_subjects.py", "--file", str(SEED_PATH)]
     first = subprocess.run(
         command,
         cwd=BACKEND,
