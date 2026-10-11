@@ -1,17 +1,25 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help check format backend-check frontend-check setup frontend-install backend-install backend-dev backend-catalog backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
+.PHONY: dev-go go-api-dev go-api-check go-api-test go-api-format backend-python-dev
+
+.PHONY: help check format backend-check frontend-check setup frontend-install backend-install backend-dev backend-subject-list backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
 
 help:
+	@echo "go-api-format     Goコードを整形"
+	@echo "backend-python-dev Python内部サービスだけを起動"
+	@echo "dev-go            devと同じ構成で起動（互換コマンド）"
+	@echo "go-api-dev        科目一覧のGo APIを起動"
+	@echo "go-api-check      Goの整形状態・静的解析を検証"
+	@echo "go-api-test       Goの入力検証・エラー変換・内部通信をテスト"
 	@echo "check             バックエンドとフロントエンドのlint・整形状態・型を検証"
 	@echo "format            バックエンドとフロントエンドのlint自動修正・整形を実行"
 	@echo "backend-check     バックエンドのlint・整形状態・型を検証"
 	@echo "frontend-check    フロントエンドのlint・整形状態・型を検証"
 	@echo "setup             フロントエンドとバックエンドの依存関係をインストール"
 	@echo "frontend-install  npm ciを実行"
-	@echo "backend-install   uv sync --lockedを実行"
+	@echo "backend-install   各パッケージの依存を個別に同期"
 	@echo "backend-dev       バックエンドの開発サーバーを起動"
-	@echo "backend-catalog   ローカル確認用の科目一覧APIを有効にして起動"
+	@echo "backend-subject-list   ローカル確認用の科目一覧APIを有効にして起動"
 	@echo "backend-test      バックエンドのテストを実行"
 	@echo "backend-lint      Ruffでlintを検証"
 	@echo "backend-format-check Ruffで整形状態を検証"
@@ -41,6 +49,7 @@ backend-check:
 	$(MAKE) backend-lint
 	$(MAKE) backend-format-check
 	$(MAKE) backend-typecheck
+	$(MAKE) go-api-check
 
 frontend-check:
 	$(MAKE) frontend-lint
@@ -56,16 +65,19 @@ frontend-install:
 	cd frontend && npm ci
 
 backend-install:
-	cd backend && uv sync --locked
+	node scripts/install-backend.mjs
 
 backend-dev:
-	cd backend && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+	node scripts/dev.mjs --backend-only
 
-backend-catalog:
-	cd backend && ENABLE_CATALOG_PREVIEW=true uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+backend-subject-list:
+	node scripts/dev.mjs --backend-only --subject-list-preview
+
+backend-python-dev:
+	cd backend && uv run --locked --project api uvicorn api_service.main:app --reload --host 127.0.0.1 --port 8001
 
 backend-test:
-	cd backend && uv run pytest
+	cd backend && uv run --locked pytest
 
 backend-lint:
 	cd backend && uv run --locked ruff check .
@@ -76,6 +88,7 @@ backend-format-check:
 backend-format:
 	cd backend && uv run --locked ruff check --fix .
 	cd backend && uv run --locked ruff format .
+	node scripts/go-modules.mjs fmt
 
 backend-typecheck:
 	cd backend && uv run --locked ty check
@@ -87,10 +100,26 @@ pre-commit:
 	uv run --locked --project backend pre-commit run --all-files
 
 backend-seed:
-	cd backend && uv run python -m app.seed --file seeds/cs_2026.json
+	cd backend && uv run --locked python scripts/seed_subjects.py --file seeds/cs_2026.json
 
 dev:
 	node scripts/dev.mjs
+
+dev-go:
+	$(MAKE) dev
+
+go-api-dev:
+	cd backend/api && go run . -subject-list-preview
+
+go-api-check:
+	node scripts/check-go-format.mjs
+	node scripts/go-modules.mjs vet
+
+go-api-format:
+	node scripts/go-modules.mjs fmt
+
+go-api-test:
+	node scripts/go-modules.mjs test -race
 
 frontend-dev:
 	cd frontend && npm run dev

@@ -4,6 +4,9 @@ import { join } from "node:path";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const windows = process.platform === "win32";
+const backendOnly = process.argv.includes("--backend-only");
+const subjectListPreview =
+  !backendOnly || process.argv.includes("--subject-list-preview");
 const servers = [];
 let stopping = false;
 
@@ -67,26 +70,39 @@ function start(name, command, args, directory, environment = {}) {
 process.on("SIGINT", () => void stop(0));
 process.on("SIGTERM", () => void stop(0));
 
-console.log("フロントエンドとバックエンドを起動します。終了は Ctrl+C です。");
+console.log(
+  `${backendOnly ? "バックエンド" : "フロントエンドとバックエンド"}を起動します。終了は Ctrl+C です。`,
+);
 start(
   "バックエンド",
   "uv",
   [
     "run",
+    "--locked",
     "uvicorn",
-    "app.main:app",
+    "api_service.main:app",
     "--reload",
     "--host",
     "127.0.0.1",
     "--port",
-    "8000",
+    "8001",
   ],
-  "backend/",
-  { ENABLE_CATALOG_PREVIEW: "true" },
+  "backend/api/",
 );
 start(
-  "フロントエンド",
-  "npm",
-  ["run", "dev", "--", "--port", "5173", "--strictPort"],
-  "frontend/",
+  "Go API",
+  "go",
+  [
+    "run",
+    ".",
+    ...(subjectListPreview ? ["-subject-list-preview"] : []),
+  ],
+  "backend/api/",
 );
+if (!backendOnly)
+  start(
+    "フロントエンド",
+    "npm",
+    ["run", "dev", "--", "--port", "5173", "--strictPort"],
+    "frontend/",
+  );
