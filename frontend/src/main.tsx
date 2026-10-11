@@ -6,7 +6,7 @@ import { createSubjectListUseCases } from "./application/subject-list/SubjectLis
 import { HttpSubjectListRepository } from "./infrastructure/subject-list/HttpSubjectListRepository";
 
 const subjectListUseCases = createSubjectListUseCases(
-  new HttpSubjectListRepository("/api/dev/course-catalog"),
+  new HttpSubjectListRepository("/api/dev/subject-list"),
 );
 
 createRoot(document.getElementById("app")!).render(
