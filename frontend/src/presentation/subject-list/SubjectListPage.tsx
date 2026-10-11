@@ -1,56 +1,65 @@
 import { useCallback, useState } from "react";
-import { courseTypeLabels, programLabel, catalogSortLabels } from "./labels";
-import type { CatalogUseCases } from "../../application/course-catalog/CatalogUseCases";
+import { subjectTypeLabels, programLabel, subjectSortLabels } from "./labels";
+import type { SubjectListUseCases } from "../../application/subject-list/SubjectListUseCases";
 import {
   emptyFilters,
-  filterCourses,
-} from "../../application/course-catalog/filterCourses";
+  filterSubjects,
+} from "../../application/subject-list/filterSubjects";
 import {
-  sortCourses,
-  isCatalogSortOrder,
-  type CatalogSortOrder,
-} from "../../application/course-catalog/sortCourses";
-import { CourseTable } from "./CourseTable";
+  sortSubjects,
+  isSubjectSortOrder,
+  type SubjectSortOrder,
+} from "../../application/subject-list/sortSubjects";
+import { SubjectTable } from "./SubjectTable";
 import { useRemote } from "../shared/useRemote";
 
-export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
+export function SubjectListPage({
+  useCases,
+}: {
+  useCases: SubjectListUseCases;
+}) {
   const [attempt, setAttempt] = useState(0);
   const [chosenId, setChosenId] = useState("");
   const [filters, setFilters] = useState(emptyFilters);
-  const [sortOrder, setSortOrder] = useState<CatalogSortOrder>("handbook");
+  const [sortOrder, setSortOrder] = useState<SubjectSortOrder>("handbook");
   const programState = useRemote("programs", useCases.listPrograms, attempt);
   const programs = programState.status === "ready" ? programState.data : [];
   const curriculumId = chosenId || programs[0]?.curriculumId || "";
-  const loadCatalog = useCallback(
-    (signal: AbortSignal) => useCases.getCatalog(curriculumId, signal),
+  const loadSubjectList = useCallback(
+    (signal: AbortSignal) => useCases.getSubjectList(curriculumId, signal),
     [useCases, curriculumId],
   );
-  const catalogState = useRemote(curriculumId || null, loadCatalog, attempt);
-  const catalog = catalogState.status === "ready" ? catalogState.data : null;
+  const subjectListState = useRemote(
+    curriculumId || null,
+    loadSubjectList,
+    attempt,
+  );
+  const subjectList =
+    subjectListState.status === "ready" ? subjectListState.data : null;
   const categories = new Map(
-    catalog?.courses.flatMap((course) =>
-      course.classificationPath[0]
+    subjectList?.subjects.flatMap((subject) =>
+      subject.classificationPath[0]
         ? [
             [
-              course.classificationPath[0].id,
-              course.classificationPath[0].name,
+              subject.classificationPath[0].id,
+              subject.classificationPath[0].name,
             ] as const,
           ]
         : [],
     ),
   );
   const faculties = [
-    ...new Set(catalog?.courses.map((course) => course.facultyName)),
+    ...new Set(subjectList?.subjects.map((subject) => subject.facultyName)),
   ];
-  const visible = sortCourses(
-    filterCourses(catalog?.courses ?? [], filters),
+  const visible = sortSubjects(
+    filterSubjects(subjectList?.subjects ?? [], filters),
     sortOrder,
   );
   const error =
     programState.status === "error"
       ? programState.message
-      : catalogState.status === "error"
-        ? catalogState.message
+      : subjectListState.status === "error"
+        ? subjectListState.message
         : null;
   const noPrograms = programState.status === "ready" && programs.length === 0;
   const changeFilter = (key: keyof typeof filters, value: string) =>
@@ -114,7 +123,7 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
               再読み込み
             </button>
           </div>
-        ) : !catalog ? (
+        ) : !subjectList ? (
           <div className="loading" role="status">
             科目一覧を読み込んでいます…
           </div>
@@ -124,17 +133,17 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
               <div>
                 <span>登録科目</span>
                 <strong>
-                  {catalog.courses.length}
+                  {subjectList.subjects.length}
                   <small>科目</small>
                 </strong>
               </div>
               {(["required", "selective", "elective"] as const).map((type) => (
                 <div key={type}>
-                  <span>{courseTypeLabels[type]}</span>
+                  <span>{subjectTypeLabels[type]}</span>
                   <strong>
                     {
-                      catalog.courses.filter(
-                        (course) => course.courseType === type,
+                      subjectList.subjects.filter(
+                        (subject) => subject.subjectType === type,
                       ).length
                     }
                     <small>科目</small>
@@ -142,7 +151,10 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
                 </div>
               ))}
             </div>
-            <section className="catalog-panel" aria-labelledby="list-heading">
+            <section
+              className="subject-list-panel"
+              aria-labelledby="list-heading"
+            >
               <div className="filters">
                 <div className="search-field">
                   <label htmlFor="search">科目名を検索</label>
@@ -183,7 +195,7 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
                     }
                   >
                     <option value="">すべての種別</option>
-                    {Object.entries(courseTypeLabels).map(([type, label]) => (
+                    {Object.entries(subjectTypeLabels).map(([type, label]) => (
                       <option key={type} value={type}>
                         {label}
                       </option>
@@ -226,10 +238,10 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
                     value={sortOrder}
                     onChange={(event) => {
                       const value = event.target.value;
-                      if (isCatalogSortOrder(value)) setSortOrder(value);
+                      if (isSubjectSortOrder(value)) setSortOrder(value);
                     }}
                   >
-                    {Object.entries(catalogSortLabels).map(([value, label]) => (
+                    {Object.entries(subjectSortLabels).map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
                       </option>
@@ -238,10 +250,10 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
                 </div>
               </div>
               <div className="list-heading">
-                <h2 id="list-heading">{programLabel(catalog.program)}</h2>
+                <h2 id="list-heading">{programLabel(subjectList.program)}</h2>
                 <div>
                   <span role="status" aria-live="polite">
-                    {visible.length} / {catalog.courses.length} 科目
+                    {visible.length} / {subjectList.subjects.length} 科目
                   </span>
                   <button
                     className="reset-button"
@@ -252,7 +264,7 @@ export function CourseCatalogPage({ useCases }: { useCases: CatalogUseCases }) {
                   </button>
                 </div>
               </div>
-              <CourseTable courses={visible} />
+              <SubjectTable subjects={visible} />
             </section>
           </>
         )}

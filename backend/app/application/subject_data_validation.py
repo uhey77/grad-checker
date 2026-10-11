@@ -5,8 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.application.errors.course_catalog_seed import SeedError
-from app.domain.course_type import CourseType
+from app.application.errors.subject_data import SeedError
+from app.domain.subject_type import SubjectType
 from app.domain.curriculum_verification_status import VerificationStatus
 from app.domain.teaching_type import TeachingType
 
@@ -51,7 +51,7 @@ class ClassificationData(SeedRecord):
     display_order: NonnegativeInteger = 0
 
 
-class CourseData(SeedRecord):
+class SubjectData(SeedRecord):
     id: UUID
     code: NonemptyText
     name: NonemptyText
@@ -61,7 +61,7 @@ class CourseData(SeedRecord):
     teaching_type_label: NonemptyText
 
 
-class CourseOfferingData(SeedRecord):
+class SubjectOfferingData(SeedRecord):
     course_id: UUID
     term_code: NonemptyText
     semester_order: PositiveInteger
@@ -69,24 +69,24 @@ class CourseOfferingData(SeedRecord):
     source_note: NonemptyText | None = None
 
 
-class CurriculumCourseData(SeedRecord):
+class CurriculumSubjectData(SeedRecord):
     curriculum_id: UUID
     course_id: UUID
     classification_id: UUID
-    course_type: CourseType
+    course_type: SubjectType
     display_order: NonnegativeInteger = 0
 
 
-class CourseCatalogSeed(SeedRecord):
+class SubjectDataSeed(SeedRecord):
     academic_programs: list[AcademicProgramData]
     curricula: list[CurriculumData]
     classifications: list[ClassificationData]
-    courses: list[CourseData]
-    course_offerings: list[CourseOfferingData]
-    curriculum_courses: list[CurriculumCourseData]
+    courses: list[SubjectData]
+    course_offerings: list[SubjectOfferingData]
+    curriculum_courses: list[CurriculumSubjectData]
 
 
-def validate_course_catalog_data(seed: CourseCatalogSeed) -> list[ClassificationData]:
+def validate_subject_data(seed: SubjectDataSeed) -> list[ClassificationData]:
     """DB既存分と投入分を合わせて検証し、分類を親から順に返す。"""
 
     def unique(records: list, key, label: str) -> dict:

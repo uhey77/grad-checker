@@ -18,7 +18,7 @@ export interface OfferingDto {
   source_note: string | null;
 }
 
-export interface CourseDto {
+export interface SubjectDto {
   id: string;
   code: string;
   name: string;
@@ -32,7 +32,7 @@ export interface CourseDto {
   offerings: OfferingDto[];
 }
 
-export interface CatalogDto {
+export interface SubjectListDto {
   program: ProgramDto;
-  courses: CourseDto[];
+  courses: SubjectDto[];
 }

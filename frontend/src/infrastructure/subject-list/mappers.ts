@@ -1,9 +1,9 @@
 import type {
   Program,
-  Course,
-  Catalog,
-} from "../../domain/course-catalog/models";
-import type { ProgramDto, CourseDto, CatalogDto } from "./dto";
+  Subject,
+  SubjectList,
+} from "../../domain/subject-list/models";
+import type { ProgramDto, SubjectDto, SubjectListDto } from "./dto";
 
 export function toProgram(dto: ProgramDto): Program {
   return {
@@ -20,7 +20,7 @@ export function toProgram(dto: ProgramDto): Program {
   };
 }
 
-export function toCourse(dto: CourseDto): Course {
+export function toSubject(dto: SubjectDto): Subject {
   return {
     id: dto.id,
     code: dto.code,
@@ -30,7 +30,7 @@ export function toCourse(dto: CourseDto): Course {
     departmentName: dto.department_name,
     specializationName: dto.specialization_name,
     teachingTypeLabel: dto.teaching_type_label,
-    courseType: dto.course_type,
+    subjectType: dto.course_type,
     classificationPath: dto.classification_path.map(({ id, name }) => ({
       id,
       name,
@@ -44,9 +44,9 @@ export function toCourse(dto: CourseDto): Course {
   };
 }
 
-export function toCatalog(dto: CatalogDto): Catalog {
+export function toSubjectList(dto: SubjectListDto): SubjectList {
   return {
     program: toProgram(dto.program),
-    courses: dto.courses.map(toCourse),
+    subjects: dto.courses.map(toSubject),
   };
 }

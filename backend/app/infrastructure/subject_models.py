@@ -101,7 +101,7 @@ class Classification(SQLModel, table=True):
     display_order: int = 0
 
 
-class Course(SQLModel, table=True):
+class Subject(SQLModel, table=True):
     __tablename__ = "courses"
     __table_args__ = (
         UniqueConstraint("code"),
@@ -124,7 +124,7 @@ class Course(SQLModel, table=True):
     teaching_type_label: str
 
 
-class CourseOffering(SQLModel, table=True):
+class SubjectOffering(SQLModel, table=True):
     __tablename__ = "course_offerings"
     __table_args__ = (
         # NULLを含む通常のUNIQUEは重複を許すため、年度未指定にも一意性を適用する。
@@ -151,7 +151,7 @@ class CourseOffering(SQLModel, table=True):
     source_note: str | None = None
 
 
-class CurriculumCourse(SQLModel, table=True):
+class CurriculumSubject(SQLModel, table=True):
     __tablename__ = "curriculum_courses"
     __table_args__ = (
         ForeignKeyConstraint(
@@ -179,14 +179,14 @@ class CurriculumCourse(SQLModel, table=True):
     display_order: int = 0
 
 
-COURSE_CATALOG_TABLES = [
+SUBJECT_TABLES = [
     model.__table__
     for model in (
         AcademicProgram,
         Curriculum,
         Classification,
-        Course,
-        CourseOffering,
-        CurriculumCourse,
+        Subject,
+        SubjectOffering,
+        CurriculumSubject,
     )
 ]

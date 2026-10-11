@@ -1,7 +1,7 @@
-import type { CatalogSortOrder } from "../../application/course-catalog/sortCourses";
-import type { Program, Offering } from "../../domain/course-catalog/models";
+import type { SubjectSortOrder } from "../../application/subject-list/sortSubjects";
+import type { Program, Offering } from "../../domain/subject-list/models";
 
-export const courseTypeLabels = {
+export const subjectTypeLabels = {
   required: "必修",
   selective: "選択必修",
   elective: "選択",
@@ -15,7 +15,7 @@ export function programLabel(program: Program): string {
   );
 }
 
-export const catalogSortLabels: Record<CatalogSortOrder, string> = {
+export const subjectSortLabels: Record<SubjectSortOrder, string> = {
   handbook: "便覧順",
   name: "科目名順",
   "credits-ascending": "単位数の少ない順",

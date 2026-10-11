@@ -83,8 +83,8 @@ UUID・必須文字列・正整数／非負整数を検証し、未知フィー�
 
 ## 実装ファイル
 
-- `app/application/course_catalog_seed.py`：投入する課程・科目データの型と整合性検証。
-- `app/infrastructure/course_catalog_seed.py`：JSONの読み込みと、DBへの原子的な追加投入。
-- `app/infrastructure/course_catalog_models.py`：課程・科目データを保存する6テーブル。
-- `app/application/errors/course_catalog_seed.py`：投入処理の例外。
-- `app/presentation/course_catalog.py`：科目一覧を取得するAPI。
+- `app/application/subject_data_validation.py`：投入する課程・科目データの型と整合性検証。
+- `app/infrastructure/subject_data_import.py`：JSONの読み込みと、DBへの原子的な追加投入。
+- `app/infrastructure/subject_models.py`：課程・科目データを保存する6テーブル。
+- `app/application/errors/subject_data.py`：投入処理の例外。
+- `app/presentation/subject_list.py`：科目一覧を取得するAPI。

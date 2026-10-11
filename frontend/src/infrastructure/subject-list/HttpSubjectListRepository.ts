@@ -1,8 +1,8 @@
-import type { CatalogRepository } from "../../application/course-catalog/CatalogRepository";
-import type { CatalogDto, ProgramDto } from "./dto";
-import { toCatalog, toProgram } from "./mappers";
+import type { SubjectListRepository } from "../../application/subject-list/SubjectListRepository";
+import type { SubjectListDto, ProgramDto } from "./dto";
+import { toSubjectList, toProgram } from "./mappers";
 
-export class HttpCatalogRepository implements CatalogRepository {
+export class HttpSubjectListRepository implements SubjectListRepository {
   constructor(private readonly baseUrl: string) {}
 
   async listPrograms(signal: AbortSignal) {
@@ -13,12 +13,12 @@ export class HttpCatalogRepository implements CatalogRepository {
     return body.map(toProgram);
   }
 
-  async getCatalog(curriculumId: string, signal: AbortSignal) {
-    const body = await this.request<CatalogDto>(
+  async getSubjectList(curriculumId: string, signal: AbortSignal) {
+    const body = await this.request<SubjectListDto>(
       `${this.baseUrl}/${encodeURIComponent(curriculumId)}`,
       signal,
     );
-    return toCatalog(body);
+    return toSubjectList(body);
   }
 
   private async request<T>(url: string, signal: AbortSignal): Promise<T> {

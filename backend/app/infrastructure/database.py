@@ -31,6 +31,6 @@ def create_database_engine(database_url: str) -> Engine:
 
 
 def create_database_schema(engine: Engine) -> None:
-    from app.infrastructure.course_catalog_models import COURSE_CATALOG_TABLES
+    from app.infrastructure.subject_models import SUBJECT_TABLES
 
-    SQLModel.metadata.create_all(engine, tables=COURSE_CATALOG_TABLES)
+    SQLModel.metadata.create_all(engine, tables=SUBJECT_TABLES)

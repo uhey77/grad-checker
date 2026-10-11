@@ -7,10 +7,10 @@ from pathlib import Path
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.application.errors.course_catalog_seed import SeedError
+from app.application.errors.subject_data import SeedError
 from app.config import Settings
 from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.course_catalog_seed import load_seed, seed_course_catalog
+from app.infrastructure.subject_data_import import load_seed, import_subject_data
 
 
 def main() -> int:
@@ -24,7 +24,7 @@ def main() -> int:
         seed = load_seed(arguments.file)
         engine = create_database_engine(Settings().database_url)
         create_database_schema(engine)
-        result = seed_course_catalog(engine, seed)
+        result = import_subject_data(engine, seed)
     except (SeedError, SQLAlchemyError, ValueError) as error:
         message = (
             str(error)

@@ -21,11 +21,11 @@ try {
       "--skipLibCheck",
       "--outDir",
       directory,
-      "src/application/course-catalog/filterCourses.ts",
-      "src/application/course-catalog/sortCourses.ts",
-      "src/presentation/course-catalog/labels.ts",
-      "src/application/course-catalog/CatalogUseCases.ts",
-      "src/infrastructure/course-catalog/mappers.ts",
+      "src/application/subject-list/filterSubjects.ts",
+      "src/application/subject-list/sortSubjects.ts",
+      "src/presentation/subject-list/labels.ts",
+      "src/application/subject-list/SubjectListUseCases.ts",
+      "src/infrastructure/subject-list/mappers.ts",
     ],
     { stdio: "inherit" },
   );
@@ -33,10 +33,10 @@ try {
   else {
     const result = spawnSync(
       process.execPath,
-      ["--test", "tests/course-catalog.test.mjs"],
+      ["--test", "tests/subject-list.test.mjs"],
       {
         stdio: "inherit",
-        env: { ...process.env, CATALOG_TEST_BUILD_DIRECTORY: directory },
+        env: { ...process.env, SUBJECT_TEST_BUILD_DIRECTORY: directory },
       },
     );
     process.exitCode = result.status ?? 1;

@@ -18,7 +18,7 @@ export interface Offering {
   sourceNote: string | null;
 }
 
-export interface Course {
+export interface Subject {
   id: string;
   code: string;
   name: string;
@@ -27,12 +27,12 @@ export interface Course {
   departmentName: string | null;
   specializationName: string | null;
   teachingTypeLabel: string;
-  courseType: "required" | "selective" | "elective";
+  subjectType: "required" | "selective" | "elective";
   classificationPath: { id: string; name: string }[];
   offerings: Offering[];
 }
 
-export interface Catalog {
+export interface SubjectList {
   program: Program;
-  courses: Course[];
+  subjects: Subject[];
 }

@@ -1,27 +1,27 @@
-import type { Course } from "../../domain/course-catalog/models";
+import type { Subject } from "../../domain/subject-list/models";
 
-export const catalogSortOrders = [
+export const subjectSortOrders = [
   "handbook",
   "name",
   "credits-ascending",
   "credits-descending",
   "semester",
 ] as const;
-export type CatalogSortOrder = (typeof catalogSortOrders)[number];
+export type SubjectSortOrder = (typeof subjectSortOrders)[number];
 
-export function isCatalogSortOrder(value: string): value is CatalogSortOrder {
-  return catalogSortOrders.some((order) => order === value);
+export function isSubjectSortOrder(value: string): value is SubjectSortOrder {
+  return subjectSortOrders.some((order) => order === value);
 }
 
 const names = new Intl.Collator("ja", { numeric: true, sensitivity: "base" });
 
 // 同順位は取得時の便覧順を保ち、元の一覧を変更しない。
-export function sortCourses(
-  courses: Course[],
-  order: CatalogSortOrder,
-): Course[] {
-  if (order === "handbook") return [...courses];
-  return [...courses].sort((a, b) => {
+export function sortSubjects(
+  subjects: Subject[],
+  order: SubjectSortOrder,
+): Subject[] {
+  if (order === "handbook") return [...subjects];
+  return [...subjects].sort((a, b) => {
     switch (order) {
       case "name":
         return names.compare(a.name, b.name);

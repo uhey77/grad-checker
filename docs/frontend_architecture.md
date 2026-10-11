@@ -4,13 +4,13 @@
 
 | 層                 | 場所（frontend/src 以下）                        | 責務                                                                 |
 | ------------------ | ------------------------------------------------ | -------------------------------------------------------------------- |
-| ドメイン           | domain/course-catalog/models.ts                  | 課程・科目・分類経路・開講時期を表す型。ReactやAPIの形式に依存しない |
-| アプリケーション   | application/course-catalog                       | 課程一覧・科目一覧の取得、検索条件の適用、取得先の契約               |
-| インフラ           | infrastructure/course-catalog                    | HTTP通信、APIのDTO、snake_caseからドメインモデルへの変換             |
-| プレゼンテーション | presentation/course-catalog、presentation/shared | React画面、表示名、ロード・エラー・再試行・キャンセルの状態管理      |
+| ドメイン           | domain/subject-list/models.ts                  | 課程・科目・分類経路・開講時期を表す型。ReactやAPIの形式に依存しない |
+| アプリケーション   | application/subject-list                       | 課程一覧・科目一覧の取得、検索条件の適用、取得先の契約               |
+| インフラ           | infrastructure/subject-list                    | HTTP通信、APIのDTO、snake_caseからドメインモデルへの変換             |
+| プレゼンテーション | presentation/subject-list、presentation/shared | React画面、表示名、ロード・エラー・再試行・キャンセルの状態管理      |
 | 組み立て           | main.tsx                                         | HTTP取得先をユースケースに注入し、画面に渡す                         |
 
-画面はユースケースを呼び、ユースケースは `CatalogRepository` の契約を通してデータを取得します。HTTP実装もこの契約に従います。具体的な取得先を知るのは組み立て部分です。
+画面はユースケースを呼び、ユースケースは `SubjectListRepository` の契約を通してデータを取得します。HTTP実装もこの契約に従います。具体的な取得先を知るのは組み立て部分です。
 
 ドメインモデルの科目は、選択中の課程における分類・必修区分を含みます。同じ科目でも課程によって必修区分が異なるため、科目だけで区分を固定しません。開講時期は配列で持ち、便覧の注記と適用入学年度の未確認状態も保持します。
 

@@ -9,7 +9,7 @@ from sqlalchemy import text
 from app.config import Settings
 from app.infrastructure.database import create_database_engine, create_database_schema
 from app.presentation.health import router as health_router
-from app.presentation.course_catalog import router as course_catalog_router
+from app.presentation.subject_list import router as subject_list_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -29,7 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(title="卒業要件チェッカー", lifespan=lifespan)
     application.include_router(health_router, prefix="/api")
-    application.include_router(course_catalog_router, prefix="/api")
+    application.include_router(subject_list_router, prefix="/api")
     return application
 
 

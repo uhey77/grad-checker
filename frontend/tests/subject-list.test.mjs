@@ -6,17 +6,17 @@ import { join } from "node:path";
 
 async function loadModule(path) {
   return import(
-    pathToFileURL(join(process.env.CATALOG_TEST_BUILD_DIRECTORY, path)).href
+    pathToFileURL(join(process.env.SUBJECT_TEST_BUILD_DIRECTORY, path)).href
   );
 }
-const { filterCourses, emptyFilters } = await loadModule(
-  "application/course-catalog/filterCourses.js",
+const { filterSubjects, emptyFilters } = await loadModule(
+  "application/subject-list/filterSubjects.js",
 );
-const { toCatalog } = await loadModule(
-  "infrastructure/course-catalog/mappers.js",
+const { toSubjectList } = await loadModule(
+  "infrastructure/subject-list/mappers.js",
 );
-const { createCatalogUseCases } = await loadModule(
-  "application/course-catalog/CatalogUseCases.js",
+const { createSubjectListUseCases } = await loadModule(
+  "application/subject-list/SubjectListUseCases.js",
 );
 
 const program = {
@@ -31,7 +31,7 @@ const program = {
   source_document: "学生便覧",
   source_pages: "91–92",
 };
-const course = {
+const subject = {
   id: "web",
   code: "WEB",
   name: "WebプログラミングⅠ",
@@ -60,32 +60,34 @@ const course = {
 const dto = {
   program,
   courses: [
-    course,
-    { ...course, id: "ai", name: "人工知能", course_type: "required" },
+    subject,
+    { ...subject, id: "ai", name: "人工知能", course_type: "required" },
   ],
 };
 
 test("APIから分類・全開講時期・注記・適用年度の未確認を保って変換する", () => {
-  const catalog = toCatalog(dto);
-  assert.equal(catalog.program.curriculumId, "social");
-  assert.equal(catalog.program.admissionYearFrom, null);
-  assert.equal(catalog.program.verificationStatus, "unverified");
+  const subjectList = toSubjectList(dto);
+  assert.equal(subjectList.program.curriculumId, "social");
+  assert.equal(subjectList.program.admissionYearFrom, null);
+  assert.equal(subjectList.program.verificationStatus, "unverified");
   assert.deepEqual(
-    catalog.courses[0].classificationPath,
-    course.classification_path,
+    subjectList.subjects[0].classificationPath,
+    subject.classification_path,
   );
-  assert.equal(catalog.courses[0].offerings.length, 2);
-  assert.equal(catalog.courses[0].offerings[0].sourceNote, "学年共通開講");
-  assert.equal(catalog.courses[0].courseType, "selective");
+  assert.equal(subjectList.subjects[0].offerings.length, 2);
+  assert.equal(subjectList.subjects[0].offerings[0].sourceNote, "学年共通開講");
+  assert.equal(subjectList.subjects[0].subjectType, "selective");
   assert.equal(
-    toCatalog({ ...dto, courses: [{ ...course, course_type: "required" }] })
-      .courses[0].courseType,
+    toSubjectList({
+      ...dto,
+      courses: [{ ...subject, course_type: "required" }],
+    }).subjects[0].subjectType,
     "required",
   );
 });
 
 test("検索は全角・大文字・ローマ数字を正規化し、複数条件をANDで適用する", () => {
-  const courses = toCatalog(dto).courses;
+  const courses = toSubjectList(dto).subjects;
   const filters = {
     search: "  ｗｅｂプログラミングI  ",
     category: "professional",
@@ -94,7 +96,7 @@ test("検索は全角・大文字・ローマ数字を正規化し、複数条�
     faculty: "CS",
   };
   assert.deepEqual(
-    filterCourses(courses, filters).map((x) => x.id),
+    filterSubjects(courses, filters).map((x) => x.id),
     ["web"],
   );
   for (const [key, value] of Object.entries({
@@ -104,30 +106,30 @@ test("検索は全角・大文字・ローマ数字を正規化し、複数条�
     semester: "other",
     faculty: "other",
   })) {
-    assert.deepEqual(filterCourses(courses, { ...filters, [key]: value }), []);
+    assert.deepEqual(filterSubjects(courses, { ...filters, [key]: value }), []);
   }
-  assert.deepEqual(filterCourses(courses, emptyFilters), courses);
-  assert.deepEqual(filterCourses([], emptyFilters), []);
+  assert.deepEqual(filterSubjects(courses, emptyFilters), courses);
+  assert.deepEqual(filterSubjects([], emptyFilters), []);
 });
 
 test("ユースケースは注入した取得先に課程IDとキャンセル信号を渡し、失敗を伝える", async () => {
   const signal = new AbortController().signal;
-  const catalog = toCatalog(dto);
+  const subjectList = toSubjectList(dto);
   const calls = [];
-  const useCases = createCatalogUseCases({
+  const useCases = createSubjectListUseCases({
     async listPrograms(received) {
       calls.push(received);
-      return [catalog.program];
+      return [subjectList.program];
     },
-    async getCatalog(id, received) {
+    async getSubjectList(id, received) {
       calls.push([id, received]);
-      return catalog;
+      return subjectList;
     },
   });
-  assert.deepEqual(await useCases.listPrograms(signal), [catalog.program]);
-  assert.equal(await useCases.getCatalog("social", signal), catalog);
+  assert.deepEqual(await useCases.listPrograms(signal), [subjectList.program]);
+  assert.equal(await useCases.getSubjectList("social", signal), subjectList);
   assert.deepEqual(calls, [signal, ["social", signal]]);
-  const failed = createCatalogUseCases({
+  const failed = createSubjectListUseCases({
     listPrograms: async () => {
       throw new Error("取得失敗");
     },
@@ -171,15 +173,15 @@ test("内側の層はReactや通信実装に依存せず、画面は通信実装
     await scan(new URL(`../src/${layer}/`, import.meta.url));
 });
 
-const { sortCourses } = await loadModule(
-  "application/course-catalog/sortCourses.js",
+const { sortSubjects } = await loadModule(
+  "application/subject-list/sortSubjects.js",
 );
 const { offeringLabels } = await loadModule(
-  "presentation/course-catalog/labels.js",
+  "presentation/subject-list/labels.js",
 );
 
 test("並べ替えは単位・最初の開講期を比較し、同順位の便覧順と元データを保つ", () => {
-  const base = toCatalog(dto).courses[0];
+  const base = toSubjectList(dto).subjects[0];
   const courses = [
     {
       ...base,
@@ -197,7 +199,7 @@ test("並べ替えは単位・最初の開講期を比較し、同順位の便�
     },
     { ...base, id: "c", name: "C", credits: 3, offerings: [] },
   ];
-  const ids = (order) => sortCourses(courses, order).map((x) => x.id);
+  const ids = (order) => sortSubjects(courses, order).map((x) => x.id);
   assert.deepEqual(ids("handbook"), ["b", "a", "c"]);
   assert.deepEqual(ids("name"), ["a", "b", "c"]);
   assert.deepEqual(ids("credits-ascending"), ["a", "b", "c"]);
@@ -207,7 +209,7 @@ test("並べ替えは単位・最初の開講期を比較し、同順位の便�
     courses.map((x) => x.id),
     ["b", "a", "c"],
   );
-  assert.notEqual(sortCourses(courses, "handbook"), courses);
+  assert.notEqual(sortSubjects(courses, "handbook"), courses);
 });
 
 test("同学年の両学期だけをまとめ、異なる学年の前期と後期を混同しない", () => {

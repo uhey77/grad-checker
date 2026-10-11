@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.config import Settings
-from app.infrastructure.course_catalog_seed import load_seed, seed_course_catalog
+from app.infrastructure.subject_data_import import load_seed, import_subject_data
 from app.main import create_app
 
 SEED_PATH = Path(__file__).resolve().parents[1] / "seeds" / "cs_2026.json"
@@ -18,11 +18,11 @@ def catalog_client(tmp_path):
     app = create_app(
         Settings(
             database_url=f"sqlite:///{tmp_path / 'catalog.db'}",
-            enable_catalog_preview=True,
+            enable_subject_list_preview=True,
         )
     )
     with TestClient(app) as client:
-        seed_course_catalog(app.state.database_engine, load_seed(SEED_PATH))
+        import_subject_data(app.state.database_engine, load_seed(SEED_PATH))
         yield client
 
 
@@ -94,7 +94,7 @@ def test_empty_master_and_database_failure_do_not_look_like_success(tmp_path):
     app = create_app(
         Settings(
             database_url=f"sqlite:///{tmp_path / 'empty.db'}",
-            enable_catalog_preview=True,
+            enable_subject_list_preview=True,
         )
     )
     with TestClient(app) as client:

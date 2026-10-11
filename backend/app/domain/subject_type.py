@@ -3,7 +3,7 @@
 from enum import StrEnum
 
 
-class CourseType(StrEnum):
+class SubjectType(StrEnum):
     REQUIRED = "required"
     SELECTIVE = "selective"
     ELECTIVE = "elective"

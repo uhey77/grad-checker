@@ -1,8 +1,8 @@
-import { courseTypeLabels, offeringLabels } from "./labels";
-import type { Course } from "../../domain/course-catalog/models";
+import { subjectTypeLabels, offeringLabels } from "./labels";
+import type { Subject } from "../../domain/subject-list/models";
 
-export function CourseTable({ courses }: { courses: Course[] }) {
-  if (courses.length === 0) {
+export function SubjectTable({ subjects }: { subjects: Subject[] }) {
+  if (subjects.length === 0) {
     return (
       <div className="empty">
         <strong>条件に一致する科目がありません</strong>
@@ -32,40 +32,40 @@ export function CourseTable({ courses }: { courses: Course[] }) {
             </tr>
           </thead>
           <tbody>
-            {courses.map((course) => {
+            {subjects.map((subject) => {
               const notes = [
                 ...new Set(
-                  course.offerings
+                  subject.offerings
                     .map((x) => x.sourceNote)
                     .filter((x): x is string => Boolean(x)),
                 ),
               ];
-              const terms = offeringLabels(course.offerings);
+              const terms = offeringLabels(subject.offerings);
               const sharedYears = notes.some((note) =>
                 note.includes("学年共通"),
               );
               return (
-                <tr key={course.id}>
+                <tr key={subject.id}>
                   <th scope="row">
-                    <span className="course-name">{course.name}</span>
+                    <span className="subject-name">{subject.name}</span>
                   </th>
                   <td>
                     <span>
-                      {course.classificationPath[0]?.name ?? "分類なし"}
+                      {subject.classificationPath[0]?.name ?? "分類なし"}
                     </span>
                     <small>
-                      {course.classificationPath
+                      {subject.classificationPath
                         .slice(1)
                         .map((x) => x.name)
                         .join(" / ")}
                     </small>
                   </td>
                   <td>
-                    <span className={`badge ${course.courseType}`}>
-                      {courseTypeLabels[course.courseType]}
+                    <span className={`badge ${subject.subjectType}`}>
+                      {subjectTypeLabels[subject.subjectType]}
                     </span>
                   </td>
-                  <td className="credits">{course.credits}</td>
+                  <td className="credits">{subject.credits}</td>
                   <td className="offerings">
                     <span>{terms.join("・") || "記載なし"}</span>
                     {sharedYears ? (
@@ -73,12 +73,12 @@ export function CourseTable({ courses }: { courses: Course[] }) {
                     ) : null}
                   </td>
                   <td>
-                    <span>{course.facultyName}</span>
+                    <span>{subject.facultyName}</span>
                     <small>
                       {[
-                        course.departmentName,
-                        course.specializationName,
-                        course.teachingTypeLabel,
+                        subject.departmentName,
+                        subject.specializationName,
+                        subject.teachingTypeLabel,
                       ]
                         .filter(Boolean)
                         .join(" / ")}

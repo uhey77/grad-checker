@@ -5,27 +5,27 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from app.application.errors.course_catalog import CatalogNotFound
-from app.application.course_catalog import (
-    CatalogRepository,
-    CatalogClassification,
-    CatalogCourse,
-    CatalogOffering,
-    CatalogProgram,
-    CourseCatalog,
+from app.application.errors.subject_list import SubjectListNotFound
+from app.application.subject_list import (
+    SubjectListRepository,
+    SubjectListClassification,
+    SubjectListItem,
+    SubjectListOffering,
+    SubjectListProgram,
+    SubjectList,
 )
-from app.infrastructure.course_catalog_models import (
+from app.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
-    Course,
-    CourseOffering,
+    Subject,
+    SubjectOffering,
     Curriculum,
-    CurriculumCourse,
+    CurriculumSubject,
 )
 
 
-def program_data(curriculum: Curriculum, program: AcademicProgram) -> CatalogProgram:
-    return CatalogProgram(
+def program_data(curriculum: Curriculum, program: AcademicProgram) -> SubjectListProgram:
+    return SubjectListProgram(
         curriculum_id=curriculum.id,
         name=curriculum.name,
         faculty_name=program.faculty_name,
@@ -39,11 +39,11 @@ def program_data(curriculum: Curriculum, program: AcademicProgram) -> CatalogPro
     )
 
 
-class SqliteCatalogRepository(CatalogRepository):
+class SqliteSubjectListRepository(SubjectListRepository):
     def __init__(self, session: Session):
         self.session = session
 
-    def list_programs(self) -> list[CatalogProgram]:
+    def list_programs(self) -> list[SubjectListProgram]:
         rows = self.session.exec(
             select(Curriculum, AcademicProgram)
             .join(AcademicProgram, Curriculum.program_id == AcademicProgram.id)
@@ -51,7 +51,7 @@ class SqliteCatalogRepository(CatalogRepository):
         ).all()
         return [program_data(curriculum, program) for curriculum, program in rows]
 
-    def get_catalog(self, curriculum_id: UUID) -> CourseCatalog:
+    def get_subject_list(self, curriculum_id: UUID) -> SubjectList:
         # SQLiteの従来トランザクションモードでも複数SELECTの一貫性を保証する。
         self.session.connection().exec_driver_sql("BEGIN")
         row = self.session.exec(
@@ -60,7 +60,7 @@ class SqliteCatalogRepository(CatalogRepository):
             .where(Curriculum.id == str(curriculum_id))
         ).first()
         if row is None:
-            raise CatalogNotFound("選択したカリキュラムが見つかりません。")
+            raise SubjectListNotFound("選択したカリキュラムが見つかりません。")
         curriculum, program = row
         classifications = {
             item.id: item
@@ -71,22 +71,22 @@ class SqliteCatalogRepository(CatalogRepository):
             ).all()
         }
         rows = self.session.exec(
-            select(CurriculumCourse, Course, AcademicProgram)
-            .join(Course, CurriculumCourse.course_id == Course.id)
-            .join(AcademicProgram, Course.offering_program_id == AcademicProgram.id)
-            .where(CurriculumCourse.curriculum_id == curriculum.id)
-            .order_by(CurriculumCourse.display_order, Course.code)
+            select(CurriculumSubject, Subject, AcademicProgram)
+            .join(Subject, CurriculumSubject.course_id == Subject.id)
+            .join(AcademicProgram, Subject.offering_program_id == AcademicProgram.id)
+            .where(CurriculumSubject.curriculum_id == curriculum.id)
+            .order_by(CurriculumSubject.display_order, Subject.code)
         ).all()
         offerings = defaultdict(list)
         if rows:
             course_ids = [course.id for _, course, _ in rows]
             for offering in self.session.exec(
-                select(CourseOffering)
-                .where(CourseOffering.course_id.in_(course_ids))
-                .order_by(CourseOffering.semester_order, CourseOffering.id)
+                select(SubjectOffering)
+                .where(SubjectOffering.course_id.in_(course_ids))
+                .order_by(SubjectOffering.semester_order, SubjectOffering.id)
             ).all():
                 offerings[offering.course_id].append(
-                    CatalogOffering(
+                    SubjectListOffering(
                         term_code=offering.term_code,
                         semester_order=offering.semester_order,
                         academic_year=offering.academic_year,
@@ -104,13 +104,13 @@ class SqliteCatalogRepository(CatalogRepository):
                 visited.add(current)
                 classification = classifications[current]
                 path.append(
-                    CatalogClassification(
+                    SubjectListClassification(
                         id=classification.id, name=classification.name
                     )
                 )
                 current = classification.parent_id
             courses.append(
-                CatalogCourse(
+                SubjectListItem(
                     id=course.id,
                     code=course.code,
                     name=course.name,
@@ -124,4 +124,4 @@ class SqliteCatalogRepository(CatalogRepository):
                     offerings=offerings[course.id],
                 )
             )
-        return CourseCatalog(program=program_data(curriculum, program), courses=courses)
+        return SubjectList(program=program_data(curriculum, program), courses=courses)

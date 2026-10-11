@@ -5,19 +5,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.application.errors.course_catalog import CatalogNotFound
-from app.application.course_catalog import (
-    CatalogProgram,
-    CourseCatalog,
-    get_course_catalog,
-    list_catalog_programs,
+from app.application.errors.subject_list import SubjectListNotFound
+from app.application.subject_list import (
+    SubjectListProgram,
+    SubjectList,
+    get_subject_list,
+    list_subject_programs,
 )
-from app.infrastructure.course_catalog import SqliteCatalogRepository
+from app.infrastructure.subject_list import SqliteSubjectListRepository
 from app.presentation.dependencies import SessionDependency
 
 
-def require_catalog_preview(request: Request, response: Response) -> None:
-    if not request.app.state.settings.enable_catalog_preview:
+def require_subject_list_preview(request: Request, response: Response) -> None:
+    if not request.app.state.settings.enable_subject_list_preview:
         raise HTTPException(status_code=404, detail="科目一覧の開発用表示は無効です。")
     response.headers["Cache-Control"] = "no-store"
 
@@ -25,14 +25,14 @@ def require_catalog_preview(request: Request, response: Response) -> None:
 router = APIRouter(
     prefix="/dev/course-catalog",
     tags=["開発用科目一覧"],
-    dependencies=[Depends(require_catalog_preview)],
+    dependencies=[Depends(require_subject_list_preview)],
 )
 
 
-@router.get("/programs", response_model=list[CatalogProgram])
-def programs(session: SessionDependency) -> list[CatalogProgram]:
+@router.get("/programs", response_model=list[SubjectListProgram])
+def programs(session: SessionDependency) -> list[SubjectListProgram]:
     try:
-        return list_catalog_programs(SqliteCatalogRepository(session))
+        return list_subject_programs(SqliteSubjectListRepository(session))
     except SQLAlchemyError as error:
         raise HTTPException(
             status_code=503,
@@ -40,8 +40,8 @@ def programs(session: SessionDependency) -> list[CatalogProgram]:
         ) from error
 
 
-@router.get("/{curriculum_id}", response_model=CourseCatalog)
-def catalog(curriculum_id: str, session: SessionDependency) -> CourseCatalog:
+@router.get("/{curriculum_id}", response_model=SubjectList)
+def subject_list(curriculum_id: str, session: SessionDependency) -> SubjectList:
     try:
         identifier = UUID(curriculum_id)
     except ValueError as error:
@@ -49,8 +49,8 @@ def catalog(curriculum_id: str, session: SessionDependency) -> CourseCatalog:
             status_code=422, detail="カリキュラムIDの形式が不正です。"
         ) from error
     try:
-        return get_course_catalog(SqliteCatalogRepository(session), identifier)
-    except CatalogNotFound as error:
+        return get_subject_list(SqliteSubjectListRepository(session), identifier)
+    except SubjectListNotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(

@@ -8,33 +8,33 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
-from app.application.errors.course_catalog_seed import SeedError
-from app.application.course_catalog_seed import (
+from app.application.errors.subject_data import SeedError
+from app.application.subject_data_validation import (
     AcademicProgramData,
     ClassificationData,
-    CourseData,
-    CourseOfferingData,
-    CurriculumCourseData,
+    SubjectData,
+    SubjectOfferingData,
+    CurriculumSubjectData,
     CurriculumData,
-    CourseCatalogSeed,
-    validate_course_catalog_data,
+    SubjectDataSeed,
+    validate_subject_data,
 )
-from app.infrastructure.course_catalog_models import (
+from app.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
-    Course,
-    CourseOffering,
+    Subject,
+    SubjectOffering,
     Curriculum,
-    CurriculumCourse,
+    CurriculumSubject,
 )
 
 TABLE_MAPPING = (
     ("academic_programs", AcademicProgram, AcademicProgramData),
     ("curricula", Curriculum, CurriculumData),
     ("classifications", Classification, ClassificationData),
-    ("courses", Course, CourseData),
-    ("course_offerings", CourseOffering, CourseOfferingData),
-    ("curriculum_courses", CurriculumCourse, CurriculumCourseData),
+    ("courses", Subject, SubjectData),
+    ("course_offerings", SubjectOffering, SubjectOfferingData),
+    ("curriculum_courses", CurriculumSubject, CurriculumSubjectData),
 )
 
 
@@ -42,25 +42,25 @@ def record_key(
     record: AcademicProgramData
     | CurriculumData
     | ClassificationData
-    | CourseData
-    | CourseOfferingData
-    | CurriculumCourseData,
+    | SubjectData
+    | SubjectOfferingData
+    | CurriculumSubjectData,
 ) -> tuple:
-    if isinstance(record, CourseOfferingData):
+    if isinstance(record, SubjectOfferingData):
         return (
             record.course_id,
             record.term_code,
             record.semester_order,
             record.academic_year,
         )
-    if isinstance(record, CurriculumCourseData):
+    if isinstance(record, CurriculumSubjectData):
         return record.curriculum_id, record.course_id
     return (record.id,)
 
 
-def load_seed(path: Path) -> CourseCatalogSeed:
+def load_seed(path: Path) -> SubjectDataSeed:
     try:
-        return CourseCatalogSeed.model_validate_json(path.read_text(encoding="utf-8"))
+        return SubjectDataSeed.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError) as error:
         raise SeedError("シードファイルをUTF-8で読み込めません。") from error
     except ValidationError as error:
@@ -72,7 +72,7 @@ def load_seed(path: Path) -> CourseCatalogSeed:
         ) from error
 
 
-def seed_course_catalog(engine: Engine, seed: CourseCatalogSeed) -> dict[str, int]:
+def import_subject_data(engine: Engine, seed: SubjectDataSeed) -> dict[str, int]:
     # 入力内の重複を先に拒否する。参照は既存DBを使えるため、ここでは検証しない。
     for name, _, _ in TABLE_MAPPING:
         keys = [record_key(record) for record in getattr(seed, name)]
@@ -105,7 +105,7 @@ def seed_course_catalog(engine: Engine, seed: CourseCatalogSeed) -> dict[str, in
                         new.append(record)
                 combined[name] = existing + new
                 additions[name] = new
-            ordered = validate_course_catalog_data(CourseCatalogSeed(**combined))
+            ordered = validate_subject_data(SubjectDataSeed(**combined))
             new_classifications = {record.id for record in additions["classifications"]}
             additions["classifications"] = [
                 record for record in ordered if record.id in new_classifications
