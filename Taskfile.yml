@@ -22,12 +22,14 @@ tasks:
     desc: バックエンドのlint・整形状態・型を検証
     cmds:
       - task: backend-lint
+      - task: backend-format-check
       - task: backend-typecheck
 
   frontend-check:
     desc: フロントエンドのlint・整形状態・型を検証
     cmds:
       - task: frontend-lint
+      - task: frontend-format-check
       - task: frontend-typecheck
 
   setup:
@@ -70,10 +72,15 @@ tasks:
       - uv run pytest
 
   backend-lint:
-    desc: Ruffでバックエンドのlintと整形状態を検証
+    desc: Ruffでバックエンドのlintを検証
     dir: backend
     cmds:
       - uv run --locked ruff check .
+
+  backend-format-check:
+    desc: Ruffでバックエンドの整形状態を検証
+    dir: backend
+    cmds:
       - uv run --locked ruff format --check .
 
   backend-format:
@@ -117,10 +124,15 @@ tasks:
       - npm run dev
 
   frontend-lint:
-    desc: ESLintとPrettierでフロントエンドを検証
+    desc: ESLintでフロントエンドのlintを検証
     dir: frontend
     cmds:
       - npm run lint
+
+  frontend-format-check:
+    desc: Prettierでフロントエンドの整形状態を検証
+    dir: frontend
+    cmds:
       - npm run format:check
 
   frontend-format:

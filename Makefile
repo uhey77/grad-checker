@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help check format backend-check frontend-check setup frontend-install backend-install backend-dev backend-catalog backend-test backend-lint backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format frontend-typecheck build preview
+.PHONY: help check format backend-check frontend-check setup frontend-install backend-install backend-dev backend-catalog backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
 
 help:
 	@echo "check             バックエンドとフロントエンドのlint・整形状態・型を検証"
@@ -13,7 +13,8 @@ help:
 	@echo "backend-dev       バックエンドの開発サーバーを起動"
 	@echo "backend-catalog   ローカル確認用の科目一覧APIを有効にして起動"
 	@echo "backend-test      バックエンドのテストを実行"
-	@echo "backend-lint      Ruffのlintと整形状態を検証"
+	@echo "backend-lint      Ruffでlintを検証"
+	@echo "backend-format-check Ruffで整形状態を検証"
 	@echo "backend-format    Ruffのlint自動修正と整形を実行"
 	@echo "backend-typecheck tyでバックエンドの型を検証"
 	@echo "pre-commit-install コミット時のフックを登録"
@@ -21,7 +22,8 @@ help:
 	@echo "backend-seed      CS学部の便覧掲載科目データを追加投入"
 	@echo "dev               フロントエンドと科目一覧APIを同時に起動"
 	@echo "frontend-dev      フロントエンドの開発サーバーを起動"
-	@echo "frontend-lint     ESLintとPrettierで検証"
+	@echo "frontend-lint     ESLintでlintを検証"
+	@echo "frontend-format-check Prettierで整形状態を検証"
 	@echo "frontend-format   ESLintの自動修正とPrettierの整形を実行"
 	@echo "frontend-typecheck TypeScriptでフロントエンドの型を検証"
 	@echo "build             フロントエンドをビルド"
@@ -37,10 +39,12 @@ format:
 
 backend-check:
 	$(MAKE) backend-lint
+	$(MAKE) backend-format-check
 	$(MAKE) backend-typecheck
 
 frontend-check:
 	$(MAKE) frontend-lint
+	$(MAKE) frontend-format-check
 	$(MAKE) frontend-typecheck
 
 setup:
@@ -65,6 +69,8 @@ backend-test:
 
 backend-lint:
 	cd backend && uv run --locked ruff check .
+
+backend-format-check:
 	cd backend && uv run --locked ruff format --check .
 
 backend-format:
@@ -91,6 +97,8 @@ frontend-dev:
 
 frontend-lint:
 	cd frontend && npm run lint
+
+frontend-format-check:
 	cd frontend && npm run format:check
 
 frontend-format:
