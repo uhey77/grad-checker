@@ -1,6 +1,6 @@
 # DB基本設計
 
-文書版：1.3。[RDD](RDD.md)に基づき、SQLModel / SQLiteを採用する。DDL・モデル・マイグレーションは今後実装する。全課程のマスタが既に投入済みという意味ではない。
+文書版：1.3。[RDD](RDD.md)に基づき、SQLModel / SQLiteを採用する。2026年10月11日に課程・カリキュラム・分類・科目・開講期・課程別科目の6テーブルとシードを実装した。その他のモデル・マイグレーションは今後実装する。全課程のマスタが既に投入済みという意味ではない。
 
 ## 1. 型と共通制約
 
@@ -13,10 +13,10 @@ IDは安定したUUIDをSQLiteではTEXTとして保存する。科目単位数�
 | テーブル | 主な列・制約 |
 |---|---|
 | academic_programs | id, code一意, faculty_name, department_name?, specialization_name?, course_name?。存在しない階層はnull |
-| curricula | id, program_id FK, code一意, name, revision正整数, 適用年度範囲, source_document, source_pages, verification_status |
+| curricula | id, program_id FK, code一意, name, revision正整数, admission_year_from?, admission_year_to?, source_document, source_pages, verification_status（unverified/verified） |
 | classifications | id, curriculum_id FK, code, name, parent_id?, level, display_order。課程内code一意、親は同課程 |
-| courses | id, code一意, name, credits正整数, offering_program_id FK, teaching_type（lecture/exercise/practice/experiment/other） |
-| course_offerings | course_id FK, term_code, semester_order, academic_year?。科目に複数開講学期を保持できる |
+| courses | id, code一意, name, credits正整数, offering_program_id FK, teaching_type（lecture/exercise/practice/experiment/other）, teaching_type_label（原文） |
+| course_offerings | id UUID PK, course_id FK, term_code, semester_order, academic_year?, source_note?。科目・学期・学年列・暦年で一意、暦年nullにも一意性を適用 |
 | curriculum_courses | curriculum_id FK, course_id FK, classification_id FK, course_type（required/selective/elective）, display_order。課程・科目で一意 |
 | graduation_requirements | id, curriculum_id FK, code, name, kind, required_credits, classification_id?, parent_id?, display_order |
 | requirement_scopes | requirement_id FK, classification_id?またはcourse_id?。対象集合を表し、片方だけを指定 |
@@ -65,6 +65,10 @@ check_resultsは本人の入力と計算済み結果を保存する。input_json
 
 JSONシードを課程→カリキュラム→分類→科目・開講期→課程別科目→要件・規則→テストアカウントの順でコマンド1つで投入する。科目種別・授業形態・各課程の必要値・対象他学部集合・共通上限を検証し、重複投入で同一マスタを増やさない。全データ消去は通常の再投入と分けた明示的な初期化操作とする。
 
-現在はDB・シード・モデル未実装。READMEには実装時に初期化、シード、起動、pytestの手順を記載する。添付便覧は手動確認元とし、自動取得機能は作らない。
+現在はマスタ6テーブルと追加投入CLIを実装済み。コンピュータサイエンス学部の4課程の科目131件・課程別科目498件を便覧の表から転記した。入学年度への適用は未確認のためunverified、適用年度はnullで保持する。卒業要件・規則・学生・成績・認証・履歴のモデルは未実装。
+
+通常シードは全件の形式・参照・階層を検証し、1トランザクションで追加する。同じ内容はスキップし、既存IDの変更は拒否する。省略した既存データを削除しない。分類循環・階層levelの整合性は投入時に検証し、同課程の親／分類参照・単位数・一意性・削除RESTRICTはDBでも強制する。マイグレーションは未実装。
+
+READMEに初期化、シード、起動、pytestの手順を記載済み。[転記とコードの説明](../backend/seeds/README.md)を参照。添付便覧は手動確認元とし、自動取得機能は作らない。
 
 関連：[API](api_specification.md)、[判定](graduation_requirement_logic.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。

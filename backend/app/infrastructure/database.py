@@ -1,11 +1,11 @@
-"""SQLiteエンジンの生成。スキーマ作成は業務モデルの実装時に追加する。"""
+"""SQLiteエンジンと、実装済みマスタスキーマの生成。"""
 
 from pathlib import Path
 from sqlite3 import Connection
 
 from sqlalchemy import Engine, event
 from sqlalchemy.engine import make_url
-from sqlmodel import create_engine
+from sqlmodel import SQLModel, create_engine
 
 
 def create_database_engine(database_url: str) -> Engine:
@@ -28,3 +28,9 @@ def create_database_engine(database_url: str) -> Engine:
             cursor.close()
 
     return engine
+
+
+def create_database_schema(engine: Engine) -> None:
+    from app.infrastructure.master_models import MASTER_TABLES
+
+    SQLModel.metadata.create_all(engine, tables=MASTER_TABLES)
