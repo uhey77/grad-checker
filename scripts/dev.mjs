@@ -81,6 +81,8 @@ start(
     "--locked",
     "uvicorn",
     "api_service.main:app",
+    "--app-dir",
+    "..",
     "--reload",
     "--host",
     "127.0.0.1",

@@ -74,7 +74,7 @@ backend-subject-list:
 	node scripts/dev.mjs --backend-only --subject-list-preview
 
 backend-python-dev:
-	cd backend && uv run --locked --project api uvicorn api_service.main:app --reload --host 127.0.0.1 --port 8001
+	cd backend && uv run --locked --project api uvicorn api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
 backend-test:
 	cd backend && uv run --locked pytest
@@ -100,7 +100,7 @@ pre-commit:
 	uv run --locked --project backend pre-commit run --all-files
 
 backend-seed:
-	cd backend && uv run --locked python scripts/seed_subjects.py --file seeds/cs_2026.json
+	cd backend && uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
 
 dev:
 	node scripts/dev.mjs

@@ -279,7 +279,7 @@ def test_database_enforces_same_curriculum_references_restrict_and_nullable_uniq
 def test_cli_and_japanese_input_errors(tmp_path):
     db = tmp_path / "cli.db"
     environment = dict(os.environ, DATABASE_URL=f"sqlite:///{db}")
-    command = [sys.executable, "scripts/seed_subjects.py", "--file", str(SEED_PATH)]
+    command = [sys.executable, "-m", "scripts.seed_subjects", "--file", str(SEED_PATH)]
     first = subprocess.run(
         command,
         cwd=BACKEND,

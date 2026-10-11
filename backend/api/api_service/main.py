@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from grad_checker_config.settings import Settings
 from grad_checker_subjects.infrastructure.database import (
     create_database_engine,
     create_database_schema,
@@ -16,6 +15,7 @@ from sqlalchemy import text
 from api_service.presentation.internal_subject_list import (
     router as internal_subject_list_router,
 )
+from config.settings import Settings
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:

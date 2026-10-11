@@ -4,6 +4,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from config.settings import DEFAULT_DATABASE_PATH, Settings
+
 BACKEND = Path(__file__).resolve().parents[1]
 
 
@@ -26,7 +28,7 @@ from sqlmodel import Session
 assert importlib.util.find_spec('fastapi') is None
 assert importlib.util.find_spec('uvicorn') is None
 assert importlib.util.find_spec('api_service') is None
-assert importlib.util.find_spec('grad_checker_config') is None
+assert importlib.util.find_spec('config') is None
 engine = create_database_engine('sqlite:///:memory:')
 try:
     create_database_schema(engine)
@@ -39,21 +41,10 @@ finally:
     subprocess.run([str(python), "-I", "-c", code], cwd=tmp_path, check=True)
 
 
-def test_config_environment_runs_without_subjects_or_api(tmp_path: Path) -> None:
-    python = (
-        BACKEND
-        / "config/.venv"
-        / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+def test_shared_settings_default_to_backend_data(monkeypatch) -> None:
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    assert DEFAULT_DATABASE_PATH == BACKEND / "data/grad_checker.db"
+    assert Settings().database_url == f"sqlite:///{DEFAULT_DATABASE_PATH}"
+    assert (
+        Settings(database_url="sqlite:///:memory:").database_url == "sqlite:///:memory:"
     )
-    code = """
-import importlib.util
-from grad_checker_config.settings import Settings, DEFAULT_DATABASE_PATH
-assert importlib.util.find_spec('fastapi') is None
-assert importlib.util.find_spec('sqlmodel') is None
-assert importlib.util.find_spec('grad_checker_subjects') is None
-assert importlib.util.find_spec('api_service') is None
-assert Settings(database_url='sqlite:///:memory:').database_url == 'sqlite:///:memory:'
-assert DEFAULT_DATABASE_PATH.parent.name == 'data'
-assert DEFAULT_DATABASE_PATH.parent.parent.name == 'backend'
-"""
-    subprocess.run([str(python), "-I", "-c", code], cwd=tmp_path, check=True)

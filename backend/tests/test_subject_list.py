@@ -4,12 +4,13 @@ from uuid import uuid4
 import pytest
 from api_service.main import create_app
 from fastapi.testclient import TestClient
-from grad_checker_config.settings import Settings
 from grad_checker_subjects.infrastructure.subject_data_import import (
     import_subject_data,
     load_seed,
 )
 from sqlalchemy import text
+
+from config.settings import Settings
 
 SEED_PATH = Path(__file__).resolve().parents[1] / "seeds" / "cs_2026.json"
 BASE = "/internal/subject-list"

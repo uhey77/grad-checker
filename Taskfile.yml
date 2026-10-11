@@ -65,7 +65,7 @@ tasks:
     desc: Python内部サービスだけを起動
     dir: backend
     cmds:
-      - uv run --locked --project api uvicorn api_service.main:app --reload --host 127.0.0.1 --port 8001
+      - uv run --locked --project api uvicorn api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
   backend-test:
     desc: バックエンドのテストを実行
@@ -113,7 +113,7 @@ tasks:
     desc: CS学部の便覧掲載科目データを検証して追加投入
     dir: backend
     cmds:
-      - uv run --locked python scripts/seed_subjects.py --file seeds/cs_2026.json
+      - uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
 
   dev:
     desc: フロントエンドと科目一覧APIを同時に起動

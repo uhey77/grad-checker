@@ -5,7 +5,6 @@ import json
 import sys
 from pathlib import Path
 
-from grad_checker_config.settings import Settings
 from grad_checker_subjects.application.errors.subject_data import SeedError
 from grad_checker_subjects.infrastructure.database import (
     create_database_engine,
@@ -16,6 +15,8 @@ from grad_checker_subjects.infrastructure.subject_data_import import (
     load_seed,
 )
 from sqlalchemy.exc import SQLAlchemyError
+
+from config.settings import Settings
 
 
 def main() -> int:

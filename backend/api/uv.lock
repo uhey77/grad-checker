@@ -64,9 +64,9 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
-    { name = "grad-checker-config" },
     { name = "grad-checker-subjects" },
     { name = "pydantic" },
+    { name = "pydantic-settings" },
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
     { name = "uvicorn" },
@@ -75,27 +75,12 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.135.0,<1.0" },
-    { name = "grad-checker-config", editable = "../config" },
     { name = "grad-checker-subjects", editable = "../modules/subjects" },
     { name = "pydantic", specifier = ">=2.0,<3.0" },
+    { name = "pydantic-settings", specifier = ">=2.0,<3.0" },
     { name = "sqlalchemy", specifier = ">=2.0,<3.0" },
     { name = "sqlmodel", specifier = ">=0.0.37,<0.1" },
     { name = "uvicorn", specifier = ">=0.41.0,<1.0" },
-]
-
-[[package]]
-name = "grad-checker-config"
-version = "0.1.0"
-source = { editable = "../config" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pydantic", specifier = ">=2.0,<3.0" },
-    { name = "pydantic-settings", specifier = ">=2.0,<3.0" },
 ]
 
 [[package]]

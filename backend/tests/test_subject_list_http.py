@@ -91,6 +91,8 @@ def services(tmp_path_factory):
                 "-m",
                 "uvicorn",
                 "api_service.main:app",
+                "--app-dir",
+                str(BACKEND),
                 "--host",
                 "127.0.0.1",
                 "--port",

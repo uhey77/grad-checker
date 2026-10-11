@@ -6,13 +6,11 @@ requires-python = ">=3.15,<3.16"
 dependencies = [
     "grad-checker-api==0.1.0",
     "grad-checker-subjects==0.1.0",
-    "grad-checker-config==0.1.0",
 ]
 
 [tool.uv.sources]
 grad-checker-api = { path = "api", editable = true }
 grad-checker-subjects = { path = "modules/subjects", editable = true }
-grad-checker-config = { path = "config", editable = true }
 
 [dependency-groups]
 dev = [
@@ -25,6 +23,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 88
@@ -56,7 +55,7 @@ ignore = [
 include = [
     "api/api_service",
     "modules/subjects/grad_checker_subjects",
-    "config/grad_checker_config",
+    "config",
     "scripts",
     "tests",
     "seeds/build_cs_seed.py",

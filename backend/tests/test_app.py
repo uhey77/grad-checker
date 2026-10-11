@@ -3,8 +3,9 @@ from pathlib import Path
 from api_service.main import create_app
 from api_service.presentation.dependencies import SessionDependency
 from fastapi.testclient import TestClient
-from grad_checker_config.settings import Settings
 from sqlalchemy import inspect, text
+
+from config.settings import Settings
 
 
 def test_startup_and_internal_service(tmp_path: Path) -> None:
