@@ -1,7 +1,7 @@
 # バックエンドの構成
 
 `backend/api/`にHTTPの入口、`backend/modules/subjects/`に科目の業務処理を配置する。
-Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。GoもAPI・科目・テストごとにモジュールを分ける。
+Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。Goの`go.mod`も`backend/`直下の一つに統一する。
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
 現在の実装対象は開発用の科目一覧。卒業判定・推薦・認証・成績保存は未実装。
 
@@ -27,8 +27,9 @@ React / Vite :5173
 ```text
 backend/
 ├── pyproject.toml / uv.lock / .python-version / .venv/  # Python共通環境
+├── go.mod                            # Go共通モジュール
 ├── api/
-│   ├── go.mod / main.go               # Goの起動・依存関係の組立て
+│   ├── main.go               # Goの起動・依存関係の組立て
 │   ├── presentation/subject_list.go   # 外部HTTPハンドラー
 │   └── api_service/
 │       ├── main.py                    # Python内部サービスの起動
@@ -36,7 +37,6 @@ backend/
 ├── config/settings.py                # 共有設定。独立パッケージにはしない
 ├── modules/
 │   └── subjects/
-│       ├── go.mod
 │       ├── application/subject_list.go
 │       ├── infrastructure/subject_list_client.go
 │       └── grad_checker_subjects/
@@ -46,7 +46,6 @@ backend/
 ├── scripts/seed_subjects.py           # 設定と科目モジュールを使うCLI
 ├── seeds/                            # 便覧データ
 └── tests/                            # Python・Go・実プロセス結合テスト
-    └── go.mod                        # APIと科目を検証する独立モジュール
 ```
 
 Python・Goのテストは`backend/tests/`に集約する。
@@ -76,7 +75,8 @@ Python内部サービスは`backend/`から`uv run --locked uvicorn api.api_serv
 投入CLIは同じ場所から`uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json`で起動する。
 APIと科目モジュールはコードの責務を分離するが、Pythonの依存バージョンや仮想環境は分離しない。
 
-Goは引き続きAPI・科目・テストごとの`go.mod`を持ち、ローカル`replace`で参照先を指定する。
+Goは`backend/go.mod`一つでAPI・科目・テストを管理する。
+バックエンド直下で`go vet ./...`・`go test -race ./...`を実行でき、ローカル`require`・`replace`は不要。
 現在は標準ライブラリのみのため`go.sum`は生成されない。
 
 ## 外部APIと内部通信
@@ -130,7 +130,7 @@ Go 1.22以上の`go`・`gofmt`をPATHに用意する。Goは標準ライブラ�
 `dev-go`は`dev`と同じ構成で起動する互換コマンド。
 画面は http://127.0.0.1:5173 、外部APIは http://127.0.0.1:8000 。Ctrl+Cで一括終了する。
 通常の`dev`は科目一覧を有効にする。Go単体の既定は無効で、`-subject-list-preview`で有効化する。
-Goの設定例は、`backend/api/`で`go run . -listen 127.0.0.1:8000 -python-url http://127.0.0.1:8001 -subject-list-preview`。
+Goの設定例は、`backend/`で`go run ./api -listen 127.0.0.1:8000 -python-url http://127.0.0.1:8001 -subject-list-preview`。
 Python内部サービスは127.0.0.1:8001で起動し、外部には公開しない。
 Pythonの`/api`・Swagger UIは削除しており、画面はGoを介して取得する。外部OpenAPI/Swagger UIの整備は今後実施する。
 
@@ -150,7 +150,7 @@ Pythonの内部HTTPプロセスは引き続き必要。言語を分けたこと�
 - `backend/`直下の共通Python環境を`uv sync --locked`で同期。
 - Pythonの46テストが成功。科目モジュールの逆依存検査、共有設定の保存先検証、共通環境を使う実プロセス結合テスト3件を含む。
 - 科目モジュールがAPI・設定・FastAPI・uvicornをimportしないことを確認。
-- Goの各モジュールの静的解析、共通テストの競合検出付き実行が成功。
+- Goの共通モジュールの静的解析、共通テストの競合検出付き実行が成功。
 - TaskとMakeのバックエンドチェックが成功。両方の共通環境同期、`task check`、フロントエンド6テスト、`task build`も成功。
 - 通常の`dev`でVite → Go → Python → 一時SQLiteの4課程・科目一覧が一致（126・126・126・120科目）。422・404の応答とCtrl+Cによる3サーバー終了・ポート解放も確認。
 
