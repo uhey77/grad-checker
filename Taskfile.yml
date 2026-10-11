@@ -24,7 +24,6 @@ tasks:
       - task: backend-lint
       - task: backend-format-check
       - task: backend-typecheck
-      - task: go-api-check
 
   frontend-check:
     desc: フロントエンドのlint・整形状態・型を検証
@@ -68,22 +67,25 @@ tasks:
       - uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
   backend-test:
-    desc: バックエンドのテストを実行
+    desc: Python・結合テストとGoの競合検出付きテストを実行
     dir: backend
     cmds:
       - uv run --locked pytest
+      - task: go-api-test
 
   backend-lint:
-    desc: Ruffでバックエンドのlintを検証
+    desc: Ruffとgo vetでバックエンドのlintを検証
     dir: backend
     cmds:
       - uv run --locked ruff check .
+      - go vet ./...
 
   backend-format-check:
-    desc: Ruffでバックエンドの整形状態を検証
+    desc: Ruffとgofmtでバックエンドの整形状態を検証
     dir: backend
     cmds:
       - uv run --locked ruff format --check .
+      - node ../scripts/check-go-format.mjs
 
   backend-format:
     desc: Ruffでバックエンドのlint自動修正と整形を実行
@@ -94,10 +96,11 @@ tasks:
       - go fmt ./...
 
   backend-typecheck:
-    desc: tyでバックエンドの型を検証
+    desc: tyとgo buildでバックエンドの型を検証
     dir: backend
     cmds:
       - uv run --locked ty check
+      - go build ./...
 
   pre-commit-install:
     desc: コミット時のlint・整形・型検証フックを登録

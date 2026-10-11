@@ -19,7 +19,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [lint, typecheck, format-check]
+        include:
+          - check: lint
+            target: backend-lint
+          - check: format-check
+            target: backend-format-check
+          - check: typecheck
+            target: backend-typecheck
+          - check: test
+            target: backend-test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -29,7 +37,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.3.0
@@ -37,6 +45,12 @@ jobs:
           working-directory: backend
           enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
 
       - name: Install Python
         run: uv python install
@@ -46,7 +60,7 @@ jobs:
         run: make backend-install
 
       - name: Run check
-        run: make backend-${{ matrix.check }}
+        run: make ${{ matrix.target }}
 
   frontend:
     name: Frontend / ${{ matrix.check }}
@@ -65,7 +79,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 

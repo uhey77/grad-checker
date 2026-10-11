@@ -21,10 +21,10 @@ help:
 	@echo "backend-dev       バックエンドの開発サーバーを起動"
 	@echo "backend-subject-list   ローカル確認用の科目一覧APIを有効にして起動"
 	@echo "backend-test      バックエンドのテストを実行"
-	@echo "backend-lint      Ruffでlintを検証"
-	@echo "backend-format-check Ruffで整形状態を検証"
+	@echo "backend-lint      Ruffとgo vetでlintを検証"
+	@echo "backend-format-check Ruffとgofmtで整形状態を検証"
 	@echo "backend-format    Ruffのlint自動修正と整形を実行"
-	@echo "backend-typecheck tyでバックエンドの型を検証"
+	@echo "backend-typecheck tyとgo buildでバックエンドの型を検証"
 	@echo "pre-commit-install コミット時のフックを登録"
 	@echo "pre-commit        全ファイルにpre-commitを実行"
 	@echo "backend-seed      CS学部の便覧掲載科目データを追加投入"
@@ -49,7 +49,6 @@ backend-check:
 	$(MAKE) backend-lint
 	$(MAKE) backend-format-check
 	$(MAKE) backend-typecheck
-	$(MAKE) go-api-check
 
 frontend-check:
 	$(MAKE) frontend-lint
@@ -78,12 +77,15 @@ backend-python-dev:
 
 backend-test:
 	cd backend && uv run --locked pytest
+	$(MAKE) go-api-test
 
 backend-lint:
 	cd backend && uv run --locked ruff check .
+	cd backend && go vet ./...
 
 backend-format-check:
 	cd backend && uv run --locked ruff format --check .
+	node scripts/check-go-format.mjs
 
 backend-format:
 	cd backend && uv run --locked ruff check --fix .
@@ -92,6 +94,7 @@ backend-format:
 
 backend-typecheck:
 	cd backend && uv run --locked ty check
+	cd backend && go build ./...
 
 pre-commit-install:
 	uv run --locked --project backend pre-commit install
