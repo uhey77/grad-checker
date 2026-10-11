@@ -58,6 +58,8 @@ make dev
 コミット時にバックエンドのPythonファイルへRuffのlint自動修正・整形を行い、
 tyでバックエンド全体の型を検証します。自動修正された場合は差分を確認し、
 再度ステージしてコミットしてください。Ruff・tyは `backend/uv.lock` のバージョンを使用します。
+Ruffは `A`・`B`・`E`・`F`・`I`・`N`・`W`・`PL`・`UP` のルールを有効にし、
+無視する7ルールは `backend/pyproject.toml` に明記しています。
 
 フロントの変更時にはESLintの自動修正、Prettierの整形、TypeScriptの型チェックも
 フロント全体に実行します。依存は `frontend/package-lock.json` で管理します。

@@ -7,6 +7,8 @@ from sqlalchemy import Engine, event
 from sqlalchemy.engine import make_url
 from sqlmodel import SQLModel, create_engine
 
+from app.infrastructure.subject_models import SUBJECT_TABLES
+
 
 def create_database_engine(database_url: str) -> Engine:
     url = make_url(database_url)
@@ -31,6 +33,4 @@ def create_database_engine(database_url: str) -> Engine:
 
 
 def create_database_schema(engine: Engine) -> None:
-    from app.infrastructure.subject_models import SUBJECT_TABLES
-
     SQLModel.metadata.create_all(engine, tables=SUBJECT_TABLES)

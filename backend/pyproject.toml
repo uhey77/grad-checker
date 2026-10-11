@@ -29,7 +29,26 @@ line-length = 88
 src = ["."]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
+select = [
+    "A",  # flake8-builtins
+    "B",  # flake8-bugbear
+    "E",  # pycodestyle errors
+    "F",  # Pyflakes
+    "I",  # isort
+    "N",  # pep8-naming
+    "W",  # pycodestyle warnings
+    "PL", # Pylint
+    "UP", # pyupgrade
+]
+ignore = [
+    "B905",    # zip-without-explicit-strict
+    "F403",    # undefined-local-with-import-star
+    "N812",    # lowercase-imported-as-non-lowercase
+    "N999",    # invalid-module-name
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
+    "PLR2004", # magic-value-comparison
+]
 
 [tool.ty.src]
 include = ["app", "tests", "seeds/build_cs_seed.py"]

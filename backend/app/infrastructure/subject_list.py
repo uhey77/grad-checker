@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from app.application.errors.subject_list import SubjectListNotFound
+from app.application.errors.subject_list import SubjectListNotFoundError
 from app.application.subject_list import (
     SubjectList,
     SubjectListClassification,
@@ -66,7 +66,7 @@ class SqliteSubjectListRepository(SubjectListRepository):
             .where(Curriculum.id == str(curriculum_id))
         ).first()
         if row is None:
-            raise SubjectListNotFound("選択したカリキュラムが見つかりません。")
+            raise SubjectListNotFoundError("選択したカリキュラムが見つかりません。")
         curriculum, program = row
         classifications = {
             item.id: item

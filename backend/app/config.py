@@ -5,6 +5,8 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_DATABASE_PATH = Path(__file__).resolve().parents[1] / "data" / "grad_checker.db"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -13,7 +15,7 @@ class Settings(BaseSettings):
 
     # 起動ディレクトリにかかわらずbackend/dataへ保存する。
     database_url: str = Field(
-        default=f"sqlite:///{Path(__file__).resolve().parents[1] / 'data' / 'grad_checker.db'}",
+        default=f"sqlite:///{DEFAULT_DATABASE_PATH}",
         validation_alias="DATABASE_URL",
     )
     enable_subject_list_preview: bool = Field(

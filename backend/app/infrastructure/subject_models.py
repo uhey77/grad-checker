@@ -56,7 +56,8 @@ class Curriculum(SQLModel, table=True):
         integer_check("admission_year_from", 1, True),
         integer_check("admission_year_to", 1, True),
         CheckConstraint(
-            "admission_year_from IS NULL OR admission_year_to IS NULL OR admission_year_from <= admission_year_to"
+            "admission_year_from IS NULL OR admission_year_to IS NULL "
+            "OR admission_year_from <= admission_year_to"
         ),
         CheckConstraint("verification_status IN ('unverified', 'verified')"),
         CheckConstraint(
@@ -110,7 +111,8 @@ class Subject(SQLModel, table=True):
         integer_check("credits", 1),
         text_check("teaching_type_label"),
         CheckConstraint(
-            "teaching_type IN ('lecture', 'exercise', 'practice', 'experiment', 'other')"
+            "teaching_type IN "
+            "('lecture', 'exercise', 'practice', 'experiment', 'other')"
         ),
     )
     id: str = Field(primary_key=True)
