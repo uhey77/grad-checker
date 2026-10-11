@@ -6,7 +6,9 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.application.errors.master_seed import SeedError
-from app.domain.master import CourseType, TeachingType, VerificationStatus
+from app.domain.course_type import CourseType
+from app.domain.curriculum_verification_status import VerificationStatus
+from app.domain.teaching_type import TeachingType
 
 PositiveInteger = Annotated[int, Field(strict=True, gt=0)]
 NonnegativeInteger = Annotated[int, Field(strict=True, ge=0)]
