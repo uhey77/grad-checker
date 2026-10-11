@@ -79,4 +79,4 @@ CS学部4課程の切替、科目名検索、区分・必修種別・学期・�
 これらの元データはマスタ内に保持する。
 
 確認用の課程選択は本人の所属を保存しない。S00〜S03の学生向け認証・成績入力・判定画面は今後実装する。
-通常起動のAPIは無効とし、READMEの `dev` または `backend-subject-list` 手順でローカルのみ有効にする。
+Go単体の既定と`backend-dev`では開発用科目一覧APIを無効にする。画面確認はリポジトリルートの`task dev` / `make dev`で、バックエンドだけの科目一覧確認は`task backend-subject-list` / `make backend-subject-list`で有効にする。待受と起動手順は[バックエンドの構成](../backend_architecture.md)を参照する。

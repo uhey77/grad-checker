@@ -23,7 +23,7 @@
 - Pythonの依存定義・ロック・Pythonバージョン・仮想環境は`backend/pyproject.toml`・`backend/uv.lock`・`backend/.python-version`・`backend/.venv`に統一する。`api/`・`modules/`・`config/`に重複して置かない。
 - `api/`・`modules/`・`config/`・`scripts/`は共通環境にインストールするPythonパッケージとする。業務ごとのコード配置と層の依存方向は維持する。
 - 科目モジュールはAPI・設定を参照しない。APIとCLIが設定値と具体実装を組み合わせる。
-- Python内部サービスは`uvicorn api.api_service.main:app`、CLIは`backend/`から`python -m scripts.seed_subjects`で起動する。
+- 通常の起動はリポジトリルートのTask / Makeを使用する。画面は127.0.0.1:5173、Go外部APIは127.0.0.1:8000、Python内部サービスは127.0.0.1:8001に統一する。Python単独起動は`backend-python-dev`を使用し、直接起動する場合も`--host 127.0.0.1 --port 8001`を明示する。CLIは`backend/`から`python -m scripts.seed_subjects`で起動する。詳細は[起動と確認](../../docs/backend_architecture.md#起動と確認)を参照する。
 - 業務処理・HTTP・設定と開発ツールの第三者依存はすべて`backend/pyproject.toml`に宣言し、一つのロックで解決する。
 - Goの`go.mod`は`backend/`直下の一つに統一する。配下に別の`go.mod`を作らず、API・科目・テストを共通モジュールから検証する。ローカル`require`・`replace`は不要。
 - 新しい業務モジュールは`modules/<機能>/`に配置し、必要になった利用側からのみ参照する。Python依存はバックエンドルートに追加する。
@@ -60,7 +60,7 @@
 | 確認 | Task | Make |
 | --- | --- | --- |
 | lint・整形状態・型 | `task backend-check` | `make backend-check` |
-| Python・実プロセス結合テスト | `task backend-test` | `make backend-test` |
+| Python・実プロセス結合・Goテスト | `task backend-test` | `make backend-test` |
 | Goテスト（競合検出付き） | `task go-api-test` | `make go-api-test` |
 
 処理を変更した場合は、該当するユースケース・DB・APIのテストで正常系と失敗時の振る舞いを確認する。

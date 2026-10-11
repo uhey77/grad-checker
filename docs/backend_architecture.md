@@ -71,8 +71,8 @@ Go:     API → subjects
         tests → API / subjects
 ```
 
-Python内部サービスは`backend/`から`uv run --locked uvicorn api.api_service.main:app`で起動する。
-投入CLIは同じ場所から`uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json`で起動する。
+通常の起動はリポジトリルートからTask / Makeで行う。Python内部サービスだけを起動する場合は`task backend-python-dev` / `make backend-python-dev`を使用する（127.0.0.1:8001）。
+投入はリポジトリルートの`task backend-seed` / `make backend-seed`を使用する。CLIを直接実行する場合は`backend/`から`uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json`で起動する。
 APIと科目モジュールはコードの責務を分離するが、Pythonの依存バージョンや仮想環境は分離しない。
 
 Goは`backend/go.mod`一つでAPI・科目・テストを管理する。
@@ -116,6 +116,16 @@ Goで通信を中断しても、Pythonで既に実行中のDB処理が直ちに�
 Go 1.22以上の`go`・`gofmt`をPATHに用意する。Goは標準ライブラリのみを使用する。
 通常の`task setup` / `make setup`後、リポジトリルートで次を実行する。
 
+ローカル開発の待受は次の構成に統一する。
+
+| プロセス | 待受 | 接続先 |
+| --- | --- | --- |
+| React / Vite | `127.0.0.1:5173` | `/api`をGoの`http://127.0.0.1:8000`へプロキシ |
+| Go外部API | `127.0.0.1:8000` | Pythonの`http://127.0.0.1:8001`へ内部HTTPで接続 |
+| Python内部サービス | `127.0.0.1:8001` | SQLite。画面から直接呼び出さない |
+
+通常の画面確認には`task dev` / `make dev`を使用する。バックエンドだけの確認には、科目一覧を無効にする`backend-dev`か、有効にする`backend-subject-list`を選ぶ。
+
 | 用途 | Task | Make |
 | --- | --- | --- |
 | 画面＋Go外部API＋Python内部サービス | `task dev` | `make dev` |
@@ -124,13 +134,15 @@ Go 1.22以上の`go`・`gofmt`をPATHに用意する。Goは標準ライブラ�
 | Python内部サービスのみ | `task backend-python-dev` | `make backend-python-dev` |
 | Go外部APIのみ（科目一覧有効） | `task go-api-dev` | `make go-api-dev` |
 | Python・Goのlint・整形状態・型 | `task backend-check` | `make backend-check` |
-| Python・実プロセス結合テスト | `task backend-test` | `make backend-test` |
+| Python・実プロセス結合・Goテスト | `task backend-test` | `make backend-test` |
 | Goテスト（競合検出付き） | `task go-api-test` | `make go-api-test` |
 
 `dev-go`は`dev`と同じ構成で起動する互換コマンド。
 画面は http://127.0.0.1:5173 、外部APIは http://127.0.0.1:8000 。Ctrl+Cで一括終了する。
 通常の`dev`は科目一覧を有効にする。Go単体の既定は無効で、`-subject-list-preview`で有効化する。
 Goの設定例は、`backend/`で`go run ./api -listen 127.0.0.1:8000 -python-url http://127.0.0.1:8001 -subject-list-preview`。
+単独起動の`backend-python-dev`と`go-api-dev`は別々のターミナルで実行する。片方のコマンドからもう片方のサービスは起動しない。
+Pythonを直接起動して確認する場合も、`backend/`で`uv run --locked uvicorn api.api_service.main:app --host 127.0.0.1 --port 8001`と待受を明示する。ポートを省略すると8000になり、Goの待受と競合する。
 Python内部サービスは127.0.0.1:8001で起動し、外部には公開しない。
 Pythonの`/api`・Swagger UIは削除しており、画面はGoを介して取得する。外部OpenAPI/Swagger UIの整備は今後実施する。
 
