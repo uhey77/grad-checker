@@ -17,7 +17,7 @@ help:
 	@echo "frontend-check    フロントエンドのlint・整形状態・型を検証"
 	@echo "setup             フロントエンドとバックエンドの依存関係をインストール"
 	@echo "frontend-install  npm ciを実行"
-	@echo "backend-install   各パッケージの依存を個別に同期"
+	@echo "backend-install   バックエンドの依存を同期"
 	@echo "backend-dev       バックエンドの開発サーバーを起動"
 	@echo "backend-subject-list   ローカル確認用の科目一覧APIを有効にして起動"
 	@echo "backend-test      バックエンドのテストを実行"
@@ -65,7 +65,7 @@ frontend-install:
 	cd frontend && npm ci
 
 backend-install:
-	node scripts/install-backend.mjs
+	uv sync --locked --project backend
 
 backend-dev:
 	node scripts/dev.mjs --backend-only
@@ -74,7 +74,7 @@ backend-subject-list:
 	node scripts/dev.mjs --backend-only --subject-list-preview
 
 backend-python-dev:
-	cd backend && uv run --locked --project api uvicorn api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
+	cd backend && uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
 backend-test:
 	cd backend && uv run --locked pytest

@@ -12,15 +12,16 @@ from urllib.request import Request, urlopen
 from uuid import uuid4
 
 import pytest
-from grad_checker_subjects.infrastructure.database import (
+from sqlalchemy import text
+
+from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
     create_database_schema,
 )
-from grad_checker_subjects.infrastructure.subject_data_import import (
+from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     import_subject_data,
     load_seed,
 )
-from sqlalchemy import text
 
 BACKEND = Path(__file__).resolve().parents[1]
 BASE = "/api/dev/subject-list"
@@ -85,12 +86,12 @@ def services(tmp_path_factory):
             [
                 str(
                     BACKEND
-                    / "api/.venv"
+                    / ".venv"
                     / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
                 ),
                 "-m",
                 "uvicorn",
-                "api_service.main:app",
+                "api.api_service.main:app",
                 "--app-dir",
                 str(BACKEND),
                 "--host",

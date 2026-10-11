@@ -6,12 +6,12 @@ from uuid import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from grad_checker_subjects.application.errors.subject_list import (
+from modules.subjects.grad_checker_subjects.application.errors.subject_list import (
     SubjectListIntegrityError,
     SubjectListNotFoundError,
     SubjectListUnavailableError,
 )
-from grad_checker_subjects.application.subject_list import (
+from modules.subjects.grad_checker_subjects.application.subject_list import (
     SubjectList,
     SubjectListClassification,
     SubjectListItem,
@@ -19,7 +19,7 @@ from grad_checker_subjects.application.subject_list import (
     SubjectListProgram,
     SubjectListRepository,
 )
-from grad_checker_subjects.infrastructure.subject_models import (
+from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
     Curriculum,

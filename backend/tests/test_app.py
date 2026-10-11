@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from api_service.main import create_app
-from api_service.presentation.dependencies import SessionDependency
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 
+from api.api_service.main import create_app
+from api.api_service.presentation.dependencies import SessionDependency
 from config.settings import Settings
 
 

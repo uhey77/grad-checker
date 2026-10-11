@@ -5,12 +5,15 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from grad_checker_subjects.application.errors.subject_data import SeedError
-from grad_checker_subjects.domain.curriculum_verification_status import (
+from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
+    SeedError,
+)
+from modules.subjects.grad_checker_subjects.domain.subject_type import SubjectType
+from modules.subjects.grad_checker_subjects.domain.teaching_type import TeachingType
+
+from ..domain.curriculum_verification_status import (
     VerificationStatus,
 )
-from grad_checker_subjects.domain.subject_type import SubjectType
-from grad_checker_subjects.domain.teaching_type import TeachingType
 
 PositiveInteger = Annotated[int, Field(strict=True, gt=0)]
 NonnegativeInteger = Annotated[int, Field(strict=True, ge=0)]

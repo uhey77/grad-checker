@@ -5,18 +5,20 @@ import json
 import sys
 from pathlib import Path
 
-from grad_checker_subjects.application.errors.subject_data import SeedError
-from grad_checker_subjects.infrastructure.database import (
-    create_database_engine,
-    create_database_schema,
-)
-from grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
-    load_seed,
-)
 from sqlalchemy.exc import SQLAlchemyError
 
 from config.settings import Settings
+from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
+    SeedError,
+)
+from modules.subjects.grad_checker_subjects.infrastructure.database import (
+    create_database_engine,
+    create_database_schema,
+)
+from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+    import_subject_data,
+    load_seed,
+)
 
 
 def main() -> int:

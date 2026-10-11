@@ -5,21 +5,21 @@ from typing import Literal, Self
 from uuid import UUID
 
 from fastapi import APIRouter
-from grad_checker_subjects.application.errors.subject_list import (
+from pydantic import BaseModel, ConfigDict, model_validator
+
+from api.api_service.presentation.dependencies import SessionDependency
+from modules.subjects.grad_checker_subjects.application.errors.subject_list import (
     SubjectListIntegrityError,
     SubjectListNotFoundError,
     SubjectListUnavailableError,
 )
-from grad_checker_subjects.application.subject_list import (
+from modules.subjects.grad_checker_subjects.application.subject_list import (
     get_subject_list,
     list_subject_programs,
 )
-from grad_checker_subjects.infrastructure.subject_list import (
+from modules.subjects.grad_checker_subjects.infrastructure.subject_list import (
     SqliteSubjectListRepository,
 )
-from pydantic import BaseModel, ConfigDict, model_validator
-
-from api_service.presentation.dependencies import SessionDependency
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/internal")

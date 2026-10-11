@@ -106,10 +106,14 @@ wheels = [
 [[package]]
 name = "grad-checker"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
-    { name = "grad-checker-api" },
-    { name = "grad-checker-subjects" },
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "sqlalchemy" },
+    { name = "sqlmodel" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -123,8 +127,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "grad-checker-api", editable = "api" },
-    { name = "grad-checker-subjects", editable = "modules/subjects" },
+    { name = "fastapi", specifier = ">=0.135.0,<1.0" },
+    { name = "pydantic", specifier = ">=2.0,<3.0" },
+    { name = "pydantic-settings", specifier = ">=2.0,<3.0" },
+    { name = "sqlalchemy", specifier = ">=2.0,<3.0" },
+    { name = "sqlmodel", specifier = ">=0.0.37,<0.1" },
+    { name = "uvicorn", specifier = ">=0.41.0,<1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -134,48 +142,6 @@ dev = [
     { name = "pytest", specifier = ">=9.0.2,<10.0" },
     { name = "ruff", specifier = ">=0.17.0,<0.18" },
     { name = "ty", specifier = ">=0.0.86" },
-]
-
-[[package]]
-name = "grad-checker-api"
-version = "0.1.0"
-source = { editable = "api" }
-dependencies = [
-    { name = "fastapi" },
-    { name = "grad-checker-subjects" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "sqlalchemy" },
-    { name = "sqlmodel" },
-    { name = "uvicorn" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.135.0,<1.0" },
-    { name = "grad-checker-subjects", editable = "modules/subjects" },
-    { name = "pydantic", specifier = ">=2.0,<3.0" },
-    { name = "pydantic-settings", specifier = ">=2.0,<3.0" },
-    { name = "sqlalchemy", specifier = ">=2.0,<3.0" },
-    { name = "sqlmodel", specifier = ">=0.0.37,<0.1" },
-    { name = "uvicorn", specifier = ">=0.41.0,<1.0" },
-]
-
-[[package]]
-name = "grad-checker-subjects"
-version = "0.1.0"
-source = { editable = "modules/subjects" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "sqlalchemy" },
-    { name = "sqlmodel" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pydantic", specifier = ">=2.0,<3.0" },
-    { name = "sqlalchemy", specifier = ">=2.0,<3.0" },
-    { name = "sqlmodel", specifier = ">=0.0.37,<0.1" },
 ]
 
 [[package]]

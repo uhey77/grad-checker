@@ -80,16 +80,14 @@ start(
     "run",
     "--locked",
     "uvicorn",
-    "api_service.main:app",
-    "--app-dir",
-    "..",
+    "api.api_service.main:app",
     "--reload",
     "--host",
     "127.0.0.1",
     "--port",
     "8001",
   ],
-  "backend/api/",
+  "backend/",
 );
 start(
   "Go API",

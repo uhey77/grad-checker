@@ -49,7 +49,7 @@ tasks:
   backend-install:
     desc: バックエンドの依存関係をロックファイルからインストール
     cmds:
-      - node scripts/install-backend.mjs
+      - uv sync --locked --project backend
 
   backend-dev:
     desc: Go外部APIとPython内部サービスを起動
@@ -65,7 +65,7 @@ tasks:
     desc: Python内部サービスだけを起動
     dir: backend
     cmds:
-      - uv run --locked --project api uvicorn api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
+      - uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
   backend-test:
     desc: バックエンドのテストを実行

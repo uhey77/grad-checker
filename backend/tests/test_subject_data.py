@@ -8,19 +8,24 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from grad_checker_subjects.application.errors.subject_data import SeedError
-from grad_checker_subjects.application.subject_data_validation import SubjectDataSeed
-from grad_checker_subjects.infrastructure.database import (
-    create_database_engine,
-    create_database_schema,
-)
-from grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
-    load_seed,
-)
 from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
+
+from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
+    SeedError,
+)
+from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+    SubjectDataSeed,
+)
+from modules.subjects.grad_checker_subjects.infrastructure.database import (
+    create_database_engine,
+    create_database_schema,
+)
+from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+    import_subject_data,
+    load_seed,
+)
 
 BACKEND = Path(__file__).resolve().parents[1]
 SEED_PATH = BACKEND / "seeds" / "cs_2026.json"
