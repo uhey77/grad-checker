@@ -12,20 +12,20 @@ from app.application.errors.subject_data import SeedError
 from app.application.subject_data_validation import (
     AcademicProgramData,
     ClassificationData,
-    SubjectData,
-    SubjectOfferingData,
-    CurriculumSubjectData,
     CurriculumData,
+    CurriculumSubjectData,
+    SubjectData,
     SubjectDataSeed,
+    SubjectOfferingData,
     validate_subject_data,
 )
 from app.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
-    Subject,
-    SubjectOffering,
     Curriculum,
     CurriculumSubject,
+    Subject,
+    SubjectOffering,
 )
 
 TABLE_MAPPING = (
@@ -114,7 +114,11 @@ def import_subject_data(engine: Engine, seed: SubjectDataSeed) -> dict[str, int]
                 for record in additions[name]:
                     data = record.model_dump(mode="json")
                     if name == "course_offerings":
-                        identity = f"grad-checker:offering:{record.course_id}:{record.term_code}:{record.semester_order}:{record.academic_year}"
+                        identity = (
+                            f"grad-checker:offering:{data['course_id']}:"
+                            f"{data['term_code']}:{data['semester_order']}:"
+                            f"{data['academic_year']}"
+                        )
                         data["id"] = str(uuid5(NAMESPACE_URL, identity))
                     session.add(model(**data))
                     # 親分類も同じテーブルなので、順序を明示してFKを満たす。

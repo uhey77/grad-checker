@@ -6,8 +6,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.application.errors.subject_data import SeedError
-from app.domain.subject_type import SubjectType
 from app.domain.curriculum_verification_status import VerificationStatus
+from app.domain.subject_type import SubjectType
 from app.domain.teaching_type import TeachingType
 
 PositiveInteger = Annotated[int, Field(strict=True, gt=0)]
@@ -86,37 +86,38 @@ class SubjectDataSeed(SeedRecord):
     curriculum_courses: list[CurriculumSubjectData]
 
 
+def _unique_records(records: list, key, label: str) -> dict:
+    result = {}
+    for record in records:
+        identity = key(record)
+        if identity in result:
+            raise SeedError(f"{label}が重複しています。")
+        result[identity] = record
+    return result
+
+
 def validate_subject_data(seed: SubjectDataSeed) -> list[ClassificationData]:
     """DB既存分と投入分を合わせて検証し、分類を親から順に返す。"""
 
-    def unique(records: list, key, label: str) -> dict:
-        result = {}
-        for record in records:
-            identity = key(record)
-            if identity in result:
-                raise SeedError(f"{label}が重複しています。")
-            result[identity] = record
-        return result
-
-    programs = unique(seed.academic_programs, lambda x: x.id, "課程ID")
-    curricula = unique(seed.curricula, lambda x: x.id, "カリキュラムID")
-    classifications = unique(seed.classifications, lambda x: x.id, "分類ID")
-    courses = unique(seed.courses, lambda x: x.id, "科目ID")
+    programs = _unique_records(seed.academic_programs, lambda x: x.id, "課程ID")
+    curricula = _unique_records(seed.curricula, lambda x: x.id, "カリキュラムID")
+    classifications = _unique_records(seed.classifications, lambda x: x.id, "分類ID")
+    courses = _unique_records(seed.courses, lambda x: x.id, "科目ID")
     for records, label in (
         (seed.academic_programs, "課程コード"),
         (seed.curricula, "カリキュラムコード"),
         (seed.courses, "科目コード"),
     ):
-        unique(records, lambda x: x.code, label)
-    unique(
+        _unique_records(records, lambda x: x.code, label)
+    _unique_records(
         seed.classifications, lambda x: (x.curriculum_id, x.code), "課程内の分類コード"
     )
-    unique(
+    _unique_records(
         seed.course_offerings,
         lambda x: (x.course_id, x.term_code, x.semester_order, x.academic_year),
         "科目の開講期",
     )
-    unique(
+    _unique_records(
         seed.curriculum_courses, lambda x: (x.curriculum_id, x.course_id), "課程別科目"
     )
 

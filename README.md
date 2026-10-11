@@ -8,6 +8,10 @@
 | 操作 | Task | Make |
 | --- | --- | --- |
 | コマンド一覧を表示 | `task` | `make` |
+| バックエンド・フロントのlint・整形状態・型を検証 | `task check` | `make check` |
+| バックエンド・フロントの自動修正・整形 | `task format` | `make format` |
+| バックエンドだけのlint・整形状態・型を検証 | `task backend-check` | `make backend-check` |
+| フロントだけのlint・整形状態・型を検証 | `task frontend-check` | `make frontend-check` |
 | すべての依存関係をインストール | `task setup` | `make setup` |
 | フロントエンドの依存関係をインストール | `task frontend-install` | `make frontend-install` |
 | バックエンドの依存関係をインストール | `task backend-install` | `make backend-install` |
@@ -15,8 +19,16 @@
 | バックエンドを起動 | `task backend-dev` | `make backend-dev` |
 | ローカル確認用の科目一覧APIを起動 | `task backend-catalog` | `make backend-catalog` |
 | バックエンドのテスト | `task backend-test` | `make backend-test` |
+| Ruffのlint・整形状態を検証 | `task backend-lint` | `make backend-lint` |
+| Ruffの自動修正・整形 | `task backend-format` | `make backend-format` |
+| tyで型を検証 | `task backend-typecheck` | `make backend-typecheck` |
+| コミット時のフックを登録 | `task pre-commit-install` | `make pre-commit-install` |
+| 全ファイルにpre-commitを実行 | `task pre-commit` | `make pre-commit` |
 | フロントエンドと科目一覧APIを同時に起動 | `task dev` | `make dev` |
 | フロントエンドだけを起動 | `task frontend-dev` | `make frontend-dev` |
+| フロントのlint・整形状態を検証 | `task frontend-lint` | `make frontend-lint` |
+| フロントの自動修正・整形 | `task frontend-format` | `make frontend-format` |
+| フロントの型を検証 | `task frontend-typecheck` | `make frontend-typecheck` |
 | フロントエンドをビルド | `task build` | `make build` |
 | フロントエンドのビルド結果をプレビュー | `task preview` | `make preview` |
 
@@ -41,6 +53,26 @@ make dev
 ```
 
 依存関係のセットアップと科目データの投入は初回に実行してください。次回からは `task dev` または `make dev` だけで両方を起動できます。
+
+`setup` はpre-commitのGitフックも登録します。セットアップ済みの場合は
+`task backend-install` と `task pre-commit-install`（Makeも同名）を実行してください。
+コミット時は `scripts/run-tasks.mjs` がTask（未インストールならMake）を選び、
+`format` → `check` の順に両方のコードを自動修正・整形・検証します。
+Task／Makeはどちらか一方のインストールで動作します。
+自動修正された場合は差分を確認し、再度ステージしてコミットしてください。
+Ruff・tyは `backend/uv.lock` のバージョンを使用します。
+Ruffは `A`・`B`・`E`・`F`・`I`・`N`・`W`・`PL`・`UP` のルールを有効にし、
+無視する7ルールは `backend/pyproject.toml` に明記しています。
+
+フロントの依存は `frontend/package-lock.json` で管理します。
+ESLintはTypeScriptとReact Hooksのルールを検証し、整形はPrettierに任せます。
+TypeScriptはtypescript-eslintの対応範囲に合わせて6.0系を使用します。
+フロントの依存を更新した場合は `task frontend-install`（Makeも同名）を実行してください。
+
+両方をまとめて検証する場合は `task check` または `make check` を実行してください。
+Ruff・ESLintのlint、Ruff・Prettierの整形状態、ty・TypeScriptの型チェックを行います。
+片方だけを検証する場合は `backend-check` または `frontend-check` を使ってください。
+整形を適用する場合は `format`、片方だけの場合は `backend-format`・`frontend-format` を使ってください。
 
 開発サーバーの URL はターミナルに表示されます（通常は
 http://127.0.0.1:5173）。`Ctrl+C` で両方のサーバーを終了します。

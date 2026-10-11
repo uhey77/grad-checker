@@ -19,19 +19,7 @@ def clean(value: str) -> str:
     return value.replace("\x08", " ").replace("\n", "").strip()
 
 
-def main() -> None:
-    source = json.loads((DIRECTORY / "cs_2026.source.json").read_text(encoding="utf-8"))
-    seed = {
-        key: []
-        for key in (
-            "academic_programs",
-            "curricula",
-            "classifications",
-            "courses",
-            "course_offerings",
-            "curriculum_courses",
-        )
-    }
+def add_programs(seed: dict, source: dict) -> list[str]:
     # CS/CS-ADVは共通科目の開講元。選択用カリキュラムは末端4課程のみ。
     programs = (
         ("CS", None, None),
@@ -54,12 +42,14 @@ def main() -> None:
             }
         )
         if code in selections:
+            curriculum_name = course or major
+            assert curriculum_name is not None
             seed["curricula"].append(
                 {
                     "id": identity("curriculum", code + "-HANDBOOK-2026"),
                     "program_id": identity("program", code),
                     "code": code + "-HANDBOOK-2026",
-                    "name": "2026年度便覧掲載 " + (course or major),
+                    "name": "2026年度便覧掲載 " + curriculum_name,
                     "revision": 1,
                     "admission_year_from": None,
                     "admission_year_to": None,
@@ -71,6 +61,10 @@ def main() -> None:
                 }
             )
 
+    return selections
+
+
+def add_classifications(seed: dict, selections: list[str]) -> dict[str, str]:
     groups = (
         (
             "general",
@@ -136,6 +130,26 @@ def main() -> None:
                     }
                 )
 
+    return group_codes
+
+
+def main() -> None:
+    source = json.loads((DIRECTORY / "cs_2026.source.json").read_text(encoding="utf-8"))
+    seed = {
+        key: []
+        for key in (
+            "academic_programs",
+            "curricula",
+            "classifications",
+            "courses",
+            "course_offerings",
+            "curriculum_courses",
+        )
+    }
+    selections = add_programs(seed, source)
+
+    group_codes = add_classifications(seed, selections)
+
     course_types = {
         "必": "required",
         "選必": "selective",
@@ -158,7 +172,7 @@ def main() -> None:
             row = entry["cells"]
             name = clean(row[1]).replace("（※）", "")
             label = clean(row[-1]).replace(" ", "")
-            credits = int(row[3])
+            credit_value = int(row[3])
             # 同学部の両専攻表の共通科目だけを照合して共有する。
             if name not in by_name:
                 code = f"CS-C{len(by_name) + 1:03}"
@@ -171,7 +185,7 @@ def main() -> None:
                     "id": identity("course", code),
                     "code": code,
                     "name": name,
-                    "credits": credits,
+                    "credits": credit_value,
                     "offering_program_id": identity("program", offering_program),
                     "teaching_type": teaching_types[label],
                     "teaching_type_label": label,
@@ -179,7 +193,10 @@ def main() -> None:
                 by_name[name] = course
                 seed["courses"].append(course)
             course = by_name[name]
-            if (course["credits"], course["teaching_type_label"]) != (credits, label):
+            if (course["credits"], course["teaching_type_label"]) != (
+                credit_value,
+                label,
+            ):
                 raise ValueError(f"共通科目の単位または授業形態が一致しません: {name}")
             start = 8 if booklet == 88 else 5
             for slot, cell in enumerate(row[start : start + 8], start=1):

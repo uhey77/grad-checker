@@ -50,23 +50,27 @@ def test_request_sessions_preserve_commits_and_rollback_uncommitted_changes(
     # テスト専用ルートで、実際のFastAPI依存解決とリクエスト終了を検証する。
     @application.post("/test/committed")
     def committed(session: SessionDependency) -> dict[str, str]:
-        session.execute(text("INSERT INTO records (id) VALUES (1)"))
+        session.connection().execute(text("INSERT INTO records (id) VALUES (1)"))
         session.commit()
         return {"status": "ok"}
 
     @application.post("/test/uncommitted")
     def uncommitted(session: SessionDependency) -> dict[str, str]:
-        session.execute(text("INSERT INTO records (id) VALUES (2)"))
+        session.connection().execute(text("INSERT INTO records (id) VALUES (2)"))
         return {"status": "ok"}
 
     @application.post("/test/error")
     def error(session: SessionDependency) -> None:
-        session.execute(text("INSERT INTO records (id) VALUES (3)"))
+        session.connection().execute(text("INSERT INTO records (id) VALUES (3)"))
         raise RuntimeError("テスト用の障害")
 
     @application.get("/test/records")
     def records(session: SessionDependency) -> list[int]:
-        return list(session.execute(text("SELECT id FROM records ORDER BY id")).scalars())
+        return list(
+            session.connection()
+            .execute(text("SELECT id FROM records ORDER BY id"))
+            .scalars()
+        )
 
     with TestClient(application, raise_server_exceptions=False) as client:
         with application.state.database_engine.begin() as connection:

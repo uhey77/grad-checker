@@ -5,10 +5,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.application.errors.subject_list import SubjectListNotFound
+from app.application.errors.subject_list import SubjectListNotFoundError
 from app.application.subject_list import (
-    SubjectListProgram,
     SubjectList,
+    SubjectListProgram,
     get_subject_list,
     list_subject_programs,
 )
@@ -50,7 +50,7 @@ def subject_list(curriculum_id: str, session: SessionDependency) -> SubjectList:
         ) from error
     try:
         return get_subject_list(SqliteSubjectListRepository(session), identifier)
-    except SubjectListNotFound as error:
+    except SubjectListNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(

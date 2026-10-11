@@ -3,28 +3,30 @@
 from collections import defaultdict
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
-from app.application.errors.subject_list import SubjectListNotFound
+from app.application.errors.subject_list import SubjectListNotFoundError
 from app.application.subject_list import (
-    SubjectListRepository,
+    SubjectList,
     SubjectListClassification,
     SubjectListItem,
     SubjectListOffering,
     SubjectListProgram,
-    SubjectList,
+    SubjectListRepository,
 )
 from app.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
-    Subject,
-    SubjectOffering,
     Curriculum,
     CurriculumSubject,
+    Subject,
+    SubjectOffering,
 )
 
 
-def program_data(curriculum: Curriculum, program: AcademicProgram) -> SubjectListProgram:
+def program_data(
+    curriculum: Curriculum, program: AcademicProgram
+) -> SubjectListProgram:
     return SubjectListProgram(
         curriculum_id=curriculum.id,
         name=curriculum.name,
@@ -46,7 +48,9 @@ class SqliteSubjectListRepository(SubjectListRepository):
     def list_programs(self) -> list[SubjectListProgram]:
         rows = self.session.exec(
             select(Curriculum, AcademicProgram)
-            .join(AcademicProgram, Curriculum.program_id == AcademicProgram.id)
+            .join(
+                AcademicProgram, col(Curriculum.program_id) == col(AcademicProgram.id)
+            )
             .order_by(AcademicProgram.code, Curriculum.code)
         ).all()
         return [program_data(curriculum, program) for curriculum, program in rows]
@@ -56,11 +60,13 @@ class SqliteSubjectListRepository(SubjectListRepository):
         self.session.connection().exec_driver_sql("BEGIN")
         row = self.session.exec(
             select(Curriculum, AcademicProgram)
-            .join(AcademicProgram, Curriculum.program_id == AcademicProgram.id)
+            .join(
+                AcademicProgram, col(Curriculum.program_id) == col(AcademicProgram.id)
+            )
             .where(Curriculum.id == str(curriculum_id))
         ).first()
         if row is None:
-            raise SubjectListNotFound("選択したカリキュラムが見つかりません。")
+            raise SubjectListNotFoundError("選択したカリキュラムが見つかりません。")
         curriculum, program = row
         classifications = {
             item.id: item
@@ -72,18 +78,21 @@ class SqliteSubjectListRepository(SubjectListRepository):
         }
         rows = self.session.exec(
             select(CurriculumSubject, Subject, AcademicProgram)
-            .join(Subject, CurriculumSubject.course_id == Subject.id)
-            .join(AcademicProgram, Subject.offering_program_id == AcademicProgram.id)
+            .join(Subject, col(CurriculumSubject.course_id) == col(Subject.id))
+            .join(
+                AcademicProgram,
+                col(Subject.offering_program_id) == col(AcademicProgram.id),
+            )
             .where(CurriculumSubject.curriculum_id == curriculum.id)
-            .order_by(CurriculumSubject.display_order, Subject.code)
+            .order_by(col(CurriculumSubject.display_order), col(Subject.code))
         ).all()
         offerings = defaultdict(list)
         if rows:
             course_ids = [course.id for _, course, _ in rows]
             for offering in self.session.exec(
                 select(SubjectOffering)
-                .where(SubjectOffering.course_id.in_(course_ids))
-                .order_by(SubjectOffering.semester_order, SubjectOffering.id)
+                .where(col(SubjectOffering.course_id).in_(course_ids))
+                .order_by(col(SubjectOffering.semester_order), col(SubjectOffering.id))
             ).all():
                 offerings[offering.course_id].append(
                     SubjectListOffering(

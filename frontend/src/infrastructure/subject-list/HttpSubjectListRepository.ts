@@ -41,6 +41,7 @@ export class HttpSubjectListRepository implements SubjectListRepository {
       if (error instanceof TypeError || error instanceof SyntaxError)
         throw new Error(
           "科目一覧に接続できませんでした。時間をおいて再試行してください。",
+          { cause: error },
         );
       throw error;
     }

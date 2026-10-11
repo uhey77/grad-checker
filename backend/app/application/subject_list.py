@@ -60,7 +60,9 @@ class SubjectListRepository(ABC):
         """指定課程の科目一覧を取得する。"""
 
 
-def list_subject_programs(repository: SubjectListRepository) -> list[SubjectListProgram]:
+def list_subject_programs(
+    repository: SubjectListRepository,
+) -> list[SubjectListProgram]:
     return repository.list_programs()
 
 

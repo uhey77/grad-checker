@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -14,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from app.application.errors.subject_data import SeedError
 from app.application.subject_data_validation import SubjectDataSeed
 from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.subject_data_import import load_seed, import_subject_data
+from app.infrastructure.subject_data_import import import_subject_data, load_seed
 
 BACKEND = Path(__file__).resolve().parents[1]
 SEED_PATH = BACKEND / "seeds" / "cs_2026.json"
@@ -122,7 +123,9 @@ def test_seed_is_persistent_idempotent_and_handles_child_before_parent(engine, s
         name: len(getattr(seed, name)) for name in SubjectDataSeed.model_fields
     }
     before = counts(engine)
-    assert import_subject_data(engine, seed) == dict.fromkeys(SubjectDataSeed.model_fields, 0)
+    assert import_subject_data(engine, seed) == dict.fromkeys(
+        SubjectDataSeed.model_fields, 0
+    )
     assert counts(engine) == before
     # 新しいエンジンでも同じファイルに保存されている。
     reopened = create_database_engine(str(engine.url))
@@ -132,10 +135,10 @@ def test_seed_is_persistent_idempotent_and_handles_child_before_parent(engine, s
         reopened.dispose()
 
 
-@pytest.mark.parametrize("credits", [0, -1, 1.5, 2.0, True, "2"])
-def test_json_rejects_non_positive_or_coerced_credits(seed, credits):
+@pytest.mark.parametrize("credit_value", [0, -1, 1.5, 2.0, True, "2"])
+def test_json_rejects_non_positive_or_coerced_credits(seed, credit_value):
     data = seed.model_dump(mode="json")
-    data["courses"][0]["credits"] = credits
+    data["courses"][0]["credits"] = credit_value
     with pytest.raises(ValidationError):
         SubjectDataSeed.model_validate(data)
 
@@ -204,7 +207,10 @@ def test_incremental_seed_can_reference_existing_master(engine, seed):
     course = seed.courses[0].model_dump(mode="json")
     course.update(id=str(uuid4()), code="NEW-COURSE", name="テスト用の追加科目")
     data["courses"] = [course]
-    assert import_subject_data(engine, SubjectDataSeed.model_validate(data))["courses"] == 1
+    assert (
+        import_subject_data(engine, SubjectDataSeed.model_validate(data))["courses"]
+        == 1
+    )
     assert counts(engine)["courses"] == len(seed.courses) + 1
 
 
@@ -212,7 +218,8 @@ def test_save_failure_rolls_back_preceding_tables(engine, seed):
     with engine.begin() as connection:
         connection.execute(
             text(
-                "CREATE TRIGGER test_failure BEFORE INSERT ON courses BEGIN SELECT RAISE(ABORT, 'test failure'); END"
+                "CREATE TRIGGER test_failure BEFORE INSERT ON courses "
+                "BEGIN SELECT RAISE(ABORT, 'test failure'); END"
             )
         )
     with pytest.raises(SeedError, match="全件の変更を取り消しました"):
@@ -245,13 +252,18 @@ def test_database_enforces_same_curriculum_references_restrict_and_nullable_uniq
                 {"foreign": foreign_root, "child": child},
             ),
             (
-                "UPDATE curriculum_courses SET classification_id = :foreign WHERE classification_id = :root",
+                "UPDATE curriculum_courses SET classification_id = :foreign "
+                "WHERE classification_id = :root",
                 {"foreign": foreign_root, "root": child},
             ),
             ("DELETE FROM classifications WHERE id = :root", {"root": root}),
             ("UPDATE courses SET teaching_type = 'unknown'", {}),
             (
-                "INSERT INTO course_offerings (id, course_id, term_code, semester_order, academic_year, source_note) SELECT 'new-id', course_id, term_code, semester_order, academic_year, source_note FROM course_offerings LIMIT 1",
+                "INSERT INTO course_offerings "
+                "(id, course_id, term_code, semester_order, "
+                "academic_year, source_note) "
+                "SELECT 'new-id', course_id, term_code, semester_order, "
+                "academic_year, source_note FROM course_offerings LIMIT 1",
                 {},
             ),
         ):
@@ -264,12 +276,22 @@ def test_cli_and_japanese_input_errors(tmp_path):
     environment = dict(os.environ, DATABASE_URL=f"sqlite:///{db}")
     command = [sys.executable, "-m", "app.seed", "--file", str(SEED_PATH)]
     first = subprocess.run(
-        command, cwd=BACKEND, env=environment, capture_output=True, text=True
+        command,
+        cwd=BACKEND,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert first.returncode == 0, first.stderr
     assert '"courses": 131' in first.stdout
     second = subprocess.run(
-        command, cwd=BACKEND, env=environment, capture_output=True, text=True
+        command,
+        cwd=BACKEND,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert second.returncode == 0, second.stderr
     assert '"courses": 0' in second.stdout
@@ -281,6 +303,7 @@ def test_cli_and_japanese_input_errors(tmp_path):
         env=environment,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert failure.returncode == 1
     assert "シードの形式・型・値が不正" in failure.stderr
@@ -293,14 +316,13 @@ def test_cli_and_japanese_input_errors(tmp_path):
 
 def test_seed_regeneration_is_reproducible(tmp_path):
     # リポジトリのシードを書き換えず、コピーした生成元とスクリプトで再現性を検証。
-    import shutil
-
     for filename in ("cs_2026.source.json", "build_cs_seed.py"):
         shutil.copyfile(BACKEND / "seeds" / filename, tmp_path / filename)
     result = subprocess.run(
         [sys.executable, str(tmp_path / "build_cs_seed.py")],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert json.loads((tmp_path / "cs_2026.json").read_text()) == json.loads(

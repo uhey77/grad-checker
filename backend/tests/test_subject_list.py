@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.config import Settings
-from app.infrastructure.subject_data_import import load_seed, import_subject_data
+from app.infrastructure.subject_data_import import import_subject_data, load_seed
 from app.main import create_app
 
 SEED_PATH = Path(__file__).resolve().parents[1] / "seeds" / "cs_2026.json"

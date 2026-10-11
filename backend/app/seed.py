@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.application.errors.subject_data import SeedError
 from app.config import Settings
 from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.subject_data_import import load_seed, import_subject_data
+from app.infrastructure.subject_data_import import import_subject_data, load_seed
 
 
 def main() -> int:
