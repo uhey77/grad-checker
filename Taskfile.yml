@@ -12,6 +12,12 @@ tasks:
       - task: backend-check
       - task: frontend-check
 
+  test:
+    desc: バックエンドとフロントエンドの全テストを実行
+    cmds:
+      - task: backend-test
+      - task: frontend-test
+
   format:
     desc: バックエンドとフロントエンドのlint自動修正・整形を実行
     cmds:
@@ -103,7 +109,7 @@ tasks:
       - go build ./...
 
   pre-commit-install:
-    desc: コミット時のlint・整形・型検証フックを登録
+    desc: コミット時の整形・チェック・全テストのフックを登録
     cmds:
       - uv run --locked --project backend pre-commit install
 
@@ -157,6 +163,12 @@ tasks:
     dir: backend
     cmds:
       - go test -race ./...
+
+  frontend-test:
+    desc: フロントエンドのテストを実行
+    dir: frontend
+    cmds:
+      - npm test
 
   frontend-lint:
     desc: ESLintでフロントエンドのlintを検証

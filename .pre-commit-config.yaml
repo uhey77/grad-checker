@@ -2,8 +2,8 @@ repos:
   - repo: local
     hooks:
       - id: project-check
-        name: Format and check
-        entry: node scripts/run-tasks.mjs format check
+        name: Format, check and test
+        entry: node scripts/run-tasks.mjs format check test
         language: system
         pass_filenames: false
         always_run: true
