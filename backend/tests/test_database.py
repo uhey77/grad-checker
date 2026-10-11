@@ -4,7 +4,9 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from app.infrastructure.database import create_database_engine
+from modules.subjects.grad_checker_subjects.infrastructure.database import (
+    create_database_engine,
+)
 
 
 def test_foreign_keys_are_enforced_on_each_connection(tmp_path: Path) -> None:

@@ -18,6 +18,3 @@ class Settings(BaseSettings):
         default=f"sqlite:///{DEFAULT_DATABASE_PATH}",
         validation_alias="DATABASE_URL",
     )
-    enable_subject_list_preview: bool = Field(
-        default=False, validation_alias="ENABLE_CATALOG_PREVIEW"
-    )

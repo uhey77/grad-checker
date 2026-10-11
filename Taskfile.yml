@@ -24,6 +24,7 @@ tasks:
       - task: backend-lint
       - task: backend-format-check
       - task: backend-typecheck
+      - task: go-api-check
 
   frontend-check:
     desc: フロントエンドのlint・整形状態・型を検証
@@ -47,29 +48,30 @@ tasks:
 
   backend-install:
     desc: バックエンドの依存関係をロックファイルからインストール
-    dir: backend
     cmds:
-      - uv sync --locked
+      - uv sync --locked --project backend
 
   backend-dev:
-    desc: バックエンドの開発サーバーを起動
-    dir: backend
+    desc: Go外部APIとPython内部サービスを起動
     cmds:
-      - uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+      - node scripts/dev.mjs --backend-only
 
-  backend-catalog:
-    desc: ローカル確認用の科目一覧APIを有効にして起動
-    dir: backend
-    env:
-      ENABLE_CATALOG_PREVIEW: 'true'
+  backend-subject-list:
+    desc: Go外部APIの科目一覧を有効にしてバックエンドを起動
     cmds:
-      - uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+      - node scripts/dev.mjs --backend-only --subject-list-preview
+
+  backend-python-dev:
+    desc: Python内部サービスだけを起動
+    dir: backend
+    cmds:
+      - uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
   backend-test:
     desc: バックエンドのテストを実行
     dir: backend
     cmds:
-      - uv run pytest
+      - uv run --locked pytest
 
   backend-lint:
     desc: Ruffでバックエンドのlintを検証
@@ -89,6 +91,7 @@ tasks:
     cmds:
       - uv run --locked ruff check --fix .
       - uv run --locked ruff format .
+      - go fmt ./...
 
   backend-typecheck:
     desc: tyでバックエンドの型を検証
@@ -110,7 +113,7 @@ tasks:
     desc: CS学部の便覧掲載科目データを検証して追加投入
     dir: backend
     cmds:
-      - uv run python -m app.seed --file seeds/cs_2026.json
+      - uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
 
   dev:
     desc: フロントエンドと科目一覧APIを同時に起動
@@ -122,6 +125,35 @@ tasks:
     dir: frontend
     cmds:
       - npm run dev
+
+  dev-go:
+    desc: devと同じ構成で起動（互換コマンド）
+    cmds:
+      - task: dev
+
+  go-api-dev:
+    desc: Go外部APIだけを起動（科目一覧有効）
+    dir: backend
+    cmds:
+      - go run ./api -subject-list-preview
+
+  go-api-check:
+    desc: Goの整形状態・静的解析を検証
+    cmds:
+      - node scripts/check-go-format.mjs
+      - go -C backend vet ./...
+
+  go-api-format:
+    desc: Goコードを整形
+    dir: backend
+    cmds:
+      - go fmt ./...
+
+  go-api-test:
+    desc: Goの入力検証・エラー変換・内部通信をテスト
+    dir: backend
+    cmds:
+      - go test -race ./...
 
   frontend-lint:
     desc: ESLintでフロントエンドのlintを検証

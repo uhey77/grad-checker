@@ -1,4 +1,4 @@
-"""HTTPリクエストごとのリソース管理。"""
+"""内部呼出しごとのPythonリソース管理。"""
 
 from collections.abc import Iterator
 from typing import Annotated

@@ -3,6 +3,9 @@
 対象は `frontend/`。React・TypeScript・Viteによる現在の層構成を維持する。
 科目一覧の設計意図は [フロントエンドの構成](../../docs/frontend_architecture.md) を参照する。
 
+[バックエンドの構成](../../docs/backend_architecture.md)に従い、ViteからGoの外部APIを呼び出す。
+Pythonの内部通信を画面から直接呼ばない。内部通信の包絡形式やDB処理をフロントエンドに追加しない。
+
 ## 各層の責務
 
 | 場所（frontend/src 以下） | 責務 | 配置例 |

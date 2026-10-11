@@ -3,10 +3,15 @@
 from collections import defaultdict
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from app.application.errors.subject_list import SubjectListNotFoundError
-from app.application.subject_list import (
+from modules.subjects.grad_checker_subjects.application.errors.subject_list import (
+    SubjectListIntegrityError,
+    SubjectListNotFoundError,
+    SubjectListUnavailableError,
+)
+from modules.subjects.grad_checker_subjects.application.subject_list import (
     SubjectList,
     SubjectListClassification,
     SubjectListItem,
@@ -14,7 +19,7 @@ from app.application.subject_list import (
     SubjectListProgram,
     SubjectListRepository,
 )
-from app.infrastructure.subject_models import (
+from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
     Curriculum,
@@ -46,6 +51,12 @@ class SqliteSubjectListRepository(SubjectListRepository):
         self.session = session
 
     def list_programs(self) -> list[SubjectListProgram]:
+        try:
+            return self._list_programs()
+        except SQLAlchemyError as error:
+            raise SubjectListUnavailableError from error
+
+    def _list_programs(self) -> list[SubjectListProgram]:
         rows = self.session.exec(
             select(Curriculum, AcademicProgram)
             .join(
@@ -56,6 +67,12 @@ class SqliteSubjectListRepository(SubjectListRepository):
         return [program_data(curriculum, program) for curriculum, program in rows]
 
     def get_subject_list(self, curriculum_id: UUID) -> SubjectList:
+        try:
+            return self._get_subject_list(curriculum_id)
+        except SQLAlchemyError as error:
+            raise SubjectListUnavailableError from error
+
+    def _get_subject_list(self, curriculum_id: UUID) -> SubjectList:
         # SQLiteの従来トランザクションモードでも複数SELECTの一貫性を保証する。
         self.session.connection().exec_driver_sql("BEGIN")
         row = self.session.exec(
@@ -66,7 +83,7 @@ class SqliteSubjectListRepository(SubjectListRepository):
             .where(Curriculum.id == str(curriculum_id))
         ).first()
         if row is None:
-            raise SubjectListNotFoundError("選択したカリキュラムが見つかりません。")
+            raise SubjectListNotFoundError
         curriculum, program = row
         classifications = {
             item.id: item
@@ -109,7 +126,7 @@ class SqliteSubjectListRepository(SubjectListRepository):
             current = association.classification_id
             while current is not None:
                 if current in visited or current not in classifications:
-                    raise ValueError("科目分類の階層が不整合です。")
+                    raise SubjectListIntegrityError
                 visited.add(current)
                 classification = classifications[current]
                 path.append(

@@ -8,8 +8,17 @@ dependencies = [
     "pydantic>=2.0,<3.0",
     "pydantic-settings>=2.0,<3.0",
     "sqlmodel>=0.0.37,<0.1",
+    "sqlalchemy>=2.0,<3.0",
     "uvicorn>=0.41.0,<1.0",
 ]
+
+[build-system]
+requires = ["uv_build>=0.10.2,<0.11"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["api", "modules", "config", "scripts"]
+module-root = ""
 
 [dependency-groups]
 dev = [
@@ -51,4 +60,11 @@ ignore = [
 ]
 
 [tool.ty.src]
-include = ["app", "tests", "seeds/build_cs_seed.py"]
+include = [
+    "api/api_service",
+    "modules/subjects/grad_checker_subjects",
+    "config",
+    "scripts",
+    "tests",
+    "seeds/build_cs_seed.py",
+]

@@ -16,15 +16,16 @@
 
 ### 1.1 技術構成
 
-旧ルート文書で指定された技術構成を本書へ統合する。
+旧ルート文書の構成を統合し、2026-10-11の設計変更でGoを外部HTTP、Pythonを業務処理・DBとして共通の層構成に配置する。
+現時点の実装対象は開発用科目一覧。詳細は[バックエンドの構成](backend_architecture.md)を参照する。
 
 | 分野 | 採用技術 |
 |---|---|
-| バックエンド | Python / FastAPI / SQLModel / SQLite |
+| バックエンド | Go（外部HTTP） / Python（業務処理） / FastAPI（内部通信） / SQLModel / SQLite |
 | フロントエンド | React / TypeScript（Viteで開発・ビルド） |
-| テスト | pytest |
+| テスト | pytest / Goのtesting |
 | 通信 | JSON |
-| APIドキュメント | FastAPIのSwagger UI |
+| APIドキュメント | 外部APIのOpenAPI / Swagger UI（今後整備） |
 
 授業第2回資料の59枚目では、データ入出力・DB保存・JSON等の通信・HTML表示・JavaScriptによる動的生成・CSS装飾を求める。学生向けJSONファイルの読み込みは課題の必須条件ではない。APIのJSON通信と、開発用のJSONシードを使う。
 
