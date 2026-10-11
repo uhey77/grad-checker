@@ -1,6 +1,6 @@
 """科目マスタの読取契約。開発用一覧でも所属を保存・変更しない。"""
 
-from typing import Protocol
+from abc import ABC, abstractmethod
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -50,14 +50,14 @@ class CourseCatalog(BaseModel):
     courses: list[CatalogCourse]
 
 
-class CatalogNotFound(ValueError):
-    pass
+class CatalogRepository(ABC):
+    @abstractmethod
+    def list_programs(self) -> list[CatalogProgram]:
+        """選択できる課程一覧を取得する。"""
 
-
-class CatalogRepository(Protocol):
-    def list_programs(self) -> list[CatalogProgram]: ...
-
-    def get_catalog(self, curriculum_id: UUID) -> CourseCatalog: ...
+    @abstractmethod
+    def get_catalog(self, curriculum_id: UUID) -> CourseCatalog:
+        """指定課程の科目一覧を取得する。"""
 
 
 def list_catalog_programs(repository: CatalogRepository) -> list[CatalogProgram]:

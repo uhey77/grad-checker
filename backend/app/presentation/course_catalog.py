@@ -5,8 +5,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.application.errors.course_catalog import CatalogNotFound
 from app.application.course_catalog import (
-    CatalogNotFound,
     CatalogProgram,
     CourseCatalog,
     get_course_catalog,

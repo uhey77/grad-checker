@@ -8,6 +8,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
+from app.application.errors.master_seed import SeedError
 from app.application.master_seed import (
     AcademicProgramData,
     ClassificationData,
@@ -16,7 +17,6 @@ from app.application.master_seed import (
     CurriculumCourseData,
     CurriculumData,
     MasterSeed,
-    SeedError,
     validate_master,
 )
 from app.infrastructure.master_models import (

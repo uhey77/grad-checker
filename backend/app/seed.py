@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.application.master_seed import SeedError
+from app.application.errors.master_seed import SeedError
 from app.config import Settings
 from app.infrastructure.database import create_database_engine, create_database_schema
 from app.infrastructure.master_seed import load_seed, seed_master

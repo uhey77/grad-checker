@@ -5,10 +5,11 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
+from app.application.errors.course_catalog import CatalogNotFound
 from app.application.course_catalog import (
+    CatalogRepository,
     CatalogClassification,
     CatalogCourse,
-    CatalogNotFound,
     CatalogOffering,
     CatalogProgram,
     CourseCatalog,
@@ -38,7 +39,7 @@ def program_data(curriculum: Curriculum, program: AcademicProgram) -> CatalogPro
     )
 
 
-class SqliteCatalogRepository:
+class SqliteCatalogRepository(CatalogRepository):
     def __init__(self, session: Session):
         self.session = session
 

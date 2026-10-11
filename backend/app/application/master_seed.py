@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.application.errors.master_seed import SeedError
 from app.domain.master import CourseType, TeachingType, VerificationStatus
 
 PositiveInteger = Annotated[int, Field(strict=True, gt=0)]
@@ -81,10 +82,6 @@ class MasterSeed(SeedRecord):
     courses: list[CourseData]
     course_offerings: list[CourseOfferingData]
     curriculum_courses: list[CurriculumCourseData]
-
-
-class SeedError(ValueError):
-    """利用者へ表示できるシードエラー。"""
 
 
 def validate_master(seed: MasterSeed) -> list[ClassificationData]:

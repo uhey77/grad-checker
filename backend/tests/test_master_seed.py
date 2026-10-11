@@ -11,7 +11,8 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from app.application.master_seed import MasterSeed, SeedError
+from app.application.errors.master_seed import SeedError
+from app.application.master_seed import MasterSeed
 from app.infrastructure.database import create_database_engine, create_database_schema
 from app.infrastructure.master_seed import load_seed, seed_master
 
