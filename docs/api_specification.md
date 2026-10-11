@@ -129,7 +129,7 @@ GET /checks/{id}は所有者を確認して当時のinputとresultを200で返�
 
 ## 9. ドキュメントと検証
 
-外部入力検証・日本語エラー文字列・HTTPステータスはGoのpresentationに集約する。PythonはPydanticで内部通信契約を検証し、SQLModelでDB処理を行う。外部APIのOpenAPIとSwagger UIは今後整備する。Python内部サービスの/docs・/openapi.jsonは公開しない。pytestで正常・異常・本人認可・原子的保存・履歴不変を検証し、READMEへ起動・初期化・シード・テストの手順を記載する。
+外部入力検証・日本語エラー文字列・HTTPステータスはGoのpresentationに集約する。PythonはPydanticで内部通信契約を検証し、SQLModelでDB処理を行う。外部APIのOpenAPIとSwagger UIは今後整備する。Python内部サービスの/docs・/openapi.jsonは公開しない。Goのtestingで外部HTTPと内部通信クライアントを、pytestでPythonの業務処理・DBとGo／Pythonの実プロセス結合を検証する。本人認可・原子的保存・履歴不変を含む学生向けケースは[テスト仕様](test_specification.md)、起動・初期化・シードの手順は[バックエンドの構成](backend_architecture.md)と[DB設計](database_design.md)を参照する。
 
 関連：[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
 
@@ -138,7 +138,7 @@ GET /checks/{id}は所有者を確認して当時のinputとresultを200で返�
 ユーザー確認に基づき、ログイン実装前にCS学部の科目マスタを閲覧できる開発用経路を追加した。
 `GET /api/dev/subject-list/programs` は登録済みカリキュラムの確認用一覧、
 `GET /api/dev/subject-list/{curriculum_id}` は課程別科目・分類階層・開講期・原文注記を返す。
-未確認カリキュラムも確認用として表示するが、適用入学年度が未確認であることを画面に示す。
+未確認カリキュラムも確認用一覧に含める。適用入学年度・確認状態・出典・原文注記はAPIのデータとして保持するが、ローカル確認画面では適用入学年度の未確認表示・出典・便覧注記の展開を表示しない。[画面設計](screen_design/student_screen_design.md)に従い、非表示の情報を確認済みの値へ置き換えない。
 本人課程の設定・成績保存・卒業判定・認証を代替する経路ではない。
 
 Goの`-subject-list-preview`は既定falseで、無効時は404。ローカル確認時だけ有効にして

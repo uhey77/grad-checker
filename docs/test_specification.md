@@ -1,14 +1,47 @@
 # テスト仕様
 
-文書版：1.3。[RDD](RDD.md)第12章のT01〜T24を受入基準とする。pytestで判定の単体テストとSQLite / FastAPIの結合テストを実装する。画面はReact / TypeScriptの操作確認を行う。本書のケースは未実行のテスト設計であり、アプリの合格実績ではない。
+文書版：1.3。[RDD](RDD.md)第12章のT01〜T24を受入基準とする。[バックエンドの構成](backend_architecture.md)に従い、Goの外部HTTP API、Pythonの業務処理・FastAPI内部通信・SQLite、React / TypeScriptを検証する。
+
+第0章は現在の科目一覧に対する実装済みテストの範囲を示す。第1〜4章の学生向け受入ケースは今後の実装を含む設計であり、全ケースの実装・合格を意味しない。実行結果は実行環境・対象・スキップの有無とともに別途記録する。
+
+## 0. 現行構成とテスト分担
+
+| 対象 | 検証方法・配置 | 確認する責務 |
+|---|---|---|
+| Pythonの業務処理・DB | pytest、`backend/tests/` | 取得契約、シード検証、DB制約、原子的保存、読取結果 |
+| Pythonの内部通信 | pytest / FastAPI TestClient、`backend/tests/` | 操作名・引数の検証、結果とエラーコード、Session管理。外部向け日本語HTTPエラーは担当しない |
+| Goの外部HTTP | Goのtesting、`backend/tests/subject_list_test.go` | UUID検証・正規化、ルート・メソッド・開発用表示の制御、日本語detail・ステータス・ヘッダー |
+| Goの内部HTTPクライアント | Goのtesting / httptest、`backend/tests/subject_list_client_test.go` | Pythonへの要求、内部包絡形式の解釈、不正応答・接続失敗・タイムアウト・キャンセル |
+| Go → Python → SQLite | pytestの実プロセス結合テスト、`backend/tests/test_subject_list_http.py` | 一時DBと実サーバーを使った取得結果の一致、外部・内部ルートの分離、業務エラーのHTTP変換 |
+| フロントエンド | Node.jsのtest runner、`frontend/tests/`。画面操作はブラウザーで確認 | DTO変換、ユースケース、検索・並べ替え、層の依存方向、表示・通信状態 |
+
+Python・Goのテストは`backend/tests/`へ集約し、Goは対象パッケージの公開契約をimportして検証する。Pythonの業務テストはGoやHTTPを介さず検証し、Goへ卒業判定やSQLを重複実装しない。
+
+### 実装済みテストの範囲
+
+| 対象 | 現在の確認内容 | テストファイル |
+|---|---|---|
+| 起動・DB・Session | 起動時設定、SQLite接続ごとのFK、未commit変更の破棄 | `test_app.py`、`test_database.py` |
+| 科目マスタ | CS4課程、課程別種別、複数開講期、未確認状態、再投入、入力・DB制約、失敗時の全体ロールバック、CLI | `test_subject_data.py` |
+| 取得契約・内部通信 | 取得先の契約、DBからの一覧、不正な内部要求、業務エラーコード、Pythonの外部ルート削除 | `test_subject_list_repository.py`、`test_subject_list.py` |
+| モジュール境界 | 科目モジュールからAPI・設定・FastAPI・uvicornへの逆依存を検出 | `test_module_boundaries.py` |
+| Go外部API・内部クライアント | 入力不正時にPythonを呼ばない、UUID正規化、日本語HTTPエラー、不正内部応答、接続失敗・タイムアウト・キャンセル | `subject_list_test.go`、`subject_list_client_test.go` |
+| 実プロセス結合 | 4課程の取得結果一致、422・404・405、開発用表示無効時の404、分類不整合409・DB障害503 | `test_subject_list_http.py` |
+| フロントエンド | DTO変換で未確認状態・注記を保持、AND検索、取得先の差し替え・失敗伝播、依存方向、並べ替え、学期表示 | `frontend/tests/subject-list.test.mjs` |
+
+ローカル確認画面では、適用入学年度の未確認表示・出典・便覧注記の展開を表示しない。元データをAPI・モデルに保持することと、画面へ表示することを分けて確認する。表示項目は[画面設計](screen_design/student_screen_design.md)に従う。ブラウザーでのロード・失敗・再試行・課程切替時のキャンセル確認は、上記の自動テストだけで代替しない。
 
 ## 1. フィクスチャと再現性
 
-JSONシードで科目・課程・分類・要件・算入規則とテストアカウントA/Bを投入する。A/Bは別の保存成績・判定履歴を持つ。各課程の必要値は照合済みのマスタを使用し、全学部へCS総124を流用しない。CS例を使うテストは明示的に対象課程を固定する。
+現在の科目一覧テストは一時SQLiteへCS4課程の科目マスタを投入し、通常の開発DBを使わない。実プロセス結合テストは空きポートでGo・Pythonを起動し、終了時にサーバーを停止する。
+
+学生向けケースでは、JSONシードで科目・課程・分類・要件・算入規則とテストアカウントA/Bを投入する。要件・算入規則・アカウントの投入は今後実装する。A/Bは別の保存成績・判定履歴を持つ。各課程の必要値は照合済みのマスタを使用し、全学部へCS総124を流用しない。CS例を使うテストは明示的に対象課程を固定する。
 
 未履修、不合格、未確定、再履修、全達成、総算入不足、必修だけ不足、内訳不足、他学部の対象・非対象、共通上限、未確認規則、所属未設定、入力版競合、履歴後の更新を用意する。偽の集計値だけで必修集合の検証を代替しない。
 
 ## 2. 判定単体テスト
+
+Pythonの業務層をpytestで検証する。外部HTTPのステータスやGoの通信処理は第3章で確認する。
 
 | ID | 入力・条件 | 期待結果 | 受入 |
 |---|---|---|---|
@@ -29,7 +62,11 @@ JSONシードで科目・課程・分類・要件・算入規則とテストア�
 | U15 | 同一候補が複数不足条件へ寄与 | 候補は1件、理由と条件コードを併記 | T20 |
 | U16 | 課程を切り替えて同じ科目を判定 | 課程別種別・必要値・算入先を使用 | T06/T16 |
 
-## 3. SQLite・API結合テスト
+## 3. Go外部API・Python・SQLite結合テスト
+
+下表のHTTPステータスと日本語detailはGoの外部APIを通して検証する。Goのtestingで外部入力・HTTP変換を確認し、pytestでPythonの業務処理・SQLiteの保存結果を確認する。言語間の結合はGo → FastAPI内部通信 → Pythonのユースケース → SQLiteを実プロセスで通し、HTTP応答とDB状態の両方を検証する。
+
+内部通信は成功時にHTTP 200と`data`、業務エラー時にHTTP 200と`error.code`を返す。内部要求の契約違反は`invalid_request`とし、Go側で502へ変換する。既知の業務エラーは外部404・409・503・500、不正応答・接続失敗は502、タイムアウトは504として[通信契約](backend_architecture.md)を検証する。内部包絡形式やSQL・内部エラー文を外部へ漏らさない。
 
 | ID | 条件 | 期待結果 | 受入 |
 |---|---|---|---|
@@ -54,6 +91,8 @@ JSONシードで科目・課程・分類・要件・算入規則とテストア�
 
 ## 4. 画面受入
 
+画面はGoの外部APIを呼び、Pythonの内部APIを直接呼ばない。DTO変換・検索・並べ替え・取得契約はフロントエンドの自動テスト、ロード・エラー・再試行・課程切替・キャンセルと下表の操作はブラウザーで確認する。
+
 | ID | 操作 | 期待結果 | 受入 |
 |---|---|---|---|
 | V01 | 所属選択・変更 | 実在階層だけ表示、成績を黙って削除しない | T06/T16 |
@@ -68,8 +107,20 @@ JSONシードで科目・課程・分類・要件・算入規則とテストア�
 
 ## 5. 性能・起動・ドキュメント
 
-200科目程度の有効マスタと成績で判定APIが1秒以内に応答することを測定する。チェックAPIは計算と結果保存を含める。テスト環境、コールド／ウォーム状態、計測回数と各所要時間を記録する。全課程総データ・履歴増加時は別途測定し、この基準を無条件に保証しない。
+200科目程度の有効マスタと成績でGoの外部判定APIが1秒以内に応答することを測定する。内部HTTP・Pythonの計算・DBアクセスを含め、チェックAPIは結果保存までを測定する。テスト環境、コールド／ウォーム状態、計測回数と各所要時間を記録する。全課程総データ・履歴増加時は別途測定し、この基準を無条件に保証しない。
 
-READMEの手順に従って第三者がDB初期化・JSONシード投入・API／React起動・pytest実行を再現できること、Swagger UIに現在のパスと入力・出力・エラーが掲載されることを確認する。学生向けJSONファイル入出力と公開共有は受入対象にしない。
+現在の確認コマンドはリポジトリルートで実行する。
+
+| 確認 | Task | Make |
+|---|---|---|
+| Python・Goのlint・整形状態・型・静的解析 | `task backend-check` | `make backend-check` |
+| Python・実プロセス結合・Goテスト | `task backend-test` | `make backend-test` |
+| Goテスト（競合検出付き） | `task go-api-test` | `make go-api-test` |
+| フロントエンドのlint・整形状態・型 | `task frontend-check` | `make frontend-check` |
+| フロントエンドのビルド | `task build` | `make build` |
+
+`backend-test`はpytestの後に競合検出付きGoテストを実行する。`go-api-test`はGoのみを確認する場合に使用する。フロントエンドの自動テストは`npm --prefix frontend test`で実行する。Go・gofmtをPATHに用意し、ローカルポートを使える環境で検証する。Goがない場合にpytestの実プロセス結合テストがスキップされても、全体の合格とは扱わない。
+
+第三者が`task setup` / `make setup`、[バックエンドの起動・確認手順](backend_architecture.md)、[シード手順](../backend/seeds/README.md)、Task / Makeの定義から初期化・投入・Go／Python／Reactの起動・テストを再現できることを確認する。外部APIのOpenAPI / Swagger UIは今後整備し、Goが公開するパスと入力・出力・エラーに一致することを受入条件とする。Python内部サービスの`/docs`・`/openapi.json`は無効のままとする。学生向けJSONファイル入出力と公開共有は受入対象にしない。
 
 関連：[API](api_specification.md)、[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[未確定事項](open_questions.md)。

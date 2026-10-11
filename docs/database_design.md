@@ -69,6 +69,6 @@ JSONシードを課程→カリキュラム→分類→科目・開講期→課�
 
 通常シードは全件の形式・参照・階層を検証し、1トランザクションで追加する。同じ内容はスキップし、既存IDの変更は拒否する。省略した既存データを削除しない。分類循環・階層levelの整合性は投入時に検証し、同課程の親／分類参照・単位数・一意性・削除RESTRICTはDBでも強制する。マイグレーションは未実装。
 
-READMEに初期化、シード、起動、pytestの手順を記載済み。[転記とコードの説明](../backend/seeds/README.md)を参照。添付便覧は手動確認元とし、自動取得機能は作らない。
+セットアップはリポジトリルートの`task setup` / `make setup`を使用する。起動は[バックエンドの構成](backend_architecture.md)、投入は[転記とコードの説明](../backend/seeds/README.md)、検証は[テスト仕様](test_specification.md)を参照する。通常の起動・投入・確認にはTask / Makeを使用する。添付便覧は手動確認元とし、自動取得機能は作らない。
 
 関連：[API](api_specification.md)、[判定](graduation_requirement_logic.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
