@@ -1,6 +1,6 @@
 """アプリケーション生成と、各層の依存関係の組み立て。"""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -14,7 +14,7 @@ from app.presentation.subject_list import router as subject_list_router
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
-    async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
         runtime_settings = settings or Settings()
         engine = create_database_engine(runtime_settings.database_url)
         try:

@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from app.application.errors.subject_data import SeedError
 from app.application.subject_data_validation import SubjectDataSeed
 from app.infrastructure.database import create_database_engine, create_database_schema
-from app.infrastructure.subject_data_import import load_seed, import_subject_data
+from app.infrastructure.subject_data_import import import_subject_data, load_seed
 
 BACKEND = Path(__file__).resolve().parents[1]
 SEED_PATH = BACKEND / "seeds" / "cs_2026.json"
@@ -122,7 +122,9 @@ def test_seed_is_persistent_idempotent_and_handles_child_before_parent(engine, s
         name: len(getattr(seed, name)) for name in SubjectDataSeed.model_fields
     }
     before = counts(engine)
-    assert import_subject_data(engine, seed) == dict.fromkeys(SubjectDataSeed.model_fields, 0)
+    assert import_subject_data(engine, seed) == dict.fromkeys(
+        SubjectDataSeed.model_fields, 0
+    )
     assert counts(engine) == before
     # 新しいエンジンでも同じファイルに保存されている。
     reopened = create_database_engine(str(engine.url))
@@ -204,7 +206,10 @@ def test_incremental_seed_can_reference_existing_master(engine, seed):
     course = seed.courses[0].model_dump(mode="json")
     course.update(id=str(uuid4()), code="NEW-COURSE", name="テスト用の追加科目")
     data["courses"] = [course]
-    assert import_subject_data(engine, SubjectDataSeed.model_validate(data))["courses"] == 1
+    assert (
+        import_subject_data(engine, SubjectDataSeed.model_validate(data))["courses"]
+        == 1
+    )
     assert counts(engine)["courses"] == len(seed.courses) + 1
 
 

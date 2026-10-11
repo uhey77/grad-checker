@@ -2,7 +2,11 @@ from uuid import UUID
 
 import pytest
 
-from app.application.subject_list import SubjectListProgram, SubjectListRepository, SubjectList
+from app.application.subject_list import (
+    SubjectList,
+    SubjectListProgram,
+    SubjectListRepository,
+)
 
 
 class MissingSubjectListRepository(SubjectListRepository):

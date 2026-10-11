@@ -7,8 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.application.errors.subject_list import SubjectListNotFound
 from app.application.subject_list import (
-    SubjectListProgram,
     SubjectList,
+    SubjectListProgram,
     get_subject_list,
     list_subject_programs,
 )

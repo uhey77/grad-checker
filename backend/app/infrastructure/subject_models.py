@@ -180,7 +180,7 @@ class CurriculumSubject(SQLModel, table=True):
 
 
 SUBJECT_TABLES = [
-    model.__table__
+    SQLModel.metadata.tables[model.__tablename__]
     for model in (
         AcademicProgram,
         Curriculum,

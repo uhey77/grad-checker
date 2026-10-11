@@ -23,7 +23,9 @@ def test_foreign_keys_are_enforced_on_each_connection(tmp_path: Path) -> None:
             for connection in (first, second):
                 assert connection.execute(text("PRAGMA foreign_keys")).scalar_one() == 1
                 with pytest.raises(IntegrityError):
-                    connection.execute(text("INSERT INTO children (parent_id) VALUES (99)"))
+                    connection.execute(
+                        text("INSERT INTO children (parent_id) VALUES (99)")
+                    )
                 connection.rollback()
 
         with engine.begin() as connection:
@@ -40,9 +42,12 @@ def test_independent_engines_do_not_share_database(tmp_path: Path) -> None:
         with first.begin() as connection:
             connection.execute(text("CREATE TABLE records (id INTEGER PRIMARY KEY)"))
         with second.connect() as connection:
-            assert connection.execute(
-                text("SELECT count(*) FROM sqlite_master WHERE name = 'records'")
-            ).scalar_one() == 0
+            assert (
+                connection.execute(
+                    text("SELECT count(*) FROM sqlite_master WHERE name = 'records'")
+                ).scalar_one()
+                == 0
+            )
     finally:
         first.dispose()
         second.dispose()

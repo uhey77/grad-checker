@@ -54,12 +54,14 @@ def main() -> None:
             }
         )
         if code in selections:
+            curriculum_name = course or major
+            assert curriculum_name is not None
             seed["curricula"].append(
                 {
                     "id": identity("curriculum", code + "-HANDBOOK-2026"),
                     "program_id": identity("program", code),
                     "code": code + "-HANDBOOK-2026",
-                    "name": "2026年度便覧掲載 " + (course or major),
+                    "name": "2026年度便覧掲載 " + curriculum_name,
                     "revision": 1,
                     "admission_year_from": None,
                     "admission_year_to": None,

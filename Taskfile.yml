@@ -6,11 +6,30 @@ tasks:
     cmds:
       - task --list
 
+  check:
+    desc: バックエンドとフロントエンドのlint・整形状態・型を検証
+    cmds:
+      - task: backend-check
+      - task: frontend-check
+
+  backend-check:
+    desc: バックエンドのlint・整形状態・型を検証
+    cmds:
+      - task: backend-lint
+      - task: backend-typecheck
+
+  frontend-check:
+    desc: フロントエンドのlint・整形状態・型を検証
+    cmds:
+      - task: frontend-lint
+      - task: frontend-typecheck
+
   setup:
     desc: フロントエンドとバックエンドの依存関係をインストール
     cmds:
       - task: frontend-install
       - task: backend-install
+      - task: pre-commit-install
 
   frontend-install:
     desc: フロントエンドの依存関係をロックファイルからインストール
@@ -44,6 +63,36 @@ tasks:
     cmds:
       - uv run pytest
 
+  backend-lint:
+    desc: Ruffでバックエンドのlintと整形状態を検証
+    dir: backend
+    cmds:
+      - uv run --locked ruff check .
+      - uv run --locked ruff format --check .
+
+  backend-format:
+    desc: Ruffでバックエンドのlint自動修正と整形を実行
+    dir: backend
+    cmds:
+      - uv run --locked ruff check --fix .
+      - uv run --locked ruff format .
+
+  backend-typecheck:
+    desc: tyでバックエンドの型を検証
+    dir: backend
+    cmds:
+      - uv run --locked ty check
+
+  pre-commit-install:
+    desc: コミット時のlint・整形・型検証フックを登録
+    cmds:
+      - uv run --locked --project backend pre-commit install
+
+  pre-commit:
+    desc: 全ファイルにpre-commitを実行
+    cmds:
+      - uv run --locked --project backend pre-commit run --all-files
+
   backend-seed:
     desc: CS学部の便覧掲載科目データを検証して追加投入
     dir: backend
@@ -60,6 +109,26 @@ tasks:
     dir: frontend
     cmds:
       - npm run dev
+
+  frontend-lint:
+    desc: ESLintとPrettierでフロントエンドを検証
+    dir: frontend
+    cmds:
+      - npm run lint
+      - npm run format:check
+
+  frontend-format:
+    desc: ESLintの自動修正とPrettierの整形を実行
+    dir: frontend
+    cmds:
+      - npm run lint:fix
+      - npm run format
+
+  frontend-typecheck:
+    desc: TypeScriptでフロントエンドの型を検証
+    dir: frontend
+    cmds:
+      - npm run typecheck
 
   build:
     desc: フロントエンドをビルド

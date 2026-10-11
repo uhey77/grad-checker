@@ -15,6 +15,8 @@ export function useRemote<T>(
     if (!key) return;
     const requestKey = key;
     const controller = new AbortController();
+    // 同じ課程の再試行でも、通信開始時にローディング表示へ戻す。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState({ key, status: "loading" });
     void load(controller.signal).then(
       (data) => {
