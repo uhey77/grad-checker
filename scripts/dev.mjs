@@ -5,6 +5,7 @@ import { join } from "node:path";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const windows = process.platform === "win32";
 const backendOnly = process.argv.includes("--backend-only");
+const localMailbox = process.argv.includes("--local-mailbox");
 const subjectListPreview =
   !backendOnly || process.argv.includes("--subject-list-preview");
 const servers = [];
@@ -73,6 +74,13 @@ process.on("SIGTERM", () => void stop(0));
 console.log(
   `${backendOnly ? "バックエンド" : "フロントエンドとバックエンド"}を起動します。終了は Ctrl+C です。`,
 );
+if (localMailbox)
+  start(
+    "開発用メール受信箱",
+    "uv",
+    ["run", "--locked", "python", "-m", "scripts.local_mailbox"],
+    "backend/",
+  );
 start(
   "バックエンド",
   "uv",
@@ -88,6 +96,16 @@ start(
     "8001",
   ],
   "backend/",
+  localMailbox
+    ? {
+        SMTP_HOST: "127.0.0.1",
+        SMTP_PORT: "1025",
+        SMTP_STARTTLS: "false",
+        SMTP_SENDER: "grad-checker@example.test",
+        SMTP_USERNAME: "",
+        SMTP_PASSWORD: "",
+      }
+    : {},
 );
 start(
   "Go API",
@@ -95,6 +113,8 @@ start(
   [
     "run",
     "./api",
+    "-public-origin",
+    process.env.PUBLIC_ORIGIN || "http://127.0.0.1:5173",
     ...(subjectListPreview ? ["-subject-list-preview"] : []),
   ],
   "backend/",
