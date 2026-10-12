@@ -2,7 +2,7 @@
 
 対象は `backend/`。APIと業務モジュールを分け、各モジュール内で層の依存方向を守る。
 外部HTTPはGo、業務処理とDBはPython、両者の接続はローカル内部HTTPとする。
-現在の科目一覧をこの分担で実装する。学生向けの未実装機能を実装済みとは扱わない。
+科目一覧とアカウント認証をこの分担で実装する。学生向けの未実装機能を実装済みとは扱わない。
 構成と通信契約は[バックエンドの構成](../../docs/backend_architecture.md)を参照する。
 
 ## 各層の責務
@@ -32,7 +32,7 @@
 
 - `domain` は他のアプリ層、FastAPI、SQLModel、DB、HTTPに依存させない。
 - `application` は `domain` を参照できる。`infrastructure`・`presentation` の具体実装は参照しない。
-- Pythonの`application`の入出力契約にはPydanticを使用できる。Goの取得契約には既存科目モデルに従うJSONデータを使用できる。内部通信の包絡形式はGoの`infrastructure`とPythonの内部アダプターに閉じ込める。
+- Pythonの`application`の入出力契約はPydanticを使用し、dataclassは使用しない。Goの取得契約には既存科目モデルに従うJSONデータを使用できる。内部通信の包絡形式はGoの`infrastructure`とPythonの内部アダプターに閉じ込める。
 - `infrastructure` は `application` の契約を実装し、`domain` の概念を利用できる。`presentation` は参照しない。
 - `presentation` はユースケースを呼び出す。業務判断やSQLクエリをルーターへ追加しない。
 - Goは`api/main.go`、Pythonは`api/api_service/main.py`とCLIの入口で具体的な依存関係を組み立てる。
