@@ -10,6 +10,7 @@ dependencies = [
     "sqlmodel>=0.0.37,<0.1",
     "sqlalchemy>=2.0,<3.0",
     "uvicorn>=0.41.0,<1.0",
+    "argon2-cffi>=25.1,<26",
 ]
 
 [build-system]
@@ -22,6 +23,7 @@ module-root = ""
 
 [dependency-groups]
 dev = [
+    "aiosmtpd>=1.4.6,<2",
     "httpx>=0.28.1,<1.0",
     "pre-commit>=4.6.2,<5",
     "pytest>=9.0.2,<10.0",
@@ -63,6 +65,7 @@ ignore = [
 include = [
     "api/api_service",
     "modules/subjects/grad_checker_subjects",
+    "modules/accounts/grad_checker_accounts",
     "config",
     "scripts",
     "tests",
