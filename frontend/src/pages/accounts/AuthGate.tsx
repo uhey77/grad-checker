@@ -76,13 +76,10 @@ export function AuthGate({
         </h1>
         <p>
           {mode === "register"
-            ? "@edu.teu.ac.jp の大学メールアドレスに確認リンクを送ります。"
+            ? "大学のメールアドレスに確認リンクを送ります。"
             : mode === "verify"
               ? `確認リンクの有効期限は${auth.policy.verificationMinutes}分です。パスワードを設定して登録を完了してください。`
               : "メール認証を済ませたアドレスでログインしてください。"}
-        </p>
-        <p className="auth-help">
-          大学の公式システムではありません。大学アカウントのパスワードは使わず、このアプリ専用のパスワードを設定してください。
         </p>
         {notice ? <p role="status">{notice}</p> : null}
         {auth.error ? <p role="alert">{auth.error}</p> : null}

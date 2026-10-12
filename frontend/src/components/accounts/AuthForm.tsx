@@ -23,7 +23,7 @@ export function AuthForm({
         event.preventDefault();
         setError("");
         if (mode !== "verify" && !/^[^@\s]+@edu\.teu\.ac\.jp$/i.test(email)) {
-          setError("@edu.teu.ac.jp のメールアドレスを入力してください。");
+          setError("大学で発行されたメールアドレスを入力してください。");
           return;
         }
         if (mode === "verify" && password !== confirmation) {
