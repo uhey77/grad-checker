@@ -31,7 +31,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	handler, err := presentation.NewAuthHandler(authClient, *origin, presentation.NewSubjectListHandler(client, *preview))
+	profileClient, err := accounts.NewPythonProfileClient(*pythonURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	profileHandler := presentation.NewProfileHandler(profileClient, *origin, presentation.NewSubjectListHandler(client, *preview))
+	handler, err := presentation.NewAuthHandler(authClient, *origin, profileHandler)
 	if err != nil {
 		log.Fatal(err)
 	}

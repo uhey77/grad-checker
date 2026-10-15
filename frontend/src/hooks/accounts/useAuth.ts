@@ -122,6 +122,7 @@ export function useAuth(useCases: AuthUseCases) {
   }
   return {
     ...state,
+    expire,
     busy,
     retry: () => {
       setState({ status: "loading", session: null, error: "" });
