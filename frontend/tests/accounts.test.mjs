@@ -22,16 +22,19 @@ test("認証のDTO変換とCookie・CSRFの送信契約", async (context) => {
         policy: {
           password_min_length: 12,
           password_max_length: 128,
-          verification_minutes: 30,
         },
       });
     if (url.endsWith("/register"))
-      return Response.json({ accepted: true }, { status: 202 });
-    if (url.endsWith("/verify")) return Response.json({ verified: true });
+      return Response.json(
+        { registered: true, recovery_code: "r".repeat(43) },
+        { status: 201 },
+      );
+    if (url.endsWith("/recover"))
+      return Response.json({ recovered: true, recovery_code: "n".repeat(43) });
     if (url.endsWith("/logout")) return Response.json({ authenticated: false });
     return Response.json({
       authenticated: true,
-      student: { id: "student-id", login_name: "student@edu.teu.ac.jp" },
+      student: { id: "student-id", login_name: "student_01" },
       csrf_token: "csrf",
       expires_at: "2026-10-12T00:00:00+00:00",
     });
@@ -40,25 +43,33 @@ test("認証のDTO変換とCookie・CSRFの送信契約", async (context) => {
   assert.deepEqual(await service.config(), {
     passwordMinLength: 12,
     passwordMaxLength: 128,
-    verificationMinutes: 30,
   });
-  await service.register("student@edu.teu.ac.jp");
-  await service.verify("one-time-token", "application-password");
-  const session = await service.login(
-    "student@edu.teu.ac.jp",
-    "application-password",
+  assert.equal(
+    await service.register("student_01", "application-password"),
+    "r".repeat(43),
   );
-  assert.equal(session.student.email, "student@edu.teu.ac.jp");
+  assert.equal(
+    await service.recover("student_01", "r".repeat(43), "new-password-123"),
+    "n".repeat(43),
+  );
+  const session = await service.login("student_01", "application-password");
+  assert.equal(session.student.loginName, "student_01");
   assert.equal(session.csrfToken, "csrf");
   assert.deepEqual(await service.session(), session);
   await service.logout(session.csrfToken);
   for (const request of requests) {
     assert.equal(request.options.credentials, "same-origin");
     assert.equal(request.options.cache, "no-store");
-    assert.ok(!request.url.includes("one-time-token"));
+    assert.ok(!request.url.includes("r".repeat(43)));
   }
   assert.deepEqual(JSON.parse(requests[1].options.body), {
-    email: "student@edu.teu.ac.jp",
+    login_name: "student_01",
+    password: "application-password",
+  });
+  assert.deepEqual(JSON.parse(requests[2].options.body), {
+    login_name: "student_01",
+    recovery_code: "r".repeat(43),
+    password: "new-password-123",
   });
   assert.equal(requests.at(-1).options.headers["X-CSRF-Token"], "csrf");
 });
@@ -73,7 +84,7 @@ test("未認証と通信失敗・不正応答を区別する", async (context) =
     Response.json({ detail: "試行上限です" }, { status: 429 }),
   );
   await assert.rejects(
-    repository.login("student@edu.teu.ac.jp", "password"),
+    repository.login("student_01", "password"),
     (error) => error.status === 429 && error.detail === "試行上限です",
   );
   fetch.mock.mockImplementation(async () =>

@@ -1,31 +1,17 @@
-"""実Go → Python → SQLite → SMTP配送の登録・ログインを検証する。"""
+"""実Go → Python → SQLiteの登録・ログインを検証する。"""
 
 import os
-import re
 import shutil
 import subprocess
-from email import policy
-from email.parser import BytesParser
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
-from aiosmtpd.controller import Controller
 from test_subject_list_http import unused_port, wait_for_server
 
 BACKEND = Path(__file__).resolve().parents[1]
 ORIGIN = "http://127.0.0.1:5173"
 PASSWORD = "app-only-password-123"
-
-
-class Receiver:
-    def __init__(self):
-        self.messages: list[bytes] = []
-
-    async def handle_DATA(self, _server, _session, envelope):  # noqa: N802
-        self.messages.append(envelope.original_content)
-        return "250 OK"
 
 
 @pytest.fixture
@@ -35,10 +21,7 @@ def auth_services(tmp_path):
         pytest.skip("Goが必要です。PATHに追加して検証してください。")
     binary = tmp_path / "api"
     subprocess.run([go, "build", "-o", str(binary), "./api"], cwd=BACKEND, check=True)
-    python_port, go_port, smtp_port = [unused_port() for _ in range(3)]
-    receiver = Receiver()
-    smtp = Controller(receiver, hostname="127.0.0.1", port=smtp_port)
-    smtp.start()
+    python_port, go_port = [unused_port() for _ in range(2)]
     commands = [
         [
             str(BACKEND / ".venv/bin/python"),
@@ -63,12 +46,6 @@ def auth_services(tmp_path):
     environment = {
         **os.environ,
         "DATABASE_URL": f"sqlite:///{tmp_path / 'auth.db'}",
-        "SMTP_HOST": "127.0.0.1",
-        "SMTP_PORT": str(smtp_port),
-        "SMTP_STARTTLS": "false",
-        "SMTP_SENDER": "app@example.test",
-        "SMTP_USERNAME": "",
-        "SMTP_PASSWORD": "",
         "PUBLIC_ORIGIN": ORIGIN,
     }
     try:
@@ -105,7 +82,7 @@ def auth_services(tmp_path):
         with httpx.Client(
             base_url=f"http://127.0.0.1:{go_port}", headers={"Origin": ORIGIN}
         ) as client:
-            yield client, receiver, smtp
+            yield client
     finally:
         for process in reversed(processes):
             process.terminate()
@@ -116,90 +93,54 @@ def auth_services(tmp_path):
                 process.wait(timeout=5)
         for log in logs:
             log.close()
-        if not smtp.loop.is_closed():
-            smtp.stop()
 
 
-def test_real_registration_mail_verification_and_session(auth_services):
-    client, receiver, smtp = auth_services
-    config = client.get("/api/auth/config")
-    assert config.status_code == 200
-    assert config.json()["policy"]["password_min_length"] == 12
+def test_real_registration_recovery_and_session(auth_services):
+    client = auth_services
+    credentials = {"login_name": "Student_01", "password": PASSWORD}
+    assert client.get("/api/auth/config").json()["policy"]["password_min_length"] == 12
     assert client.get("/api/auth/session").status_code == 401
     assert (
         client.post(
             "/api/auth/register",
-            json={"email": "student@edu.teu.ac.jp"},
+            json=credentials,
             headers={"Origin": "https://evil.example"},
         ).status_code
         == 403
     )
     assert (
         client.post(
-            "/api/auth/register", json={"email": "student@edu.teu.ac.jp.evil.example"}
-        ).status_code
-        == 422
-    )
-    assert (
-        client.post(
             "/api/auth/register",
-            content='{"email":"x@edu.teu.ac.jp","email":"y@edu.teu.ac.jp"}',
+            content='{"login_name":"abc","login_name":"def","password":"password"}',
             headers={"Content-Type": "application/json"},
         ).status_code
         == 422
     )
     assert (
         client.post(
-            "/api/auth/register",
-            json={"email": "student@edu.teu.ac.jp", "password": PASSWORD},
+            "/api/auth/register", json={"email": "student@edu.teu.ac.jp"}
         ).status_code
         == 422
     )
-    response = client.post(
-        "/api/auth/register", json={"email": "student@edu.teu.ac.jp"}
-    )
-    assert response.status_code == 202
-    assert "token" not in response.text
-    assert len(receiver.messages) == 1
-    message = BytesParser(policy=policy.default).parsebytes(receiver.messages[0])
-    assert message["To"] == "student@edu.teu.ac.jp"
-    part = message.get_body(preferencelist=("plain",))
-    assert part is not None
-    body = part.get_content()
-    match = re.search(r"http://[^\s]+", body)
-    assert match is not None
-    link = match.group()
-    token = parse_qs(urlsplit(link).fragment)["verification_token"][0]
-    assert not urlsplit(link).query
+    assert client.post("/api/auth/verify", json={}).status_code == 404
+    response = client.post("/api/auth/register", json=credentials)
+    assert response.status_code == 201
+    recovery = response.json()["recovery_code"]
+    assert response.headers["cache-control"] == "no-store"
+    assert not client.cookies
     assert (
         client.post(
-            "/api/auth/login",
-            json={"email": "student@edu.teu.ac.jp", "password": PASSWORD},
+            "/api/auth/register", json={**credentials, "login_name": "student_01"}
         ).status_code
-        == 401
+        == 409
     )
-    assert (
-        client.post(
-            "/api/auth/verify", json={"token": token, "password": PASSWORD}
-        ).status_code
-        == 200
-    )
-    assert (
-        client.post(
-            "/api/auth/verify", json={"token": token, "password": PASSWORD}
-        ).status_code
-        == 400
-    )
-    response = client.post(
-        "/api/auth/login", json={"email": "student@edu.teu.ac.jp", "password": PASSWORD}
-    )
+    response = client.post("/api/auth/login", json=credentials)
     assert response.status_code == 200
-    assert "session_token" not in response.text
+    assert response.json()["student"]["login_name"] == "student_01"
+    assert "session_token" not in response.text and "recovery_code" not in response.text
     cookie = response.headers["set-cookie"]
     assert "HttpOnly" in cookie and "SameSite=Lax" in cookie and "Path=/" in cookie
-    assert response.headers["cache-control"] == "no-store"
     session = client.get("/api/auth/session")
-    assert session.status_code == 200
     assert session.json() == response.json()
     csrf = session.json()["csrf_token"]
     assert client.post("/api/auth/logout", json={}).status_code == 403
@@ -223,10 +164,41 @@ def test_real_registration_mail_verification_and_session(auth_services):
         ).status_code
         == 401
     )
-    smtp.stop()
+    assert client.post("/api/auth/login", json=credentials).status_code == 200
+    old_cookie = client.cookies.get("grad_checker_session")
+    recovered = client.post(
+        "/api/auth/recover",
+        json={
+            "login_name": "STUDENT_01",
+            "recovery_code": recovery,
+            "password": "new-application-password",
+        },
+    )
+    assert recovered.status_code == 200
+    assert recovered.json()["recovery_code"] != recovery
+    assert (
+        client.get(
+            "/api/auth/session",
+            headers={"Cookie": f"grad_checker_session={old_cookie}"},
+        ).status_code
+        == 401
+    )
+    assert client.post("/api/auth/login", json=credentials).status_code == 401
     assert (
         client.post(
-            "/api/auth/register", json={"email": "another@edu.teu.ac.jp"}
+            "/api/auth/login",
+            json={**credentials, "password": "new-application-password"},
         ).status_code
-        == 503
+        == 200
+    )
+    assert (
+        client.post(
+            "/api/auth/recover",
+            json={
+                "login_name": "student_01",
+                "recovery_code": recovery,
+                "password": PASSWORD,
+            },
+        ).status_code
+        == 400
     )

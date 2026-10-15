@@ -7,10 +7,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api.api_service.presentation.dependencies import SessionDependency
 from modules.accounts.grad_checker_accounts.application.auth import (
-    AuthError,
     AuthPolicy,
     AuthService,
 )
+from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
 from modules.accounts.grad_checker_accounts.infrastructure.repository import (
     SqliteAccountRepository,
 )
@@ -20,8 +20,9 @@ router = APIRouter(prefix="/internal")
 
 class AuthCall(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    operation: Literal["register", "verify", "login", "session", "logout", "config"]
-    email: str = Field(default="", max_length=254)
+    operation: Literal["register", "recover", "login", "session", "logout", "config"]
+    login_name: str = Field(default="", max_length=32)
+    recovery_code: str = Field(default="", max_length=128)
     password: str = Field(default="", max_length=1024)
     token: str = Field(default="", max_length=128)
     csrf: str = Field(default="", max_length=128)
@@ -31,13 +32,20 @@ class AuthCall(BaseModel):
     def validate_arguments(self) -> Self:
         required = {
             "config": set(),
-            "register": {"email", "client_key"},
-            "verify": {"token", "password", "client_key"},
-            "login": {"email", "password", "client_key"},
+            "register": {"login_name", "password", "client_key"},
+            "recover": {"login_name", "recovery_code", "password", "client_key"},
+            "login": {"login_name", "password", "client_key"},
             "session": {"token"},
             "logout": {"token", "csrf"},
         }[self.operation]
-        for field in ("email", "password", "token", "csrf", "client_key"):
+        for field in (
+            "login_name",
+            "recovery_code",
+            "password",
+            "token",
+            "csrf",
+            "client_key",
+        ):
             if bool(getattr(self, field)) != (field in required):
                 raise ValueError("operation and arguments do not match")
         return self
@@ -51,9 +59,7 @@ def auth(
     service = AuthService(
         SqliteAccountRepository(session),
         request.app.state.passwords,
-        request.app.state.verification_mailer,
         AuthPolicy(
-            verification_minutes=settings.auth_verification_minutes,
             session_hours=settings.auth_session_hours,
             password_min_length=settings.auth_password_min_length,
             password_max_length=settings.auth_password_max_length,
@@ -68,23 +74,24 @@ def auth(
                     "policy": {
                         "password_min_length": settings.auth_password_min_length,
                         "password_max_length": settings.auth_password_max_length,
-                        "verification_minutes": settings.auth_verification_minutes,
                     }
                 }
             }
         if call.operation == "register":
-            service.register(call.email, call.client_key)
-            return {"data": {"accepted": True}}
-        if call.operation == "verify":
-            service.verify(call.token, call.password, call.client_key)
-            return {"data": {"verified": True}}
+            recovery = service.register(call.login_name, call.password, call.client_key)
+            return {"data": {"registered": True, "recovery_code": recovery}}
+        if call.operation == "recover":
+            recovery = service.recover(
+                call.login_name, call.recovery_code, call.password, call.client_key
+            )
+            return {"data": {"recovered": True, "recovery_code": recovery}}
         if call.operation == "logout":
             service.logout(call.token, call.csrf)
             return {"data": {"authenticated": False}}
         raw_token = None
         if call.operation == "login":
             identity, raw_token = service.login(
-                call.email, call.password, call.client_key
+                call.login_name, call.password, call.client_key
             )
         else:
             identity = service.session(call.token)

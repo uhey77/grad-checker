@@ -30,7 +30,6 @@ def test_startup_and_internal_service(tmp_path: Path) -> None:
             "students",
             "student_credentials",
             "auth_sessions",
-            "email_verifications",
             "auth_attempts",
         }
         with application.state.database_engine.connect() as connection:
