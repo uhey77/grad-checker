@@ -3,7 +3,7 @@
 `backend/api/`にHTTPの入口、`backend/modules/subjects/`に科目の業務処理を配置する。
 Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。Goの`go.mod`も`backend/`直下の一つに統一する。
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
-現在は開発用科目一覧と、大学メール限定の自己登録・メール認証・ログインを実装。所属保存・卒業判定・推薦・成績保存は未実装。
+現在は開発用科目一覧と、ユーザー名による自己登録・復旧・ログインを実装。所属保存・卒業判定・推薦・成績保存は未実装。
 
 ```text
 React / Vite :5173
@@ -172,4 +172,4 @@ Pythonの内部HTTPプロセスは引き続き必要。言語を分けたこと�
 
 認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、内部アダプターは `internal_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
 
-再現手順とSMTP設定は[メール認証の開発手順](auth_development.md)を参照する。
+再現手順と認証設定は[認証の開発手順](auth_development.md)を参照する。

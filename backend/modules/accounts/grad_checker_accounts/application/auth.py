@@ -1,4 +1,4 @@
-"""メールの所有確認後にアカウントを作成し、本人セッションを管理する。"""
+"""ユーザー名とパスワードによる登録・復旧・本人セッション管理。"""
 
 import hashlib
 import secrets
@@ -7,15 +7,10 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
 
-from modules.accounts.grad_checker_accounts.domain.email_address import (
-    validate_registration_email,
+from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
+from modules.accounts.grad_checker_accounts.domain.username import (
+    normalize_username,
 )
-
-
-class AuthError(Exception):
-    def __init__(self, code: str) -> None:
-        self.code = code
-        super().__init__(code)
 
 
 class Account(BaseModel):
@@ -43,7 +38,6 @@ class StoredSession(BaseModel):
 class AuthPolicy(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    verification_minutes: int
     session_hours: int
     password_min_length: int
     password_max_length: int
@@ -55,16 +49,25 @@ class AccountRepository(Protocol):
     def take_attempt(
         self, key: str, now: datetime, window: int, limit: int
     ) -> None: ...
-    def account_exists(self, email: str) -> bool: ...
-    def save_verification(
-        self, email: str, token_hash: str, expires: datetime
-    ) -> None: ...
-    def complete_registration(
-        self, token_hash: str, password_hash: str, now: datetime
+    def register(
+        self, username: str, password_hash: str, recovery_hash: str, now: datetime
     ) -> Account: ...
-    def credentials(self, email: str) -> tuple[Account, str] | None: ...
+    def recover(
+        self,
+        username: str,
+        recovery_hash: str,
+        password_hash: str,
+        new_recovery_hash: str,
+        now: datetime,
+    ) -> None: ...
+    def credentials(self, username: str) -> tuple[Account, str] | None: ...
     def save_session(
-        self, account: Account, token_hash: str, csrf: str, expires: datetime
+        self,
+        account: Account,
+        token_hash: str,
+        csrf: str,
+        expires: datetime,
+        password_hash: str,
     ) -> None: ...
     def session(self, token_hash: str, now: datetime) -> StoredSession | None: ...
     def revoke_session(self, token_hash: str, now: datetime) -> None: ...
@@ -73,10 +76,6 @@ class AccountRepository(Protocol):
 class Passwords(Protocol):
     def hash(self, password: str) -> str: ...
     def verify(self, password_hash: str | None, password: str) -> bool: ...
-
-
-class VerificationMailer(Protocol):
-    def send(self, email: str, token: str) -> None: ...
 
 
 def digest(value: str) -> str:
@@ -88,12 +87,10 @@ class AuthService:
         self,
         repository: AccountRepository,
         passwords: Passwords,
-        mailer: VerificationMailer,
         policy: AuthPolicy,
     ) -> None:
         self.repository = repository
         self.passwords = passwords
-        self.mailer = mailer
         self.policy = policy
 
     def _attempt(self, operation: str, identity: str, now: datetime) -> None:
@@ -104,44 +101,56 @@ class AuthService:
             self.policy.attempt_limit,
         )
 
-    def register(self, email: str, client_key: str) -> None:
-        now = datetime.now(UTC)
-        self._attempt("register-ip", client_key, now)
-        email = self._email(email)
-        self._attempt("register-email", email, now)
-        # 登録済みでも同じ外部応答。確認済みのパスワードを変更しない。
-        if self.repository.account_exists(email):
-            return
-        token = secrets.token_urlsafe(32)
-        expires = now + timedelta(minutes=self.policy.verification_minutes)
-        self.repository.save_verification(email, digest(token), expires)
-        self.mailer.send(email, token)
-
-    def verify(self, token: str, password: str, client_key: str) -> Account:
-        now = datetime.now(UTC)
-        self._attempt("verify-ip", client_key, now)
+    def _password(self, password: str) -> None:
         if (
             not self.policy.password_min_length
             <= len(password)
             <= self.policy.password_max_length
         ):
             raise AuthError("invalid_password")
-        if not 20 <= len(token) <= 128:
-            raise AuthError("invalid_verification")
-        return self.repository.complete_registration(
-            digest(token), self.passwords.hash(password), now
+
+    def register(self, username: str, password: str, client_key: str) -> str:
+        now = datetime.now(UTC)
+        self._attempt("register-ip", client_key, now)
+        username = self._username(username)
+        self._attempt("register-username", username, now)
+        self._password(password)
+        recovery = secrets.token_urlsafe(32)
+        self.repository.register(
+            username, self.passwords.hash(password), digest(recovery), now
         )
+        return recovery
+
+    def recover(
+        self, username: str, recovery_code: str, password: str, client_key: str
+    ) -> str:
+        now = datetime.now(UTC)
+        self._attempt("recover-ip", client_key, now)
+        username = self._username(username)
+        self._attempt("recover-username", username, now)
+        self._password(password)
+        if len(recovery_code) != 43:
+            raise AuthError("invalid_recovery")
+        recovery = secrets.token_urlsafe(32)
+        self.repository.recover(
+            username,
+            digest(recovery_code),
+            self.passwords.hash(password),
+            digest(recovery),
+            now,
+        )
+        return recovery
 
     def login(
-        self, email: str, password: str, client_key: str
+        self, username: str, password: str, client_key: str
     ) -> tuple[SessionIdentity, str]:
         now = datetime.now(UTC)
         self._attempt("login-ip", client_key, now)
-        email = self._email(email)
-        self._attempt("login-email", email, now)
+        username = self._username(username)
+        self._attempt("login-username", username, now)
         if len(password) > self.policy.password_max_length:
             raise AuthError("invalid_credentials")
-        credentials = self.repository.credentials(email)
+        credentials = self.repository.credentials(username)
         valid = self.passwords.verify(credentials[1] if credentials else None, password)
         if not valid or credentials is None:
             raise AuthError("invalid_credentials")
@@ -149,7 +158,9 @@ class AuthService:
         token = secrets.token_urlsafe(32)
         csrf = digest(f"csrf:{token}")
         expires = now + timedelta(hours=self.policy.session_hours)
-        self.repository.save_session(account, digest(token), csrf, expires)
+        self.repository.save_session(
+            account, digest(token), csrf, expires, credentials[1]
+        )
         return SessionIdentity(
             account=account, csrf_token=csrf, expires_at=expires
         ), token
@@ -172,8 +183,8 @@ class AuthService:
         self.repository.revoke_session(digest(token), datetime.now(UTC))
 
     @staticmethod
-    def _email(email: str) -> str:
+    def _username(username: str) -> str:
         try:
-            return validate_registration_email(email)
+            return normalize_username(username)
         except ValueError as error:
-            raise AuthError("invalid_email") from error
+            raise AuthError("invalid_username") from error

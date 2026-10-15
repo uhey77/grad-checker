@@ -1,6 +1,6 @@
 # テスト仕様
 
-文書版：1.3。[RDD](RDD.md)第12章のT01〜T24を受入基準とする。[バックエンドの構成](backend_architecture.md)に従い、Goの外部HTTP API、Pythonの業務処理・FastAPI内部通信・SQLite、React / TypeScriptを検証する。
+文書版：1.4（2026年10月15日更新）。[RDD](RDD.md)第12章のT01〜T24を受入基準とする。[バックエンドの構成](backend_architecture.md)に従い、Goの外部HTTP API、Pythonの業務処理・FastAPI内部通信・SQLite、React / TypeScriptを検証する。
 
 第0章は現在の科目一覧に対する実装済みテストの範囲を示す。第1〜4章の学生向け受入ケースは今後の実装を含む設計であり、全ケースの実装・合格を意味しない。実行結果は実行環境・対象・スキップの有無とともに別途記録する。
 
@@ -125,12 +125,14 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 
 関連：[API](api_specification.md)、[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[未確定事項](open_questions.md)。
 
-## メール認証の実装検証（2026-10-11）
+## ユーザー名認証の検証項目（2026-10-15）
 
-- `test_registration_email.py`：完全一致ドメインと類似・サブドメイン・不正形式の拒否。
-- `test_auth.py`：認証前ログイン拒否、Argon2id保存、確認期限切れ、再使用、再送、送信失敗、試行制限、失効・利用停止、並行リンク消費の原子的保存。
-- `test_auth_http.py`：実Go／Python／一時SQLite／ローカルSMTPでメール受信・確認・ログイン・Cookie・CSRF・ログアウトを検証。
+- `test_username.py`：文字種・長さ境界・大小文字の正規化。
+- `test_auth.py`：登録・Argon2id／コードハッシュ保存、重複拒否、復旧コード更新・再使用拒否、全セッション失効、アカウントID維持、並行登録・並行復旧、古いパスワードでのセッション作成拒否、永続的な試行制限。
+- `test_auth_http.py`：実Go／Python／一時SQLiteで登録・ログイン・Cookie・CSRF・復旧・ログアウトを検証。メールサーバーは不要。
+- `test_account_schema.py`：空の旧DB移行と再起動、既存メール認証アカウントがあるDBの変更前停止。
 - `auth_test.go`：外部入力・Origin・重複JSON・Cookie属性・接続元IP・原トークン非公開・日本語エラー。
-- `frontend/tests/accounts.test.mjs`：認証設定／DTO変換、Cookie／CSRF送信、キャンセル、未認証・通信失敗の区別。
+- `frontend/tests/accounts.test.mjs`：DTO変換、登録・復旧の本文とコード取得、Cookie／CSRF送信、キャンセル、未認証・通信失敗の区別。
+- ブラウザー：登録・保管確認・ログイン・再読込み・ログアウト・失敗表示・復旧・旧コード拒否・API障害と再試行を確認する。
 
-SMTPの実送信先は未設定。ローカルSMTPでの配送確認を大学メール受信箱への到達確認とは扱わない。
+本節は検証項目の定義であり、実行結果は変更時の検証報告で区別する。

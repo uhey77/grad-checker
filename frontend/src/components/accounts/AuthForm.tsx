@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AuthPolicy } from "../../modules/accounts/public.ts";
 
-type Mode = "login" | "register" | "verify";
+type Mode = "login" | "register" | "recover";
 export function AuthForm({
   mode,
   policy,
@@ -11,70 +11,95 @@ export function AuthForm({
   mode: Mode;
   policy: AuthPolicy;
   busy: boolean;
-  submit: (email: string, password: string) => void;
+  submit: (loginName: string, password: string, recoveryCode: string) => void;
 }) {
-  const [email, setEmail] = useState("");
+  const [loginName, setLoginName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [error, setError] = useState("");
+  const settingPassword = mode !== "login";
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         setError("");
-        if (mode !== "verify" && !/^[^@\s]+@edu\.teu\.ac\.jp$/i.test(email)) {
-          setError("大学で発行されたメールアドレスを入力してください。");
+        if (!/^[A-Za-z0-9_]{3,32}$/.test(loginName)) {
+          setError(
+            "ユーザー名は半角英数字・アンダースコアの3〜32文字で入力してください。",
+          );
           return;
         }
-        if (mode === "verify" && password !== confirmation) {
+        if (
+          settingPassword &&
+          (Array.from(password).length < policy.passwordMinLength ||
+            Array.from(password).length > policy.passwordMaxLength)
+        ) {
+          setError(
+            `パスワードは${policy.passwordMinLength}〜${policy.passwordMaxLength}文字で入力してください。`,
+          );
+          return;
+        }
+        if (settingPassword && password !== confirmation) {
           setError("確認用パスワードが一致しません。");
           return;
         }
-        submit(email, password);
+        submit(loginName, password, recoveryCode);
         setPassword("");
         setConfirmation("");
+        setRecoveryCode("");
       }}
     >
       <fieldset disabled={busy}>
-        {mode !== "verify" ? (
-          <>
-            <label htmlFor="auth-email">大学メールアドレス</label>
-            <input
-              id="auth-email"
-              name="email"
-              type="email"
-              autoComplete="username"
-              placeholder="例：student@edu.teu.ac.jp"
-              required
-              maxLength={254}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </>
+        <label htmlFor="auth-username">ユーザー名</label>
+        <input
+          id="auth-username"
+          name="username"
+          autoComplete="username"
+          required
+          minLength={3}
+          maxLength={32}
+          pattern="[A-Za-z0-9_]{3,32}"
+          value={loginName}
+          autoCapitalize="none"
+          spellCheck={false}
+          aria-describedby={mode === "register" ? "username-hint" : undefined}
+          onChange={(event) => setLoginName(event.target.value)}
+        />
+        {mode === "register" ? (
+          <p id="username-hint">
+            半角英数字・アンダースコアの3〜32文字。大文字と小文字は区別しません。
+          </p>
         ) : null}
-        {mode !== "register" ? (
+        {mode === "recover" ? (
           <>
-            <label htmlFor="auth-password">
-              {mode === "verify" ? "新しいパスワード" : "パスワード"}
-            </label>
+            <label htmlFor="auth-recovery">復旧コード</label>
             <input
-              id="auth-password"
-              name="password"
+              id="auth-recovery"
+              name="recovery_code"
               type="password"
-              autoComplete={
-                mode === "verify" ? "new-password" : "current-password"
-              }
+              autoComplete="off"
               required
-              minLength={
-                mode === "verify" ? policy.passwordMinLength : undefined
-              }
-              maxLength={policy.passwordMaxLength}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              minLength={43}
+              maxLength={43}
+              value={recoveryCode}
+              onChange={(event) => setRecoveryCode(event.target.value)}
             />
           </>
         ) : null}
-        {mode === "verify" ? (
+        <label htmlFor="auth-password">
+          {mode === "recover" ? "新しいパスワード" : "パスワード"}
+        </label>
+        <input
+          id="auth-password"
+          name="password"
+          type="password"
+          autoComplete={settingPassword ? "new-password" : "current-password"}
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+        {settingPassword ? (
           <>
             <p>
               {policy.passwordMinLength}〜{policy.passwordMaxLength}
@@ -87,7 +112,6 @@ export function AuthForm({
               type="password"
               autoComplete="new-password"
               required
-              maxLength={policy.passwordMaxLength}
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
             />
@@ -98,9 +122,9 @@ export function AuthForm({
           {busy
             ? "処理中…"
             : mode === "register"
-              ? "確認メールを送る"
-              : mode === "verify"
-                ? "登録を完了する"
+              ? "登録する"
+              : mode === "recover"
+                ? "パスワードを再設定する"
                 : "ログイン"}
         </button>
       </fieldset>

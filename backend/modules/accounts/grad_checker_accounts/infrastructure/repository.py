@@ -1,4 +1,4 @@
-"""認証の保存処理。更新・確認リンクの消費はSQLiteトランザクションで行う。"""
+"""認証の保存処理。登録・復旧コードの消費はSQLiteトランザクションで行う。"""
 
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -11,16 +11,15 @@ from sqlmodel import Session, col, select
 
 from modules.accounts.grad_checker_accounts.application.auth import (
     Account,
-    AuthError,
     StoredSession,
     digest,
 )
+from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
 from modules.accounts.grad_checker_accounts.infrastructure.models import (
     AuthAttempt,
     AuthSession,
     Credential,
     Student,
-    Verification,
 )
 
 
@@ -77,70 +76,68 @@ class SqliteAccountRepository:
                 )
             )
 
-    def account_exists(self, email: str) -> bool:
-        with self.transaction():
-            return (
-                self.db.exec(
-                    select(Student).where(col(Student.login_name) == email)
-                ).first()
-                is not None
-            )
-
-    def save_verification(self, email: str, token_hash: str, expires: datetime) -> None:
-        with self.transaction():
-            self.db.add(
-                Verification(token_hash=token_hash, email=email, expires_at=expires)
-            )
-
-    def complete_registration(
-        self, token_hash: str, password_hash: str, now: datetime
+    def register(
+        self, username: str, password_hash: str, recovery_hash: str, now: datetime
     ) -> Account:
         with self.transaction():
-            # 条件付きUPDATEによって同じリンクを同時に消費できないようにする。
-            result = self.db.connection().execute(
-                update(Verification)
-                .where(
-                    col(Verification.token_hash) == token_hash,
-                    col(Verification.used_at).is_(None),
-                    col(Verification.expires_at) > now,
-                )
-                .values(used_at=now)
-                .returning(col(Verification.email))
-            )
-            email = result.scalar_one_or_none()
-            if email is None:
-                raise AuthError("invalid_verification")
-            if self.db.exec(
-                select(Student).where(col(Student.login_name) == email)
-            ).first():
-                raise AuthError("invalid_verification")
-            student = Student(login_name=email, email_verified_at=now)
+            student = Student(login_name=username, created_at=now)
             self.db.add(student)
             self.db.flush()
             self.db.add(
                 Credential(
                     student_id=student.id,
                     password_hash=password_hash,
+                    recovery_code_hash=recovery_hash,
                     password_updated_at=now,
                 )
             )
-            self.db.connection().execute(
-                update(Verification)
-                .where(
-                    col(Verification.email) == email,
-                    col(Verification.used_at).is_(None),
-                )
-                .values(used_at=now)
-            )
             return Account(id=student.id, login_name=student.login_name)
 
-    def credentials(self, email: str) -> tuple[Account, str] | None:
+    def recover(
+        self,
+        username: str,
+        recovery_hash: str,
+        password_hash: str,
+        new_recovery_hash: str,
+        now: datetime,
+    ) -> None:
+        with self.transaction():
+            # 条件付きUPDATEで、同じ復旧コードの並行使用を一度だけ成功させる。
+            result = self.db.connection().execute(
+                update(Credential)
+                .where(
+                    col(Credential.student_id).in_(
+                        select(Student.id).where(col(Student.login_name) == username)
+                    ),
+                    col(Credential.recovery_code_hash) == recovery_hash,
+                    col(Credential.is_active),
+                )
+                .values(
+                    password_hash=password_hash,
+                    recovery_code_hash=new_recovery_hash,
+                    password_updated_at=now,
+                )
+                .returning(col(Credential.student_id))
+            )
+            student_id = result.scalar_one_or_none()
+            if student_id is None:
+                raise AuthError("invalid_recovery")
+            self.db.connection().execute(
+                update(AuthSession)
+                .where(
+                    col(AuthSession.student_id) == student_id,
+                    col(AuthSession.revoked_at).is_(None),
+                )
+                .values(revoked_at=now)
+            )
+
+    def credentials(self, username: str) -> tuple[Account, str] | None:
         with self.transaction():
             row = self.db.exec(
                 select(Student, Credential)
                 .join(Credential)
                 .where(
-                    col(Student.login_name) == email,
+                    col(Student.login_name) == username,
                     col(Credential.is_active),
                 )
             ).first()
@@ -152,10 +149,32 @@ class SqliteAccountRepository:
             ), credential.password_hash
 
     def save_session(
-        self, account: Account, token_hash: str, csrf: str, expires: datetime
+        self,
+        account: Account,
+        token_hash: str,
+        csrf: str,
+        expires: datetime,
+        password_hash: str,
     ) -> None:
         now = datetime.now(UTC)
         with self.transaction():
+            # 復旧と直列化し、古いパスワードで検証済みの要求からセッションを作らない。
+            current = (
+                self.db.connection()
+                .execute(
+                    update(Credential)
+                    .where(
+                        col(Credential.student_id) == account.id,
+                        col(Credential.password_hash) == password_hash,
+                        col(Credential.is_active),
+                    )
+                    .values(password_hash=password_hash)
+                    .returning(col(Credential.student_id))
+                )
+                .scalar_one_or_none()
+            )
+            if current is None:
+                raise AuthError("invalid_credentials")
             self.db.add(
                 AuthSession(
                     student_id=account.id,

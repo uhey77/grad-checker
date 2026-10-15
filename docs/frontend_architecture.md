@@ -2,7 +2,7 @@
 
 バックエンドと同じ4層の責務・依存方向を維持する。
 domain・application・infrastructureは業務モジュールにまとめ、presentationはReactの役割ごとにsrc直下へ配置する。
-React・TypeScript・Viteを使用する。現在は自己登録・メール認証・ログイン画面と、ログイン後の開発用科目一覧。成績保存・卒業判定画面は未実装。
+React・TypeScript・Viteを使用する。現在はユーザー名登録・復旧・ログイン画面と、ログイン後の開発用科目一覧。成績保存・卒業判定画面は未実装。
 
 ## 配置
 
@@ -108,4 +108,4 @@ Python応答のタイムアウトによる日本語エラーと、サービス�
 
 認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、内部アダプターは `internal_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
 
-再現手順とSMTP設定は[メール認証の開発手順](auth_development.md)を参照する。
+再現手順と認証設定は[認証の開発手順](auth_development.md)を参照する。

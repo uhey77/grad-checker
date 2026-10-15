@@ -17,7 +17,7 @@ function toSession(data: unknown): AuthSession {
   )
     throw new AuthError(502, "認証情報を読み込めません。");
   return {
-    student: { id: student.id, email: student.login_name },
+    student: { id: student.id, loginName: student.login_name },
     csrfToken: value.csrf_token,
     expiresAt: value.expires_at,
   };
@@ -73,14 +73,12 @@ export class HttpAuthRepository implements AuthRepository {
     const policy = value as Record<string, unknown>;
     if (
       !Number.isInteger(policy.password_min_length) ||
-      !Number.isInteger(policy.password_max_length) ||
-      !Number.isInteger(policy.verification_minutes)
+      !Number.isInteger(policy.password_max_length)
     )
       throw new AuthError(502, "認証設定を読み込めません。");
     return {
       passwordMinLength: policy.password_min_length as number,
       passwordMaxLength: policy.password_max_length as number,
-      verificationMinutes: policy.verification_minutes as number,
     };
   }
   async session(signal?: AbortSignal) {
@@ -91,28 +89,50 @@ export class HttpAuthRepository implements AuthRepository {
       throw error;
     }
   }
-  async register(email: string, signal?: AbortSignal) {
-    const data = await this.request("/register", { email }, signal);
+  private recoveryResult(
+    data: unknown,
+    field: "registered" | "recovered",
+  ): string {
+    if (!data || typeof data !== "object")
+      throw new AuthError(502, "登録・復旧の結果を読み込めません。");
+    const result = data as Record<string, unknown>;
     if (
-      !data ||
-      typeof data !== "object" ||
-      !("accepted" in data) ||
-      data.accepted !== true
+      result[field] !== true ||
+      typeof result.recovery_code !== "string" ||
+      !/^[A-Za-z0-9_-]{43}$/.test(result.recovery_code)
     )
-      throw new AuthError(502, "確認メールの送信結果を読み込めません。");
+      throw new AuthError(502, "登録・復旧の結果を読み込めません。");
+    return result.recovery_code;
   }
-  async verify(token: string, password: string, signal?: AbortSignal) {
-    const data = await this.request("/verify", { token, password }, signal);
-    if (
-      !data ||
-      typeof data !== "object" ||
-      !("verified" in data) ||
-      data.verified !== true
-    )
-      throw new AuthError(502, "メール認証の結果を読み込めません。");
+  async register(loginName: string, password: string, signal?: AbortSignal) {
+    return this.recoveryResult(
+      await this.request(
+        "/register",
+        { login_name: loginName, password },
+        signal,
+      ),
+      "registered",
+    );
   }
-  async login(email: string, password: string, signal?: AbortSignal) {
-    return toSession(await this.request("/login", { email, password }, signal));
+  async recover(
+    loginName: string,
+    recoveryCode: string,
+    password: string,
+    signal?: AbortSignal,
+  ) {
+    return this.recoveryResult(
+      await this.request(
+        "/recover",
+        { login_name: loginName, recovery_code: recoveryCode, password },
+        signal,
+      ),
+      "recovered",
+    );
+  }
+  async login(loginName: string, password: string, signal?: AbortSignal) {
+    return toSession(
+      await this.request("/login", { login_name: loginName, password }, signal),
+    );
   }
   async logout(csrf: string, signal?: AbortSignal) {
     const data = await this.request("/logout", {}, signal, csrf);

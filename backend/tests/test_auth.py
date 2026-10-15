@@ -1,4 +1,4 @@
-"""確認リンク・認証・失効・原子的登録を一時SQLiteで検証する。"""
+"""ユーザー名登録・復旧・失効・原子的保存を一時SQLiteで検証する。"""
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
@@ -10,85 +10,61 @@ from sqlmodel import Session, select
 
 from api.api_service.main import create_app
 from config.settings import Settings
-from modules.accounts.grad_checker_accounts.application.auth import AuthError, digest
+from modules.accounts.grad_checker_accounts.application.auth import digest
+from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
 from modules.accounts.grad_checker_accounts.infrastructure.models import (
     AuthSession,
     Credential,
     Student,
-    Verification,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.repository import (
     SqliteAccountRepository,
 )
 
-EMAIL = "student@edu.teu.ac.jp"
+USERNAME = "student_01"
 PASSWORD = "app-only-password-123"
-
-
-class Mailbox:
-    def __init__(self):
-        self.messages: list[tuple[str, str]] = []
-        self.fail = False
-
-    def send(self, email: str, token: str) -> None:
-        if self.fail:
-            raise AuthError("mail_unavailable")
-        self.messages.append((email, token))
+NEW_PASSWORD = "new-application-password"
 
 
 @pytest.fixture
 def auth(tmp_path: Path):
     app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'auth.db'}"))
     with TestClient(app) as client:
-        box = Mailbox()
-        app.state.verification_mailer = box
-        yield app, client, box
+        yield app, client
 
 
 def call(client, operation, **fields):
-    if operation in {"register", "verify", "login"}:
+    if operation in {"register", "recover", "login"}:
         fields.setdefault("client_key", "127.0.0.1")
     return client.post("/internal/auth", json={"operation": operation, **fields}).json()
 
 
-def register(client, box, email=EMAIL):
-    assert call(client, "register", email=email) == {"data": {"accepted": True}}
-    return box.messages[-1][1]
+def register(client, username=USERNAME):
+    result = call(client, "register", login_name=username, password=PASSWORD)["data"]
+    assert result["registered"] is True
+    assert len(result["recovery_code"]) == 43
+    return result["recovery_code"]
 
 
-def complete(client, box, email=EMAIL):
-    token = register(client, box, email)
-    assert call(client, "verify", token=token, password=PASSWORD) == {
-        "data": {"verified": True}
-    }
-    return token
+def login(client, username=USERNAME, password=PASSWORD):
+    return call(client, "login", login_name=username, password=password)["data"]
 
 
-def test_registration_verification_login_session_logout(auth):
-    app, client, box = auth
-    token = register(client, box)
-    assert box.messages[-1][0] == EMAIL
-    assert (
-        call(client, "login", email=EMAIL, password=PASSWORD)["error"]["code"]
-        == "invalid_credentials"
-    )
-    with Session(app.state.database_engine) as db:
-        assert db.exec(select(Student)).all() == []
-        assert token not in str(db.exec(select(Verification)).all())
-    assert call(client, "verify", token=token, password=PASSWORD)["data"]["verified"]
-    assert (
-        call(client, "verify", token=token, password=PASSWORD)["error"]["code"]
-        == "invalid_verification"
-    )
-    result = call(client, "login", email=EMAIL, password=PASSWORD)["data"]
+def test_registration_login_session_logout(auth):
+    app, client = auth
+    recovery = register(client, "Student_01")
+    result = login(client)
+    assert result["student"]["login_name"] == USERNAME
     raw = result.pop("session_token")
     assert call(client, "session", token=raw)["data"] == result
     with Session(app.state.database_engine) as db:
         credential = db.exec(select(Credential)).one()
         assert credential.password_hash.startswith("$argon2id$")
+        assert credential.recovery_code_hash == digest(recovery)
         session = db.exec(select(AuthSession)).one()
         assert session.token_hash == digest(raw)
         assert session.csrf_token_hash == digest(result["csrf_token"])
+        assert recovery not in str(credential)
     assert (
         call(client, "logout", token=raw, csrf="wrong")["error"]["code"]
         == "invalid_csrf"
@@ -102,127 +78,208 @@ def test_registration_verification_login_session_logout(auth):
     assert call(client, "session", token=raw)["error"]["code"] == "invalid_credentials"
 
 
-def test_expired_links_do_not_create_account(auth):
-    app, client, box = auth
-    token = register(client, box)
-    with Session(app.state.database_engine) as db:
-        record = db.get(Verification, digest(token))
-        assert record
-        record.expires_at = datetime.now(UTC) - timedelta(seconds=1)
-        db.add(record)
-        db.commit()
+def test_duplicate_registration_does_not_overwrite_credentials(auth):
+    app, client = auth
+    recovery = register(client)
     assert (
-        call(client, "verify", token=token, password=PASSWORD)["error"]["code"]
-        == "invalid_verification"
+        call(client, "register", login_name="STUDENT_01", password=NEW_PASSWORD)[
+            "error"
+        ]["code"]
+        == "registration_conflict"
     )
+    assert login(client)["authenticated"]
     with Session(app.state.database_engine) as db:
-        assert not db.exec(select(Student)).all()
+        assert len(db.exec(select(Student)).all()) == 1
+        assert db.exec(select(Credential)).one().recovery_code_hash == digest(recovery)
 
 
-def test_resend_and_preset_password_cannot_hijack_account(auth):
-    app, client, box = auth
-    first = register(client, box)
-    second = register(client, box)
-    assert call(client, "verify", token=second, password=PASSWORD)["data"]["verified"]
+def test_invalid_username_password_and_legacy_requests(auth):
+    app, client = auth
     assert (
-        call(client, "verify", token=first, password="attacker-password")["error"][
+        call(client, "register", login_name="x@y.jp", password=PASSWORD)["error"][
             "code"
         ]
-        == "invalid_verification"
+        == "invalid_username"
     )
-    assert call(client, "register", email=EMAIL)["data"]["accepted"]
-    assert len(box.messages) == 2
-    assert call(client, "login", email=EMAIL, password=PASSWORD)["data"][
-        "authenticated"
-    ]
-    # 登録開始でパスワードを受け付けない。
     assert (
-        call(client, "register", email=EMAIL, password=PASSWORD)["error"]["code"]
-        == "invalid_request"
-    )
-
-
-def test_domain_and_password_validation_and_mail_failure(auth):
-    app, client, box = auth
-    assert (
-        call(client, "register", email="x@edu.teu.ac.jp.evil.com")["error"]["code"]
-        == "invalid_email"
-    )
-    box.fail = True
-    assert call(client, "register", email=EMAIL)["error"]["code"] == "mail_unavailable"
-    with Session(app.state.database_engine) as db:
-        assert not db.exec(select(Student)).all()
-    box.fail = False
-    token = register(client, box)
-    assert (
-        call(client, "verify", token=token, password="short")["error"]["code"]
+        call(client, "register", login_name=USERNAME, password="short")["error"]["code"]
         == "invalid_password"
     )
-    assert call(client, "verify", token=token, password=PASSWORD)["data"]["verified"]
+    assert (
+        call(client, "register", email="x@edu.teu.ac.jp")["error"]["code"]
+        == "invalid_request"
+    )
+    assert (
+        call(client, "verify", token="old-token", password=PASSWORD)["error"]["code"]
+        == "invalid_request"
+    )
+    with Session(app.state.database_engine) as db:
+        assert not db.exec(select(Student)).all()
 
 
-def test_rate_limits_persist_and_are_shared_by_email(auth):
-    app, client, box = auth
-    for number in range(5):
-        response = call(
+def test_recovery_rotates_code_revokes_all_sessions_and_preserves_account(auth):
+    app, client = auth
+    recovery = register(client)
+    sessions = [login(client) for _ in range(2)]
+    student_id = sessions[0]["student"]["id"]
+    for name, code in ((USERNAME, "x" * 43), ("missing", recovery)):
+        assert (
+            call(
+                client,
+                "recover",
+                login_name=name,
+                recovery_code=code,
+                password=NEW_PASSWORD,
+            )["error"]["code"]
+            == "invalid_recovery"
+        )
+    assert (
+        call(
             client,
-            "login",
-            email=EMAIL,
+            "recover",
+            login_name=USERNAME,
+            recovery_code=recovery,
+            password="short",
+        )["error"]["code"]
+        == "invalid_password"
+    )
+    result = call(
+        client,
+        "recover",
+        login_name="STUDENT_01",
+        recovery_code=recovery,
+        password=NEW_PASSWORD,
+    )["data"]
+    assert result["recovered"]
+    replacement = result["recovery_code"]
+    assert replacement != recovery
+    for session in sessions:
+        assert (
+            call(client, "session", token=session["session_token"])["error"]["code"]
+            == "invalid_credentials"
+        )
+    assert (
+        call(client, "login", login_name=USERNAME, password=PASSWORD)["error"]["code"]
+        == "invalid_credentials"
+    )
+    assert login(client, password=NEW_PASSWORD)["student"]["id"] == student_id
+    assert (
+        call(
+            client,
+            "recover",
+            login_name=USERNAME,
+            recovery_code=recovery,
+            password=PASSWORD,
+        )["error"]["code"]
+        == "invalid_recovery"
+    )
+    # 回数制限は別のテストで検証。新コードでの再復旧をここで確認する。
+    with Session(app.state.database_engine) as db:
+        SqliteAccountRepository(db).recover(
+            USERNAME,
+            digest(replacement),
+            app.state.passwords.hash(PASSWORD),
+            digest("next-code"),
+            datetime.now(UTC),
+        )
+        assert db.exec(select(Credential)).one().recovery_code_hash == digest(
+            "next-code"
+        )
+
+
+@pytest.mark.parametrize("operation", ["login", "recover", "register"])
+def test_rate_limits_persist_and_are_shared_by_username(auth, operation):
+    app, client = auth
+    for number in range(5):
+        fields = dict(
+            login_name="STUDENT_01" if number % 2 else USERNAME,
             password=PASSWORD,
             client_key=f"192.0.2.{number}",
         )
-        assert response["error"]["code"] == "invalid_credentials"
-    assert (
-        call(client, "login", email=EMAIL, password=PASSWORD, client_key="192.0.2.99")[
-            "error"
-        ]["code"]
-        == "rate_limited"
-    )
+        if operation == "recover":
+            fields["recovery_code"] = "x" * 43
+        assert (
+            call(client, operation, **fields).get("error", {}).get("code")
+            != "rate_limited"
+        )
+    fields["client_key"] = "192.0.2.99"
+    assert call(client, operation, **fields)["error"]["code"] == "rate_limited"
+    # 同じDBを開き直しても制限を維持する。
+    with TestClient(create_app(app.state.settings)) as restarted:
+        assert call(restarted, operation, **fields)["error"]["code"] == "rate_limited"
 
 
 def test_expired_and_disabled_sessions(auth):
-    app, client, box = auth
-    complete(client, box)
-    result = call(client, "login", email=EMAIL, password=PASSWORD)["data"]
+    app, client = auth
+    register(client)
+    raw = login(client)["session_token"]
     with Session(app.state.database_engine) as db:
         record = db.exec(select(AuthSession)).one()
         record.expires_at = datetime.now(UTC) - timedelta(seconds=1)
         db.add(record)
         db.commit()
-    assert (
-        call(client, "session", token=result["session_token"])["error"]["code"]
-        == "invalid_credentials"
-    )
-    result = call(client, "login", email=EMAIL, password=PASSWORD)["data"]
+    assert call(client, "session", token=raw)["error"]["code"] == "invalid_credentials"
+    raw = login(client)["session_token"]
     with Session(app.state.database_engine) as db:
         credential = db.exec(select(Credential)).one()
         credential.is_active = False
         db.add(credential)
         db.commit()
-    assert (
-        call(client, "session", token=result["session_token"])["error"]["code"]
-        == "invalid_credentials"
-    )
+    assert call(client, "session", token=raw)["error"]["code"] == "invalid_credentials"
 
 
-def test_concurrent_link_consumption_only_creates_one_account(auth):
-    app, client, box = auth
-    token = register(client, box)
+def test_concurrent_registration_creates_one_account(auth):
+    app, _ = auth
     hashed = app.state.passwords.hash(PASSWORD)
 
-    def consume():
+    def attempt(_):
         with Session(app.state.database_engine) as db:
             try:
-                SqliteAccountRepository(db).complete_registration(
-                    digest(token), hashed, datetime.now(UTC)
+                SqliteAccountRepository(db).register(
+                    USERNAME, hashed, digest("code"), datetime.now(UTC)
                 )
                 return "ok"
             except AuthError as error:
                 return error.code
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(lambda _: consume(), range(2)))
-    assert sorted(results) == ["invalid_verification", "ok"]
+        assert sorted(pool.map(attempt, range(2))) == ["ok", "registration_conflict"]
     with Session(app.state.database_engine) as db:
         assert len(db.exec(select(Student)).all()) == 1
         assert len(db.exec(select(Credential)).all()) == 1
+
+
+def test_recovery_is_single_use_and_stale_password_cannot_create_session(auth):
+    app, client = auth
+    recovery = register(client)
+    with Session(app.state.database_engine) as db:
+        credentials = SqliteAccountRepository(db).credentials(USERNAME)
+        assert credentials is not None
+        account, old_hash = credentials
+    hashed = app.state.passwords.hash(NEW_PASSWORD)
+
+    def attempt(_):
+        with Session(app.state.database_engine) as db:
+            try:
+                SqliteAccountRepository(db).recover(
+                    USERNAME,
+                    digest(recovery),
+                    hashed,
+                    digest("replacement"),
+                    datetime.now(UTC),
+                )
+                return "ok"
+            except AuthError as error:
+                return error.code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert sorted(pool.map(attempt, range(2))) == ["invalid_recovery", "ok"]
+    with Session(app.state.database_engine) as db:
+        with pytest.raises(AuthError, match="invalid_credentials"):
+            SqliteAccountRepository(db).save_session(
+                account,
+                digest("token"),
+                "csrf",
+                datetime.now(UTC) + timedelta(hours=1),
+                old_hash,
+            )

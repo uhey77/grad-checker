@@ -24,12 +24,12 @@ func (f *fakeAuth) Call(_ context.Context, call application.AuthCall) (applicati
 }
 
 func TestAuthLoginSecureCookieAndNoTokenInBody(t *testing.T) {
-	fake := &fakeAuth{result: application.AuthResult{Authenticated: true, SessionToken: strings.Repeat("s", 43), CSRFToken: strings.Repeat("c", 64), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339), Student: &application.Student{ID: "id", LoginName: "student@edu.teu.ac.jp"}}}
+	fake := &fakeAuth{result: application.AuthResult{Authenticated: true, SessionToken: strings.Repeat("s", 43), CSRFToken: strings.Repeat("c", 64), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339), Student: &application.Student{ID: "id", LoginName: "student_01"}}}
 	handler, err := presentation.NewAuthHandler(fake, "https://checker.example", http.NotFoundHandler())
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"email":"student@edu.teu.ac.jp","password":"app-password"}`))
+	req := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"login_name":"student_01","password":"app-password"}`))
 	req.Header.Set("Origin", "https://checker.example")
 	req.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
@@ -54,11 +54,11 @@ func TestAuthRejectsInvalidExternalCallsBeforeBackend(t *testing.T) {
 		method, path, body, origin string
 		status                     int
 	}{
-		{"POST", "/api/auth/register", `{"email":"x@edu.teu.ac.jp"}`, "https://evil.example", 403},
-		{"POST", "/api/auth/register", `{"email":"x@edu.teu.ac.jp","email":"y@edu.teu.ac.jp"}`, "http://127.0.0.1:5173", 422},
-		{"POST", "/api/auth/register", `{"email":"x@edu.teu.ac.jp","password":"hijack"}`, "http://127.0.0.1:5173", 422},
-		{"POST", "/api/auth/register", `{"email":null}`, "http://127.0.0.1:5173", 422},
-		{"POST", "/api/auth/register", `{"email":"x@edu.teu.ac.jp"} {}`, "http://127.0.0.1:5173", 422},
+		{"POST", "/api/auth/register", `{"login_name":"student_02"}`, "https://evil.example", 403},
+		{"POST", "/api/auth/register", `{"login_name":"student_02","login_name":"student_03"}`, "http://127.0.0.1:5173", 422},
+		{"POST", "/api/auth/register", `{"login_name":"student_02"}`, "http://127.0.0.1:5173", 422},
+		{"POST", "/api/auth/register", `{"login_name":null}`, "http://127.0.0.1:5173", 422},
+		{"POST", "/api/auth/register", `{"login_name":"student_02"} {}`, "http://127.0.0.1:5173", 422},
 		{"GET", "/api/auth/register", "", "", 405},
 		{"GET", "/api/auth/session?student_id=other", "", "", 422},
 		{"GET", "/api/auth/session", "", "", 401},
@@ -87,7 +87,7 @@ func TestAuthIgnoresSpoofedForwardedIPAndMapsErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(`{"email":"x@edu.teu.ac.jp"}`))
+	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(`{"login_name":"student_02","password":"app-password"}`))
 	req.Header.Set("Origin", "http://127.0.0.1:5173")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Forwarded-For", "spoofed")

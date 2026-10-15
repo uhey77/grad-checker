@@ -63,15 +63,15 @@ func (c *PythonAuthClient) Call(ctx context.Context, call application.AuthCall) 
 	data := *result.Data
 	switch call.Operation {
 	case "config":
-		if data.Policy == nil || data.Policy.PasswordMinLength < 12 || data.Policy.PasswordMaxLength < data.Policy.PasswordMinLength || data.Policy.VerificationMinutes < 1 {
+		if data.Policy == nil || data.Policy.PasswordMinLength < 12 || data.Policy.PasswordMaxLength < data.Policy.PasswordMinLength {
 			return empty, application.ErrBackend
 		}
 	case "register":
-		if !data.Accepted {
+		if !data.Registered || len(data.RecoveryCode) != 43 {
 			return empty, application.ErrBackend
 		}
-	case "verify":
-		if !data.Verified {
+	case "recover":
+		if !data.Recovered || len(data.RecoveryCode) != 43 {
 			return empty, application.ErrBackend
 		}
 	case "login", "session":

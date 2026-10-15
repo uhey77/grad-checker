@@ -1,5 +1,5 @@
 export type AuthSession = {
-  student: { id: string; email: string };
+  student: { id: string; loginName: string };
   csrfToken: string;
   expiresAt: string;
 };
@@ -7,5 +7,4 @@ export type AuthSession = {
 export type AuthPolicy = {
   passwordMinLength: number;
   passwordMaxLength: number;
-  verificationMinutes: number;
 };

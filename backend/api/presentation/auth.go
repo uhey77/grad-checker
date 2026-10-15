@@ -50,7 +50,7 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if operation == "session" || operation == "config" {
 		method = http.MethodGet
 	}
-	allowed := map[string]bool{"config": true, "register": true, "verify": true, "login": true, "session": true, "logout": true}
+	allowed := map[string]bool{"config": true, "register": true, "recover": true, "login": true, "session": true, "logout": true}
 	if !allowed[operation] {
 		writeError(w, 404, "APIが見つかりません。")
 		return
@@ -69,7 +69,7 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	call := application.AuthCall{Operation: operation}
-	if operation == "register" || operation == "verify" || operation == "login" {
+	if operation == "register" || operation == "recover" || operation == "login" {
 		media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if err != nil || media != "application/json" {
 			writeError(w, 422, "JSON形式で入力してください。")
@@ -113,12 +113,9 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 422, "入力形式が不正です。")
 			return
 		}
-		expected := map[string]bool{"email": true}
-		if operation == "login" {
-			expected["password"] = true
-		}
-		if operation == "verify" {
-			expected = map[string]bool{"token": true, "password": true}
+		expected := map[string]bool{"login_name": true, "password": true}
+		if operation == "recover" {
+			expected["recovery_code"] = true
 		}
 		if len(fields) != len(expected) {
 			writeError(w, 422, "必要な入力項目を指定してください。")
@@ -130,8 +127,8 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		call.Email, call.Password, call.Token = fields["email"], fields["password"], fields["token"]
-		if len(call.Email) > 254 || len([]rune(call.Password)) > 1024 || len(call.Token) > 128 {
+		call.LoginName, call.Password, call.RecoveryCode = fields["login_name"], fields["password"], fields["recovery_code"]
+		if len(call.LoginName) > 32 || len([]rune(call.Password)) > 1024 || len(call.RecoveryCode) > 128 {
 			writeError(w, 422, "入力が長すぎます。")
 			return
 		}
@@ -180,29 +177,27 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	result.SessionToken = "" // Cookie以外でセッション原値を公開しない。
 	status := 200
 	if operation == "register" {
-		status = 202
+		status = 201
 	}
 	writeJSON(w, status, result)
 }
 func writeAuthError(w http.ResponseWriter, code string) {
 	status, detail := 503, "認証処理を利用できません。時間をおいて再試行してください。"
 	switch code {
-	case "invalid_email":
-		status, detail = 422, "登録できるのは @edu.teu.ac.jp のメールアドレスのみです。"
+	case "invalid_username":
+		status, detail = 422, "ユーザー名は半角英数字・アンダースコアの3〜32文字で入力してください。"
 	case "invalid_password":
 		status, detail = 422, "パスワードの文字数が設定された範囲外です。"
-	case "invalid_verification":
-		status, detail = 400, "確認リンクが無効、期限切れ、または使用済みです。登録画面から確認メールを再送してください。"
+	case "invalid_recovery":
+		status, detail = 400, "ユーザー名または復旧コードを確認してください。"
 	case "invalid_credentials":
-		status, detail = 401, "メールアドレスまたはパスワードを確認してください。メール認証が完了している必要があります。"
+		status, detail = 401, "ユーザー名またはパスワードを確認してください。"
 	case "invalid_csrf":
 		status, detail = 403, "操作を確認できません。画面を再読み込みしてください。"
 	case "rate_limited":
 		status, detail = 429, "試行回数の上限に達しました。時間をおいて再試行してください。"
-	case "mail_unavailable":
-		status, detail = 503, "確認メールを送信できません。時間をおいて再試行してください。"
 	case "registration_conflict":
-		status, detail = 409, "登録を完了できません。確認済みならログインし、それ以外は確認メールを再送してください。"
+		status, detail = 409, "このユーザー名は使用されています。別のユーザー名を指定してください。"
 	}
 	writeError(w, status, detail)
 }

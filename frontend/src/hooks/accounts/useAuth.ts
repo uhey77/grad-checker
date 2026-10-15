@@ -127,9 +127,9 @@ export function useAuth(useCases: AuthUseCases) {
       setState({ status: "loading", session: null, error: "" });
       setAttempt((value) => value + 1);
     },
-    login: (email: string, password: string) =>
+    login: (loginName: string, password: string) =>
       run(
-        (signal) => useCases.login(email, password, signal),
+        (signal) => useCases.login(loginName, password, signal),
         (session) =>
           setState((previous) => ({
             ...previous,
@@ -138,10 +138,24 @@ export function useAuth(useCases: AuthUseCases) {
             error: "",
           })),
       ),
-    register: (email: string, done: () => void) =>
-      run((signal) => useCases.register(email, signal), done),
-    verify: (token: string, password: string, done: () => void) =>
-      run((signal) => useCases.verify(token, password, signal), done),
+    register: (
+      loginName: string,
+      password: string,
+      done: (code: string) => void,
+    ) => run((signal) => useCases.register(loginName, password, signal), done),
+    recover: (
+      loginName: string,
+      code: string,
+      password: string,
+      done: (code: string) => void,
+    ) =>
+      run(
+        (signal) => useCases.recover(loginName, code, password, signal),
+        (result) => {
+          channel.current?.postMessage("logout");
+          done(result);
+        },
+      ),
     logout: () => {
       if (state.session)
         void run(

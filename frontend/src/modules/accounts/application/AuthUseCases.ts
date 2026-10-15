@@ -11,10 +11,19 @@ export class AuthError extends Error {
 export interface AuthRepository {
   config(signal?: AbortSignal): Promise<AuthPolicy>;
   session(signal?: AbortSignal): Promise<AuthSession | null>;
-  register(email: string, signal?: AbortSignal): Promise<void>;
-  verify(token: string, password: string, signal?: AbortSignal): Promise<void>;
+  register(
+    loginName: string,
+    password: string,
+    signal?: AbortSignal,
+  ): Promise<string>;
+  recover(
+    loginName: string,
+    recoveryCode: string,
+    password: string,
+    signal?: AbortSignal,
+  ): Promise<string>;
   login(
-    email: string,
+    loginName: string,
     password: string,
     signal?: AbortSignal,
   ): Promise<AuthSession>;
@@ -28,14 +37,19 @@ export class AuthUseCases implements AuthRepository {
   session(signal?: AbortSignal) {
     return this.repository.session(signal);
   }
-  register(email: string, signal?: AbortSignal) {
-    return this.repository.register(email, signal);
+  register(loginName: string, password: string, signal?: AbortSignal) {
+    return this.repository.register(loginName, password, signal);
   }
-  verify(token: string, password: string, signal?: AbortSignal) {
-    return this.repository.verify(token, password, signal);
+  recover(
+    loginName: string,
+    recoveryCode: string,
+    password: string,
+    signal?: AbortSignal,
+  ) {
+    return this.repository.recover(loginName, recoveryCode, password, signal);
   }
-  login(email: string, password: string, signal?: AbortSignal) {
-    return this.repository.login(email, password, signal);
+  login(loginName: string, password: string, signal?: AbortSignal) {
+    return this.repository.login(loginName, password, signal);
   }
   logout(csrf: string, signal?: AbortSignal) {
     return this.repository.logout(csrf, signal);
