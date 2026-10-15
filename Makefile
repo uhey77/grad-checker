@@ -1,10 +1,12 @@
 .DEFAULT_GOAL := help
+.PHONY: auth-dev
 
 .PHONY: dev-go go-api-dev go-api-check go-api-test go-api-format backend-python-dev
 
 .PHONY: help check test frontend-test format backend-check frontend-check setup frontend-install backend-install backend-dev backend-subject-list backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
 
 help:
+	@echo "auth-dev          メール認証のローカル受信箱・画面・バックエンドを起動"
 	@echo "go-api-format     Goコードを整形"
 	@echo "backend-python-dev Python内部サービスだけを起動"
 	@echo "dev-go            devと同じ構成で起動（互換コマンド）"
@@ -77,6 +79,9 @@ backend-install:
 
 backend-dev:
 	node scripts/dev.mjs --backend-only
+
+auth-dev:
+	node scripts/dev.mjs --local-mailbox
 
 backend-subject-list:
 	node scripts/dev.mjs --backend-only --subject-list-preview

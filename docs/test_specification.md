@@ -124,3 +124,13 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 第三者が`task setup` / `make setup`、[バックエンドの起動・確認手順](backend_architecture.md)、[シード手順](../backend/seeds/README.md)、Task / Makeの定義から初期化・投入・Go／Python／Reactの起動・テストを再現できることを確認する。外部APIのOpenAPI / Swagger UIは今後整備し、Goが公開するパスと入力・出力・エラーに一致することを受入条件とする。Python内部サービスの`/docs`・`/openapi.json`は無効のままとする。学生向けJSONファイル入出力と公開共有は受入対象にしない。
 
 関連：[API](api_specification.md)、[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[未確定事項](open_questions.md)。
+
+## メール認証の実装検証（2026-10-11）
+
+- `test_registration_email.py`：完全一致ドメインと類似・サブドメイン・不正形式の拒否。
+- `test_auth.py`：認証前ログイン拒否、Argon2id保存、確認期限切れ、再使用、再送、送信失敗、試行制限、失効・利用停止、並行リンク消費の原子的保存。
+- `test_auth_http.py`：実Go／Python／一時SQLite／ローカルSMTPでメール受信・確認・ログイン・Cookie・CSRF・ログアウトを検証。
+- `auth_test.go`：外部入力・Origin・重複JSON・Cookie属性・接続元IP・原トークン非公開・日本語エラー。
+- `frontend/tests/accounts.test.mjs`：認証設定／DTO変換、Cookie／CSRF送信、キャンセル、未認証・通信失敗の区別。
+
+SMTPの実送信先は未設定。ローカルSMTPでの配送確認を大学メール受信箱への到達確認とは扱わない。

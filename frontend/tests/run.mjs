@@ -31,6 +31,7 @@ try {
       "src/modules/subjects/infrastructure/subject-list/mappers.ts",
       "src/modules/subjects/infrastructure/subject-list/HttpSubjectListRepository.ts",
       "src/hooks/subjects/errors.ts",
+      "src/modules/accounts/infrastructure/HttpAuthRepository.ts",
     ],
     { stdio: "inherit" },
   );
@@ -38,7 +39,12 @@ try {
   else {
     const result = spawnSync(
       process.execPath,
-      ["--test", "tests/subject-list.test.mjs", "tests/architecture.test.mjs"],
+      [
+        "--test",
+        "tests/subject-list.test.mjs",
+        "tests/architecture.test.mjs",
+        "tests/accounts.test.mjs",
+      ],
       {
         stdio: "inherit",
         env: { ...process.env, SUBJECT_TEST_BUILD_DIRECTORY: directory },

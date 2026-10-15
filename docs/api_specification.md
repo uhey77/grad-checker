@@ -5,7 +5,7 @@
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonは内部通信で結果またはエラーコードを返す。以下の学生向けAPIのURL・JSON契約は維持するが、認証・成績・卒業判定などは未実装。
+Pythonは内部通信で結果またはエラーコードを返す。以下の学生向けAPIのURL・JSON契約は維持するが、認証APIは実装済み。所属保存・成績・卒業判定などは未実装。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -38,16 +38,19 @@ IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成�
 
 サーバー保存型セッションを用いる。十分なランダム値のトークンをCookieに保存し、DBにはトークンのハッシュを保持する。公開時はHttpOnly・Secure・SameSite=Lax・Path=/、同一オリジンHTTPS。ローカル開発のHTTP用Cookie設定を公開設定と分離する。
 
-セッションの期限・失効・アカウント利用状態を各要求で検証する。ログアウトで失効させ、パスワードは平文保存せずパスワード用ハッシュ方式を使用する。旧設計のArgon2idは提案を維持し、パラメータ・期限・試行制限の運用値はQ04で決定する。自己登録・事前発行方式も未決定である。
+セッションの期限・失効・アカウント利用状態を各要求で検証する。ログアウトで失効させ、パスワードは平文保存せずパスワード用ハッシュ方式を使用する。Argon2id（メモリ19 MiB、反復2、並列度1）を使用する。確認リンク30分、セッション24時間、パスワード12〜128文字、各操作の接続元別・登録／ログインのメール別に15分で5回の上限を設定する。試行回数はSQLiteに保存し、サービス再起動でリセットしない。自己登録と大学メール認証を採用する。
 
-POST/PUT/PATCH/DELETEはOriginを検証する。ログイン以外の認証済み更新はセッションに紐づくX-CSRF-Tokenを要求する。ログインにもOrigin検証を適用する。Vite開発プロキシと公開プロキシで同一オリジンを基本とする。未保存変更を判定用データとして扱わない。
+POST/PUT/PATCH/DELETEはOriginを検証する。登録・確認にもOrigin検証を適用する。ログイン以外の認証済み更新はセッションに紐づくX-CSRF-Tokenを要求する。ログインにもOrigin検証を適用する。Vite開発プロキシと公開プロキシで同一オリジンを基本とする。未保存変更を判定用データとして扱わない。
 
 ## 3. API一覧
 
-以下には全て `/api` を付ける。ログイン以外は認証必須。公開共有API・学生向けJSONファイル入出力APIは設けない。
+以下には全て `/api` を付ける。設定取得・登録・メール認証・ログイン以外は認証必須。公開共有API・学生向けJSONファイル入出力APIは設けない。
 
 | メソッド | パス | 役割 |
 |---|---|---|
+| GET | /auth/config | パスワード長と確認リンク期限の設定取得（認証不要） |
+| POST | /auth/register | 大学メールへ確認リンク送信（認証不要） |
+| POST | /auth/verify | 確認リンクの消費とパスワード設定（認証不要） |
 | POST | /auth/login | ログイン |
 | POST | /auth/logout | セッション終了 |
 | GET | /auth/session | 認証・CSRF情報取得 |
@@ -68,7 +71,18 @@ POST/PUT/PATCH/DELETEはOriginを検証する。ログイン以外の認証済�
 
 ## 4. 認証と所属
 
-POST /auth/loginはlogin_nameとpasswordを受け取る。ログイン識別子の正式な書式はQ04/Q06で確認し、大学アカウントとの連携であると装わない。成功200はauthenticated、本人情報、csrf_token、expires_atを返す。パスワードを返さない。
+`GET /auth/config` は200で `policy: {password_min_length, password_max_length, verification_minutes}` を返す。画面の文字数・期限表示もこの設定を使用する。
+
+`POST /auth/register` は `{"email":"student@edu.teu.ac.jp"}` を受け取る。ドメインの大小文字を正規化し、サブドメイン・類似ドメイン・表示名付きアドレス・空白等を拒否する。ローカル部分の大小文字は保持する。パスワードはこの段階で受け付けない。成功202は `{"accepted":true,"authenticated":false}`。登録済みのメールにも同じ応答を返し、既存パスワードを変更しない。SMTP未設定・配送失敗は503。受理と受信箱への到着は同義ではない。
+
+メールには `PUBLIC_ORIGIN/#verification_token=...` のリンクを送る。トークンはランダム32バイト、DBにはSHA-256ハッシュのみ保存。URLフラグメントはHTTP要求やRefererへ送られず、画面が取得後にURLから取り除く。確認画面を再読み込みした場合はメールのリンクを再度開く。
+
+`POST /auth/verify` は `{"token":"...","password":"..."}` を受け取る。期限・未使用状態を条件付き更新で確認し、学生・ハッシュ済みパスワードの作成と同メールの全確認リンクの消費を同一トランザクションで保存する。成功200は `{"verified":true,"authenticated":false}`。未使用でも期限切れ、再使用、不正トークンは400。認証完了後はログインが必要。確認リンクのGETだけでは登録を完了しない。
+
+認証レスポンスの `student` は現時点で `{id, login_name}`。所属保存・成績保存用の `/me` 等は次の実装対象である。登録・確認・ログインで接続元はGoが実接続のIPから決め、Forwardedヘッダーを信用しない。公開プロキシ配下での接続元認定は配備時の検討事項。
+
+
+POST /auth/loginはemailとpasswordを受け取る。emailは確認済みの `@edu.teu.ac.jp` アドレス。大学アカウントとの連携であると装わない。成功200はauthenticated、本人情報、csrf_token、expires_atを返す。パスワードを返さない。
 
 GET /auth/sessionは認証有効なら200、無効なら401。POST /auth/logoutはCSRFを確認して200 `{"authenticated": false}`。Cookieも削除する。CSRFの再取得後の再試行はログアウトや保存を無制限に繰り返さない。
 

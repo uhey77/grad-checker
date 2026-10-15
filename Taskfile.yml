@@ -61,6 +61,11 @@ tasks:
     cmds:
       - node scripts/dev.mjs --backend-only
 
+  auth-dev:
+    desc: メール認証のローカル受信箱・画面・バックエンドを起動
+    cmds:
+      - node scripts/dev.mjs --local-mailbox
+
   backend-subject-list:
     desc: Go外部APIの科目一覧を有効にしてバックエンドを起動
     cmds:
