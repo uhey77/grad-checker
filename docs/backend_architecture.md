@@ -3,7 +3,7 @@
 `backend/api/`にHTTPの入口、`backend/modules/subjects/`に科目の業務処理を配置する。
 Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。Goの`go.mod`も`backend/`直下の一つに統一する。
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
-現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。Pythonの卒業単位判定関数も実装したが、判定APIまで実装済み。画面・他学部算入・推薦・履歴は未実装。
+現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。Pythonの卒業単位判定関数も実装したが、判定APIまで実装済み。判定画面も接続済み。他学部算入・推薦・履歴は未実装。
 
 卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類、applicationはPydanticの投入契約と集合検証、infrastructureは5テーブルと追加投入を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIは以下の読取り専用経路を使用する。
 

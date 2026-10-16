@@ -632,3 +632,44 @@ tbody tr.earned-row:hover {
     padding: 16px 18px 20px;
   }
 }
+.graduation-check {
+  margin-bottom: 1.5rem;
+}
+.graduation-result {
+  margin-top: 1.5rem;
+}
+.judgment {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.judgment.pass,
+.judgment-label.pass {
+  color: #166534;
+}
+.judgment.fail,
+.judgment-label.fail {
+  color: #9a3412;
+}
+.credit-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.credit-summary div {
+  padding: 0.75rem;
+  background: #f4f6f8;
+  border-radius: 0.5rem;
+}
+.credit-summary dt {
+  font-size: 0.85rem;
+}
+.credit-summary dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+@media (max-width: 480px) {
+  .credit-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
