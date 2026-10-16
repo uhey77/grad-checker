@@ -3,7 +3,9 @@ import type {
   CatalogFilters,
 } from "../../modules/subjects/public.ts";
 import type { GradeFilters as Filters } from "../../modules/grades/public.ts";
-import { courseStatusLabels, termLabels } from "./labels";
+import { FilterSelect, SearchField } from "../FilterFields";
+import { termLabels } from "../subjects/labels";
+import { courseStatusLabels } from "./labels";
 
 type Key = keyof (CatalogFilters & Filters);
 
@@ -38,40 +40,29 @@ export function GradeFilters({
   changeFilter: (key: Key, value: string) => void;
 }) {
   const select = (
-    key: Key,
+    key: Exclude<Key, "search">,
     label: string,
-    options: [string, string][],
+    options: (readonly [string, string])[],
     disabled = false,
   ) => (
-    <div>
-      <label htmlFor={`grade-filter-${key}`}>{label}</label>
-      <select
-        id={`grade-filter-${key}`}
-        value={filters[key]}
-        disabled={disabled}
-        onChange={(event) => changeFilter(key, event.target.value)}
-      >
-        <option value="">すべて</option>
-        {options.map(([value, text]) => (
-          <option key={value} value={value}>
-            {text}
-          </option>
-        ))}
-      </select>
-    </div>
+    <FilterSelect
+      id={`grade-filter-${key}`}
+      label={label}
+      value={filters[key]}
+      options={options}
+      disabled={disabled}
+      onChange={(value) => changeFilter(key, value)}
+    />
   );
   return (
     <div className="filters grade-filters">
-      <div className="search-field">
-        <label htmlFor="grade-filter-search">科目名・科目コードを検索</label>
-        <input
-          id="grade-filter-search"
-          type="search"
-          placeholder="例：プログラミング、CS-C001"
-          value={filters.search}
-          onChange={(event) => changeFilter("search", event.target.value)}
-        />
-      </div>
+      <SearchField
+        id="grade-filter-search"
+        label="科目名・科目コードを検索"
+        placeholder="例：プログラミング、CS-C001"
+        value={filters.search}
+        onChange={(value) => changeFilter("search", value)}
+      />
       {select(
         "categoryId",
         "科目区分",
@@ -91,10 +82,7 @@ export function GradeFilters({
         departments.map((name) => [name, name]),
         departments.length === 0,
       )}
-      {select("semester", "開講学期", [
-        ["first", "前期"],
-        ["second", "後期"],
-      ])}
+      {select("semester", "開講学期", Object.entries(termLabels))}
       {select("status", "修得状況", Object.entries(courseStatusLabels))}
       {select(
         "year",

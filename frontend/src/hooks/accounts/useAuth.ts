@@ -5,6 +5,8 @@ import {
   type AuthPolicy,
   type AuthUseCases,
 } from "../../modules/accounts/public.ts";
+import { errorMessage } from "../errorMessage";
+import { useExclusiveAction } from "../useExclusiveAction";
 
 type AuthState = {
   status: "loading" | "ready" | "error";
@@ -18,9 +20,8 @@ export function useAuth(useCases: AuthUseCases) {
     session: null,
     error: "",
   });
-  const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const action = useRef<AbortController | null>(null);
+  const { busy, running, abort, run: runExclusive } = useExclusiveAction();
   const channel = useRef<BroadcastChannel | null>(null);
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
@@ -28,9 +29,7 @@ export function useAuth(useCases: AuthUseCases) {
     channel.current = broadcast;
     broadcast.onmessage = (event) => {
       if (event.data === "logout") {
-        action.current?.abort();
-        action.current = null;
-        setBusy(false);
+        abort();
         setState({ session: null, status: "loading", error: "" });
         setAttempt((value) => value + 1);
       }
@@ -39,7 +38,7 @@ export function useAuth(useCases: AuthUseCases) {
       broadcast.close();
       channel.current = null;
     };
-  }, []);
+  }, [abort]);
   useEffect(() => {
     const controller = new AbortController();
     void Promise.all([
@@ -55,29 +54,24 @@ export function useAuth(useCases: AuthUseCases) {
           setState({
             status: "error",
             session: null,
-            error:
-              error instanceof Error
-                ? error.message
-                : "認証情報を取得できません。",
+            error: errorMessage(error, "認証情報を取得できません。"),
           });
       },
     );
     return () => {
       controller.abort();
-      action.current?.abort();
+      abort();
     };
-  }, [useCases, attempt]);
+  }, [useCases, attempt, abort]);
   const expire = useCallback(() => {
-    action.current?.abort();
-    action.current = null;
-    setBusy(false);
+    abort();
     setState((previous) => ({
       ...previous,
       status: "ready",
       session: null,
       error: "ログインの有効期限が切れました。再度ログインしてください。",
     }));
-  }, []);
+  }, [abort]);
   useEffect(() => {
     const session = state.session;
     if (!session) return;
@@ -92,14 +86,14 @@ export function useAuth(useCases: AuthUseCases) {
         expire();
         return;
       }
-      if (checking || action.current) return;
+      if (checking || running()) return;
       const controller = new AbortController();
       checking = controller;
       void useCases
         .session(controller.signal)
         .then(
           (current) => {
-            if (controller.signal.aborted || action.current) return;
+            if (controller.signal.aborted || running()) return;
             if (!current) expire();
             else
               setState((previous) =>
@@ -124,35 +118,30 @@ export function useAuth(useCases: AuthUseCases) {
       window.removeEventListener("focus", check);
       document.removeEventListener("visibilitychange", check);
     };
-  }, [state.session, expire, useCases]);
+  }, [state.session, expire, useCases, running]);
 
-  async function run<T>(
+  function run<T>(
     operation: (signal: AbortSignal) => Promise<T>,
     done: (result: T) => void,
   ) {
-    if (action.current) return;
-    const controller = new AbortController();
-    action.current = controller;
-    setBusy(true);
-    setState((previous) => ({ ...previous, error: "" }));
-    try {
-      const result = await operation(controller.signal);
-      if (!controller.signal.aborted) done(result);
-    } catch (error) {
-      if (!controller.signal.aborted)
-        setState((previous) => ({
-          ...previous,
-          session:
-            error instanceof AuthError && error.status === 401
-              ? null
-              : previous.session,
-          error:
-            error instanceof Error ? error.message : "認証処理に失敗しました。",
-        }));
-    } finally {
-      if (action.current === controller) action.current = null;
-      if (!controller.signal.aborted) setBusy(false);
-    }
+    return runExclusive(
+      (signal) => {
+        setState((previous) => ({ ...previous, error: "" }));
+        return operation(signal);
+      },
+      {
+        onSuccess: done,
+        onError: (error) =>
+          setState((previous) => ({
+            ...previous,
+            session:
+              error instanceof AuthError && error.status === 401
+                ? null
+                : previous.session,
+            error: errorMessage(error, "認証処理に失敗しました。"),
+          })),
+      },
+    );
   }
   return {
     ...state,

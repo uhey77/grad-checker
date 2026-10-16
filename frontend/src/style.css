@@ -104,12 +104,6 @@ main {
   padding: 36px 32px 28px;
   margin: auto;
 }
-.eyebrow {
-  font-size: 13px;
-  color: #446c69;
-  font-weight: 600;
-  margin: 0 0 8px;
-}
 h1 {
   font-size: 30px;
   letter-spacing: 0.02em;
@@ -118,10 +112,13 @@ h1 {
 .page-heading {
   margin-bottom: 26px;
 }
-.program-panel {
+/* 画面内のまとまりは同じ枠で表示する。 */
+.panel {
   background: #fff;
   border: 1px solid #dde5e7;
   border-radius: 10px;
+}
+.program-panel {
   padding: 22px 24px;
   display: flex;
   gap: 32px;
@@ -181,9 +178,6 @@ input::placeholder {
   margin-left: 8px;
 }
 .subject-list-panel {
-  border: 1px solid #dde5e7;
-  border-radius: 10px;
-  background: #fff;
   overflow: hidden;
 }
 .filters {
@@ -329,9 +323,6 @@ td .shared-years {
 }
 .profile-panel {
   padding: 24px;
-  background: #fff;
-  border: 1px solid #dbe5e7;
-  border-radius: 8px;
 }
 .profile-form {
   display: grid;
@@ -341,9 +332,6 @@ td .shared-years {
 .profile-form select {
   width: 100%;
   min-width: 0;
-}
-.profile-form button {
-  justify-self: start;
 }
 .subject-preview > summary {
   cursor: pointer;
@@ -557,15 +545,15 @@ input[aria-invalid="true"] {
 .grade-table tbody th {
   width: 18%;
 }
-.grade-table tbody th small {
+tbody th small {
   display: block;
   margin-top: 4px;
   color: #6b7e85;
   font-size: 11px;
   font-weight: 400;
 }
-.grade-table td .badge {
-  margin-left: 6px;
+.classification .badge {
+  margin-top: 6px;
 }
 .grade-cell {
   min-width: 380px;
@@ -615,17 +603,21 @@ tbody tr.earned-row:hover {
   background: #eef1f4;
 }
 .save-bar {
-  border-top: 1px solid #e6ebed;
-  padding: 18px 24px 24px;
   font-size: 13px;
   line-height: 1.7;
 }
-.save-bar [role="group"] button,
-.save-actions button {
-  margin-right: 8px;
+.subject-list-panel > .save-bar {
+  border-top: 1px solid #e6ebed;
+  padding: 18px 24px 24px;
 }
-.save-actions {
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 8px;
+}
+.confirm-panel {
+  margin: 12px 0;
 }
 @media (max-width: 1050px) {
   .grade-filters {
@@ -636,7 +628,7 @@ tbody tr.earned-row:hover {
   .grade-filters {
     grid-template-columns: minmax(0, 1fr);
   }
-  .save-bar {
+  .subject-list-panel > .save-bar {
     padding: 16px 18px 20px;
   }
 }

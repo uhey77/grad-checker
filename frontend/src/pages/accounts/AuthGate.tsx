@@ -6,6 +6,11 @@ import type {
 import { useAuth } from "../../hooks/accounts/useAuth";
 import { RecoveryCode } from "../../components/accounts/RecoveryCode";
 import { AuthForm } from "../../components/accounts/AuthForm";
+import {
+  ErrorState,
+  FormError,
+  LoadingState,
+} from "../../components/StatusPanels";
 
 export function AuthGate({
   useCases,
@@ -30,16 +35,17 @@ export function AuthGate({
   if (auth.status === "loading")
     return (
       <main id="main-content">
-        <p className="loading" role="status">
-          ログイン状態を確認しています…
-        </p>
+        <LoadingState>ログイン状態を確認しています…</LoadingState>
       </main>
     );
   if (auth.status === "error" || !auth.policy)
     return (
       <main id="main-content">
-        <p role="alert">{auth.error}</p>
-        <button onClick={auth.retry}>再試行</button>
+        <ErrorState
+          message={auth.error}
+          actionLabel="再試行"
+          onAction={auth.retry}
+        />
       </main>
     );
   if (auth.session)
@@ -54,9 +60,9 @@ export function AuthGate({
           </button>
         </div>
         {auth.error ? (
-          <p className="auth-message" role="alert">
-            {auth.error}
-          </p>
+          <div className="auth-message">
+            <FormError>{auth.error}</FormError>
+          </div>
         ) : null}
         {children(auth.session, auth.expire)}
       </>
@@ -94,11 +100,7 @@ export function AuthGate({
           />
         ) : (
           <>
-            {auth.error ? (
-              <p className="form-error" role="alert">
-                {auth.error}
-              </p>
-            ) : null}
+            {auth.error ? <FormError>{auth.error}</FormError> : null}
             <p className="auth-help">
               {mode === "register"
                 ? "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。"

@@ -15,7 +15,7 @@ export function ProgramSelector({
   onChange,
 }: Props) {
   return (
-    <section className="program-panel" aria-labelledby="program-heading">
+    <section className="panel program-panel" aria-labelledby="program-heading">
       <div className="program-select">
         <label id="program-heading" htmlFor="program">
           確認する課程

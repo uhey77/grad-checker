@@ -5,6 +5,7 @@ import { AppLayout } from "./layouts/AppLayout";
 import { AuthGate } from "./pages/accounts/AuthGate";
 import { ProfilePage } from "./pages/profiles/ProfilePage";
 import { GradeEntryPage } from "./pages/grades/GradeEntryPage";
+import type { ProgramOption } from "./modules/profiles/public.ts";
 
 const screens = [
   { id: "profile", label: "所属設定" },
@@ -30,6 +31,8 @@ function StudentScreens({
       setLatestRevision((current) => Math.max(current, revision)),
     [],
   );
+  // 成績入力の見出しを所属設定と同じ表記にするため、保存済みの所属を共有する。
+  const [savedProgram, setSavedProgram] = useState<ProgramOption | null>(null);
   return (
     <>
       <main id="main-content" tabIndex={-1}>
@@ -52,6 +55,7 @@ function StudentScreens({
             expire={expire}
             latestRevision={latestRevision}
             reportRevision={reportRevision}
+            reportProgram={setSavedProgram}
           />
         </div>
         <div hidden={screen !== "grades"}>
@@ -62,6 +66,7 @@ function StudentScreens({
             expire={expire}
             latestRevision={latestRevision}
             reportRevision={reportRevision}
+            savedProgram={savedProgram}
             showProfile={() => setScreen("profile")}
           />
         </div>

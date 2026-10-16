@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ProfileError,
   type Profile,
   type ProgramOption,
   type ProfileUseCases,
 } from "../../modules/profiles/public.ts";
+import { errorMessage } from "../errorMessage";
+import { useExclusiveAction } from "../useExclusiveAction";
+import { useUnsavedChangesWarning } from "../useUnsavedChangesWarning";
 
 export function useProfile(
   useCases: ProfileUseCases,
@@ -12,6 +15,7 @@ export function useProfile(
   expire: () => void,
   latestRevision = 0,
   reportRevision: (revision: number) => void = () => {},
+  reportProgram: (program: ProgramOption | null) => void = () => {},
 ) {
   const [state, setState] = useState<{
     profile: Profile;
@@ -20,11 +24,10 @@ export function useProfile(
   const [chosenId, setChosenId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [confirmReload, setConfirmReload] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const action = useRef<AbortController | null>(null);
+  const { busy, running, abort, run } = useExclusiveAction();
   useEffect(() => {
     const controller = new AbortController();
     void Promise.all([
@@ -40,80 +43,72 @@ export function useProfile(
           setConflict(false);
         }
       },
-      (error) => {
+      (failure: unknown) => {
         if (!controller.signal.aborted) {
-          if (error instanceof ProfileError && error.status === 401) expire();
-          setError(
-            error instanceof Error
-              ? error.message
-              : "所属情報を取得できません。",
-          );
+          if (failure instanceof ProfileError && failure.status === 401)
+            expire();
+          setError(errorMessage(failure, "所属情報を取得できません。"));
         }
       },
     );
     return () => {
       controller.abort();
-      action.current?.abort();
-      action.current = null;
+      abort();
     };
-  }, [useCases, attempt, expire, reportRevision]);
+  }, [useCases, attempt, expire, reportRevision, abort]);
   const selected = state?.programs.find((p) => p.curriculumId === chosenId);
-  const dirty = !!state && chosenId !== (state.profile.curriculumId ?? "");
+  const savedProgram = state?.programs.find(
+    (p) => p.curriculumId === state.profile.curriculumId,
+  );
+  // 他の画面が本人の所属を同じ表記で示せるよう、保存済みの所属を伝える。取得中は前回の値を保つ。
   useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+    if (state) reportProgram(savedProgram ?? null);
+  }, [state, savedProgram, reportProgram]);
+  const dirty = !!state && chosenId !== (state.profile.curriculumId ?? "");
+  useUnsavedChangesWarning(dirty);
   // 別画面で成績などが保存された場合、未保存の選択がなければ最新を取得し直す。
   const stale = !!state && latestRevision > state.profile.dataRevision;
   useEffect(() => {
-    if (!stale || dirty || action.current) return;
+    if (!stale || dirty || running()) return;
+    // 外部の保存を検知した時点で、読み込み中の表示へ戻して再取得する。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState(null);
     setNotice("");
     setAttempt((x) => x + 1);
-  }, [stale, dirty]);
+  }, [stale, dirty, running]);
   async function save() {
-    if (!state || !selected || action.current || conflict || !dirty) return;
-    const controller = new AbortController();
-    action.current = controller;
-    setBusy(true);
+    if (!state || !selected || running() || conflict || !dirty) return;
     setError("");
     setNotice("");
-    try {
-      const profile = await useCases.saveProgram(
-        {
-          programId: selected.programId,
-          curriculumId: selected.curriculumId,
-          expectedRevision: state.profile.dataRevision,
+    await run(
+      (signal) =>
+        useCases.saveProgram(
+          {
+            programId: selected.programId,
+            curriculumId: selected.curriculumId,
+            expectedRevision: state.profile.dataRevision,
+          },
+          csrf,
+          signal,
+        ),
+      {
+        onSuccess: (profile) => {
+          setState({ ...state, profile });
+          reportRevision(profile.dataRevision);
+          setNotice("所属を保存しました。");
         },
-        csrf,
-        controller.signal,
-      );
-      if (!controller.signal.aborted) {
-        setState({ ...state, profile });
-        reportRevision(profile.dataRevision);
-        setNotice("所属を保存しました。");
-      }
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        if (error instanceof ProfileError && error.status === 401) expire();
-        if (error instanceof ProfileError && error.status === 409)
-          setConflict(true);
-        setError(
-          error instanceof Error ? error.message : "所属を保存できません。",
-        );
-      }
-    } finally {
-      if (action.current === controller) action.current = null;
-      if (!controller.signal.aborted) setBusy(false);
-    }
+        onError: (failure) => {
+          if (failure instanceof ProfileError && failure.status === 401)
+            expire();
+          if (failure instanceof ProfileError && failure.status === 409)
+            setConflict(true);
+          setError(errorMessage(failure, "所属を保存できません。"));
+        },
+      },
+    );
   }
   function reload() {
-    if (action.current) return;
+    if (running()) return;
     setConfirmReload(false);
     setState(null);
     setError("");
@@ -124,6 +119,7 @@ export function useProfile(
     state,
     chosenId,
     selected,
+    savedProgram,
     dirty,
     busy,
     error,
@@ -139,7 +135,7 @@ export function useProfile(
     },
     save,
     retry: () => {
-      if (action.current) return;
+      if (running()) return;
       if (dirty) setConfirmReload(true);
       else reload();
     },

@@ -1,7 +1,25 @@
-import { SubjectListError } from "../../application/errors/SubjectListError.ts";
+import {
+  detailOf,
+  fetchJson,
+  HttpTransportError,
+} from "../../../../shared/infrastructure/http.ts";
+import {
+  SubjectListError,
+  type SubjectListErrorCode,
+} from "../../application/errors/SubjectListError.ts";
 import type { SubjectListRepository } from "../../application/subject-list/SubjectListRepository";
 import type { SubjectListDto, ProgramDto } from "./dto";
 import { toSubjectList, toProgram } from "./mappers.ts";
+
+function codeOf(status: number): SubjectListErrorCode {
+  return status === 404
+    ? "not-found"
+    : status === 409
+      ? "conflict"
+      : status >= 500
+        ? "unavailable"
+        : "unexpected";
+}
 
 export class HttpSubjectListRepository implements SubjectListRepository {
   constructor(private readonly baseUrl: string) {}
@@ -24,33 +42,24 @@ export class HttpSubjectListRepository implements SubjectListRepository {
 
   private async request<T>(url: string, signal: AbortSignal): Promise<T> {
     try {
-      const response = await fetch(url, { signal });
-      const body: unknown = await response.json();
-      if (!response.ok) {
-        const detail =
-          typeof body === "object" && body !== null && "detail" in body
-            ? body.detail
-            : null;
+      const response = await fetchJson(url, { signal });
+      if (!response.ok)
         throw new SubjectListError(
-          response.status === 404
-            ? "not-found"
-            : response.status === 409
-              ? "conflict"
-              : response.status >= 500
-                ? "unavailable"
-                : "unexpected",
-          typeof detail === "string" ? detail : null,
+          codeOf(response.status),
+          detailOf(response.data),
         );
-      }
-      return body as T;
+      return response.data as T;
     } catch (error) {
-      if (error instanceof TypeError || error instanceof SyntaxError)
-        throw new SubjectListError(
-          error instanceof SyntaxError ? "invalid-response" : "unavailable",
-          null,
-          { cause: error },
-        );
-      throw error;
+      if (!(error instanceof HttpTransportError)) throw error;
+      throw new SubjectListError(
+        error.kind === "network"
+          ? "unavailable"
+          : error.ok
+            ? "invalid-response"
+            : codeOf(error.status),
+        null,
+        { cause: error },
+      );
     }
   }
 }
