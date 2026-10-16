@@ -1,4 +1,4 @@
-// Python内部サービスとのHTTP通信で、科目一覧の取得契約を実装する。
+// PythonサービスとのHTTP通信で、科目一覧の取得契約を実装する。
 package infrastructure
 
 import (
@@ -6,16 +6,16 @@ import (
 	"encoding/json"
 	"time"
 
-	"grad-checker/backend/modules/shared/internalhttp"
+	"grad-checker/backend/modules/shared/pythonbridge"
 	"grad-checker/backend/modules/subjects/application"
 )
 
 type PythonSubjectListClient struct {
-	client *internalhttp.Client
+	client *pythonbridge.Client
 }
 
 func NewPythonSubjectListClient(origin string, timeout time.Duration) (*PythonSubjectListClient, error) {
-	client, err := internalhttp.New(origin, "/internal/subject-list", timeout, 8<<20)
+	client, err := pythonbridge.New(origin, "/bridge/subject-list", timeout, 8<<20)
 	if err != nil {
 		return nil, err
 	}

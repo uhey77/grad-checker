@@ -42,7 +42,7 @@ def test_empty_legacy_schema_migrates_idempotently(tmp_path: Path):
             assert inspector.has_table("email_verifications")
     with TestClient(create_app(settings)) as client:
         response = client.post(
-            "/internal/auth",
+            "/bridge/auth",
             json={
                 "operation": "register",
                 "login_name": "student_01",
@@ -58,7 +58,7 @@ def test_nonempty_legacy_schema_stops_without_modification(tmp_path: Path):
     app = create_app(settings)
     with TestClient(app) as client:
         assert client.post(
-            "/internal/auth",
+            "/bridge/auth",
             json={
                 "operation": "register",
                 "login_name": "student_01",

@@ -1,4 +1,4 @@
-"""内部呼出しごとのPythonリソース管理。"""
+"""ブリッジ呼出しごとのPythonリソース管理。"""
 
 from collections.abc import Iterator
 from typing import Annotated
@@ -9,6 +9,7 @@ from sqlmodel import Session
 from modules.accounts.grad_checker_accounts.application.auth import (
     AuthPolicy,
     AuthService,
+    SessionIdentity,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.repository import (
     SqliteAccountRepository,
@@ -37,3 +38,13 @@ def auth_service(request: Request, session: Session) -> AuthService:
             attempt_limit=settings.auth_attempt_limit,
         ),
     )
+
+
+def current_identity(
+    request: Request, session: Session, token: str, csrf: str | None = None
+) -> SessionIdentity:
+    """本人をセッションから決定する。変更操作はCSRFトークンを渡して照合する。"""
+    service = auth_service(request, session)
+    if csrf is None:
+        return service.session(token)
+    return service.authorize(token, csrf)

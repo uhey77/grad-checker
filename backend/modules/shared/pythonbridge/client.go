@@ -1,7 +1,7 @@
-// Package internalhttpは、各業務モジュールのinfrastructureがPython内部サービスを呼ぶ共通処理。
-// 内部通信の包絡形式 {"data": ...} / {"error": {"code": ...}} をこのパッケージに閉じ込める。
+// Package pythonbridgeは、各業務モジュールのinfrastructureがPythonサービスを呼ぶ共通処理。
+// ブリッジ通信の包絡形式 {"data": ...} / {"error": {"code": ...}} をこのパッケージに閉じ込める。
 // 業務エラーの型への変換と、dataの業務上の検証は呼出し側のモジュールで行う。
-package internalhttp
+package pythonbridge
 
 import (
 	"bytes"
@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	ErrUnavailable = errors.New("internal service unavailable")
-	ErrTimeout     = errors.New("internal service timeout")
-	ErrProtocol    = errors.New("invalid internal response")
+	ErrUnavailable = errors.New("python service unavailable")
+	ErrTimeout     = errors.New("python service timeout")
+	ErrProtocol    = errors.New("invalid bridge response")
 )
 
 // BusinessErrorはPythonのユースケースが返した業務エラーコード。
@@ -34,7 +34,7 @@ type Client struct {
 	limit    int64
 }
 
-// NewはPython内部サービスのオリジンとパスから取得先を作る。limitは応答本文の上限バイト数。
+// NewはPythonサービスのオリジンとパスから取得先を作る。limitは応答本文の上限バイト数。
 func New(origin, path string, timeout time.Duration, limit int64) (*Client, error) {
 	u, err := url.Parse(origin)
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {

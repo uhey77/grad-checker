@@ -5,15 +5,15 @@ import (
 	"time"
 
 	"grad-checker/backend/modules/accounts/application"
-	"grad-checker/backend/modules/shared/internalhttp"
+	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
 type PythonAuthClient struct {
-	client *internalhttp.Client
+	client *pythonbridge.Client
 }
 
 func NewPythonAuthClient(origin string) (*PythonAuthClient, error) {
-	client, err := internalhttp.New(origin, "/internal/auth", 10*time.Second, 16384)
+	client, err := pythonbridge.New(origin, "/bridge/auth", 10*time.Second, 16384)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (c *PythonAuthClient) Call(ctx context.Context, call application.AuthCall) 
 		return empty, accountError(err)
 	}
 	var data application.AuthResult
-	if internalhttp.DecodeData(raw, &data) != nil {
+	if pythonbridge.DecodeData(raw, &data) != nil {
 		return empty, application.ErrBackend
 	}
 	switch call.Operation {

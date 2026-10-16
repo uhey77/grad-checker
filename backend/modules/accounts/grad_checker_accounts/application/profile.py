@@ -4,6 +4,10 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from modules.accounts.grad_checker_accounts.application.errors.profile import (
+    ProfileError,
+)
+
 type VerificationStatus = Literal["unverified", "verified"]
 
 
@@ -53,6 +57,13 @@ class ProfileService:
 
     def get_profile(self, student_id: str) -> Profile:
         return self.repository.get_profile(student_id)
+
+    def selected_curriculum(self, student_id: str) -> str:
+        """本人課程を前提とする処理のため、所属未設定を業務エラーにする。"""
+        curriculum_id = self.get_profile(student_id).curriculum_id
+        if curriculum_id is None:
+            raise ProfileError("program_not_selected")
+        return curriculum_id
 
     def save_program(self, student_id: str, selection: ProgramSelection) -> Profile:
         return self.repository.save_program(student_id, selection)

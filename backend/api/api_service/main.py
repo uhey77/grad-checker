@@ -8,18 +8,19 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from api.api_service.presentation.internal_auth import router as internal_auth_router
-from api.api_service.presentation.internal_courses import (
-    router as internal_courses_router,
+from api.api_service.presentation.go_bridge_auth import router as bridge_auth_router
+from api.api_service.presentation.go_bridge_call import failure
+from api.api_service.presentation.go_bridge_courses import (
+    router as bridge_courses_router,
 )
-from api.api_service.presentation.internal_grades import (
-    router as internal_grades_router,
+from api.api_service.presentation.go_bridge_grades import (
+    router as bridge_grades_router,
 )
-from api.api_service.presentation.internal_profile import (
-    router as internal_profile_router,
+from api.api_service.presentation.go_bridge_profile import (
+    router as bridge_profile_router,
 )
-from api.api_service.presentation.internal_subject_list import (
-    router as internal_subject_list_router,
+from api.api_service.presentation.go_bridge_subject_list import (
+    router as bridge_subject_list_router,
 )
 from config.settings import Settings
 from modules.accounts.grad_checker_accounts.infrastructure.passwords import (
@@ -56,7 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             engine.dispose()
 
     application = FastAPI(
-        title="卒業要件チェッカー内部サービス",
+        title="卒業要件チェッカーPythonサービス",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -64,17 +65,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     @application.exception_handler(RequestValidationError)
-    def invalid_internal_call(
+    def invalid_go_bridge_call(
         _request: Request, _error: RequestValidationError
     ) -> JSONResponse:
-        # 内部呼出しの契約違反。利用者向け422への変換はここで行わない。
-        return JSONResponse({"error": {"code": "invalid_request"}})
+        # ブリッジ呼出しの契約違反。利用者向け422への変換はここで行わない。
+        return JSONResponse(failure("invalid_request"))
 
-    application.include_router(internal_subject_list_router)
-    application.include_router(internal_auth_router)
-    application.include_router(internal_profile_router)
-    application.include_router(internal_courses_router)
-    application.include_router(internal_grades_router)
+    application.include_router(bridge_subject_list_router)
+    application.include_router(bridge_auth_router)
+    application.include_router(bridge_profile_router)
+    application.include_router(bridge_courses_router)
+    application.include_router(bridge_grades_router)
     return application
 
 

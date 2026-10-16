@@ -15,10 +15,18 @@ from modules.accounts.grad_checker_accounts.application.profile import (
     VerificationStatus,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.models import Student
+from modules.shared.grad_checker_shared.infrastructure.transactions import (
+    database_errors,
+    write_transaction,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     AcademicProgram,
     Curriculum,
 )
+
+
+def unavailable(_error: SQLAlchemyError) -> ProfileError:
+    return ProfileError("profile_unavailable")
 
 
 class SqliteProfileRepository:
@@ -26,7 +34,7 @@ class SqliteProfileRepository:
         self.db = session
 
     def list_programs(self) -> list[ProgramOption]:
-        try:
+        with database_errors(unavailable):
             rows = self.db.exec(
                 select(AcademicProgram, Curriculum)
                 .join(Curriculum, col(Curriculum.program_id) == col(AcademicProgram.id))
@@ -52,11 +60,9 @@ class SqliteProfileRepository:
                 )
                 for program, curriculum in rows
             ]
-        except SQLAlchemyError as error:
-            raise ProfileError("profile_unavailable") from error
 
     def get_profile(self, student_id: str) -> Profile:
-        try:
+        with database_errors(unavailable):
             student = self.db.get(Student, student_id)
             if student is None:
                 raise ProfileError("profile_not_found")
@@ -67,13 +73,10 @@ class SqliteProfileRepository:
                 curriculum_id=student.curriculum_id,
                 data_revision=student.data_revision,
             )
-        except SQLAlchemyError as error:
-            raise ProfileError("profile_unavailable") from error
 
     def save_program(self, student_id: str, selection: ProgramSelection) -> Profile:
-        try:
-            # 最初に書込みロックを取得し、組合せ検証と版付き更新を直列化する。
-            self.db.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        # 書込みロックの下で、組合せ検証と版付き更新を直列化する。
+        with write_transaction(self.db, unavailable):
             curriculum = self.db.get(Curriculum, selection.curriculum_id)
             if curriculum is None or curriculum.program_id != selection.program_id:
                 raise ProfileError("invalid_program")
@@ -103,12 +106,4 @@ class SqliteProfileRepository:
             )
             if row is None:
                 raise ProfileError("revision_conflict")
-            profile = Profile.model_validate(dict(row))
-            self.db.commit()
-            return profile
-        except ProfileError:
-            self.db.rollback()
-            raise
-        except SQLAlchemyError as error:
-            self.db.rollback()
-            raise ProfileError("profile_unavailable") from error
+            return Profile.model_validate(dict(row))

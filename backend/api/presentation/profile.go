@@ -9,7 +9,7 @@ import (
 
 const selectionDetail = "所属・カリキュラム・更新版を正しい形式で指定してください。"
 
-// 本人IDを外部入力から受け取らず、セッション原値を内部サービスで検証する。
+// 本人IDを外部入力から受け取らず、セッション原値をPythonサービスで検証する。
 func NewProfileHandler(gateway application.ProfileGateway, origin string, fallback http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		operation, method := "", http.MethodGet

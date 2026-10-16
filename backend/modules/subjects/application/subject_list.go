@@ -8,7 +8,7 @@ import (
 )
 
 // SubjectListReaderはPythonの科目一覧ユースケースを呼ぶ取得先の契約。
-// 結果は既存の科目モデルに従うJSONとし、DBモデルや内部通信の包絡形式は渡さない。
+// 結果は既存の科目モデルに従うJSONとし、DBモデルやブリッジ通信の包絡形式は渡さない。
 type SubjectListReader interface {
 	ListPrograms(context.Context) (json.RawMessage, error)
 	GetSubjectList(context.Context, string) (json.RawMessage, error)
@@ -23,5 +23,5 @@ func (e *SubjectListError) Error() string { return e.Code }
 var (
 	ErrUnavailable = errors.New("python service unavailable")
 	ErrTimeout     = errors.New("python service timeout")
-	ErrProtocol    = errors.New("invalid internal response")
+	ErrProtocol    = errors.New("invalid bridge response")
 )

@@ -1,4 +1,4 @@
-"""認証ユースケースの内部呼出し。Cookieと外部HTTPはGoが管理する。"""
+"""認証ユースケースのブリッジ呼出し。Cookieと外部HTTPはGoが管理する。"""
 
 from typing import Literal, Self
 
@@ -9,9 +9,9 @@ from api.api_service.presentation.dependencies import (
     SessionDependency,
     auth_service,
 )
-from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
+from api.api_service.presentation.go_bridge_call import respond
 
-router = APIRouter(prefix="/internal")
+router = APIRouter(prefix="/bridge")
 
 
 class AuthCall(BaseModel):
@@ -53,27 +53,26 @@ def auth(
 ) -> dict[str, object]:
     settings = request.app.state.settings
     service = auth_service(request, session)
-    try:
+
+    def run() -> object:
         if call.operation == "config":
             return {
-                "data": {
-                    "policy": {
-                        "password_min_length": settings.auth_password_min_length,
-                        "password_max_length": settings.auth_password_max_length,
-                    }
+                "policy": {
+                    "password_min_length": settings.auth_password_min_length,
+                    "password_max_length": settings.auth_password_max_length,
                 }
             }
         if call.operation == "register":
             recovery = service.register(call.login_name, call.password, call.client_key)
-            return {"data": {"registered": True, "recovery_code": recovery}}
+            return {"registered": True, "recovery_code": recovery}
         if call.operation == "recover":
             recovery = service.recover(
                 call.login_name, call.recovery_code, call.password, call.client_key
             )
-            return {"data": {"recovered": True, "recovery_code": recovery}}
+            return {"recovered": True, "recovery_code": recovery}
         if call.operation == "logout":
             service.logout(call.token, call.csrf)
-            return {"data": {"authenticated": False}}
+            return {"authenticated": False}
         raw_token = None
         if call.operation == "login":
             identity, raw_token = service.login(
@@ -92,6 +91,6 @@ def auth(
         }
         if raw_token is not None:
             data["session_token"] = raw_token
-        return {"data": data}
-    except AuthError as error:
-        return {"error": {"code": error.code}}
+        return data
+
+    return respond(run)

@@ -13,7 +13,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import i
 )
 
 SEED_PATH = Path(__file__).resolve().parents[1] / "seeds" / "cs_2026.json"
-BASE = "/internal/subject-list"
+BASE = "/bridge/subject-list"
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def subjects(client, identifier):
 
 
 def test_external_routes_are_removed(tmp_path):
-    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'internal.db'}"))
+    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'bridge.db'}"))
     with TestClient(app) as client:
         assert client.get("/api/dev/subject-list/programs").status_code == 404
         assert client.get("/api/health").status_code == 404
@@ -91,7 +91,7 @@ def test_response_reflects_database_not_bundled_seed(subject_list_client):
     )
 
 
-def test_missing_and_invalid_internal_calls_return_codes(subject_list_client):
+def test_missing_and_invalid_bridge_calls_return_codes(subject_list_client):
     missing = subjects(subject_list_client, uuid4())
     assert missing.status_code == 200
     assert missing.json() == {"error": {"code": "curriculum_not_found"}}

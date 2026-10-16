@@ -5,6 +5,9 @@ from collections import defaultdict
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
+from modules.shared.grad_checker_shared.infrastructure.transactions import (
+    read_snapshot,
+)
 from modules.subjects.grad_checker_subjects.application.course_catalog import (
     CatalogCategory,
     CatalogClassification,
@@ -18,6 +21,9 @@ from modules.subjects.grad_checker_subjects.application.errors.course_catalog im
     CourseCatalogError,
 )
 from modules.subjects.grad_checker_subjects.domain.subject_type import SubjectType
+from modules.subjects.grad_checker_subjects.infrastructure.classification_path import (
+    classification_path,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
@@ -32,22 +38,17 @@ from ..domain.curriculum_verification_status import (
 )
 
 
-def classification_path(
+def unavailable(_error: SQLAlchemyError) -> CourseCatalogError:
+    return CourseCatalogError("catalog_unavailable")
+
+
+def placement_path(
     classifications: dict[str, Classification], start: str
 ) -> list[CatalogClassification]:
-    path = []
-    visited = set()
-    current: str | None = start
-    while current is not None:
-        if current in visited or current not in classifications:
-            raise CourseCatalogError("classification_inconsistent")
-        visited.add(current)
-        classification = classifications[current]
-        path.append(
-            CatalogClassification(id=classification.id, name=classification.name)
-        )
-        current = classification.parent_id
-    return list(reversed(path))
+    path = classification_path(classifications, start)
+    if path is None:
+        raise CourseCatalogError("classification_inconsistent")
+    return [CatalogClassification(id=item.id, name=item.name) for item in path]
 
 
 class SqliteCourseCatalogRepository:
@@ -55,14 +56,10 @@ class SqliteCourseCatalogRepository:
         self.db = session
 
     def get_catalog(self, curriculum_id: str) -> CourseCatalog:
-        try:
+        with read_snapshot(self.db, unavailable):
             return self._get_catalog(curriculum_id)
-        except SQLAlchemyError as error:
-            raise CourseCatalogError("catalog_unavailable") from error
 
     def _get_catalog(self, curriculum_id: str) -> CourseCatalog:
-        # SQLiteの従来トランザクションモードでも複数SELECTの一貫性を保証する。
-        self.db.connection().exec_driver_sql("BEGIN")
         curriculum = self.db.get(Curriculum, curriculum_id)
         if curriculum is None:
             raise CourseCatalogError("curriculum_not_found")
@@ -127,7 +124,7 @@ class SqliteCourseCatalogRepository:
                         placement=None
                         if association is None
                         else CatalogPlacement(
-                            classification_path=classification_path(
+                            classification_path=placement_path(
                                 classifications, association.classification_id
                             ),
                             course_type=SubjectType(association.course_type),

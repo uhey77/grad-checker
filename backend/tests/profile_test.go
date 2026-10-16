@@ -88,7 +88,7 @@ func TestProfileMapsBusinessErrors(t *testing.T) {
 	}
 }
 
-func TestProfileClientValidatesInternalResponse(t *testing.T) {
+func TestProfileClientValidatesBridgeResponse(t *testing.T) {
 	for _, body := range []string{
 		`{"data":{"profile":{"student_id":"own","login_name":"owner","program_id":null,"curriculum_id":null,"data_revision":0}}}`,
 		`{"data":{"profile":{}}}`, `{"data":{}}`, `{"data":null}`, `{"data":{"programs":[]}}`,
@@ -96,7 +96,7 @@ func TestProfileClientValidatesInternalResponse(t *testing.T) {
 		`{"data":{},"error":{"code":"revision_conflict"}}`,
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != "/internal/profile" {
+			if r.URL.Path != "/bridge/profile" {
 				t.Error(r.URL.Path)
 			}
 			var call application.ProfileCall

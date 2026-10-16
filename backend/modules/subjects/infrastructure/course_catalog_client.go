@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"time"
 
-	"grad-checker/backend/modules/shared/internalhttp"
+	"grad-checker/backend/modules/shared/pythonbridge"
 	"grad-checker/backend/modules/subjects/application"
 )
 
-// PythonCourseCatalogClientは学生向け科目一覧・分類の取得契約を内部HTTPで実装する。
+// PythonCourseCatalogClientは学生向け科目一覧・分類の取得契約をブリッジHTTPで実装する。
 type PythonCourseCatalogClient struct {
-	client *internalhttp.Client
+	client *pythonbridge.Client
 }
 
 func NewPythonCourseCatalogClient(origin string, timeout time.Duration) (*PythonCourseCatalogClient, error) {
-	client, err := internalhttp.New(origin, "/internal/courses", timeout, 8<<20)
+	client, err := pythonbridge.New(origin, "/bridge/courses", timeout, 8<<20)
 	if err != nil {
 		return nil, err
 	}

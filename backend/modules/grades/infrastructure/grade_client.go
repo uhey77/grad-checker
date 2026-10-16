@@ -1,4 +1,4 @@
-// Python内部サービスとのHTTP通信で、本人成績の取得契約を実装する。
+// PythonサービスとのHTTP通信で、本人成績の取得契約を実装する。
 package infrastructure
 
 import (
@@ -7,15 +7,15 @@ import (
 	"time"
 
 	"grad-checker/backend/modules/grades/application"
-	"grad-checker/backend/modules/shared/internalhttp"
+	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
 type PythonGradeClient struct {
-	client *internalhttp.Client
+	client *pythonbridge.Client
 }
 
 func NewPythonGradeClient(origin string) (*PythonGradeClient, error) {
-	client, err := internalhttp.New(origin, "/internal/grades", 10*time.Second, 1024*1024)
+	client, err := pythonbridge.New(origin, "/bridge/grades", 10*time.Second, 1024*1024)
 	if err != nil {
 		return nil, err
 	}
@@ -26,14 +26,14 @@ func (c *PythonGradeClient) Call(ctx context.Context, call application.GradeCall
 	var empty application.StudentGrades
 	raw, err := c.client.Call(ctx, call)
 	if err != nil {
-		var failure *internalhttp.BusinessError
+		var failure *pythonbridge.BusinessError
 		if errors.As(err, &failure) {
 			return empty, &application.GradeError{Code: failure.Code}
 		}
 		return empty, application.ErrBackend
 	}
 	var data application.StudentGrades
-	if internalhttp.DecodeData(raw, &data) != nil {
+	if pythonbridge.DecodeData(raw, &data) != nil {
 		return empty, application.ErrBackend
 	}
 	if data.Grades == nil || data.DataRevision < 0 {

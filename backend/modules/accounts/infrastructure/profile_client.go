@@ -5,15 +5,15 @@ import (
 	"time"
 
 	"grad-checker/backend/modules/accounts/application"
-	"grad-checker/backend/modules/shared/internalhttp"
+	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
 type PythonProfileClient struct {
-	client *internalhttp.Client
+	client *pythonbridge.Client
 }
 
 func NewPythonProfileClient(origin string) (*PythonProfileClient, error) {
-	client, err := internalhttp.New(origin, "/internal/profile", 10*time.Second, 1024*1024)
+	client, err := pythonbridge.New(origin, "/bridge/profile", 10*time.Second, 1024*1024)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (c *PythonProfileClient) Call(ctx context.Context, call application.Profile
 		return empty, accountError(err)
 	}
 	var data application.ProfileResult
-	if internalhttp.DecodeData(raw, &data) != nil {
+	if pythonbridge.DecodeData(raw, &data) != nil {
 		return empty, application.ErrBackend
 	}
 	if call.Operation == "programs" {

@@ -102,7 +102,7 @@ func TestCoursesMapBusinessErrors(t *testing.T) {
 	}
 }
 
-func TestCourseCatalogClientValidatesInternalResponse(t *testing.T) {
+func TestCourseCatalogClientValidatesBridgeResponse(t *testing.T) {
 	for _, tc := range []struct {
 		operation, body string
 		ok              bool
@@ -118,7 +118,7 @@ func TestCourseCatalogClientValidatesInternalResponse(t *testing.T) {
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var call application.CourseCatalogCall
-			if r.URL.Path != "/internal/courses" || json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != tc.operation {
+			if r.URL.Path != "/bridge/courses" || json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != tc.operation {
 				t.Error("invalid call")
 			}
 			_, _ = w.Write([]byte(tc.body))

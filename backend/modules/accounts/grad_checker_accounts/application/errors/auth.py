@@ -1,7 +1,7 @@
 """認証処理の業務エラー。"""
 
+from modules.shared.grad_checker_shared.application.errors import BusinessError
 
-class AuthError(Exception):
-    def __init__(self, code: str) -> None:
-        self.code = code
-        super().__init__(code)
+
+class AuthError(BusinessError):
+    pass

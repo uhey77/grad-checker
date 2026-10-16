@@ -21,7 +21,7 @@
 
 | 分野 | 採用技術 |
 |---|---|
-| バックエンド | Go（外部HTTP） / Python（業務処理） / FastAPI（内部通信） / SQLModel / SQLite |
+| バックエンド | Go（外部HTTP） / Python（業務処理） / FastAPI（Goとのブリッジ通信） / SQLModel / SQLite |
 | フロントエンド | React / TypeScript（Viteで開発・ビルド） |
 | テスト | pytest / Goのtesting |
 | 通信 | JSON |

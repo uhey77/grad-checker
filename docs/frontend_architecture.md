@@ -68,7 +68,7 @@ Pageは画面構成、各コンポーネントはpropsで受け取るデータ�
 
 画面用Hookはユースケースを呼び、ユースケースはSubjectListRepositoryの取得契約を利用する。
 単純な委譲でもユースケース境界を維持する。
-通信はGoの外部API `/api/dev/subject-list` を利用し、Python内部通信やDBを参照しない。
+通信はGoの外部API `/api/dev/subject-list` を利用し、Pythonのブリッジ通信やDBを参照しない。
 卒業判定の規則はバックエンドに置き、フロントエンドで複製しない。
 
 HTTP失敗はinfrastructureでSubjectListErrorに変換する。404・409・5xx・その他HTTP失敗をコードで区別し、日本語detailを保持する。
@@ -106,7 +106,7 @@ Python応答のタイムアウトによる日本語エラーと、サービス�
 
 ## アカウント認証の追加（2026-10-11）
 
-認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、内部アダプターは `internal_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
+認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
 
 再現手順と認証設定は[認証の開発手順](auth_development.md)を参照する。
 

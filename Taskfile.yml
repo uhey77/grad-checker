@@ -57,7 +57,7 @@ tasks:
       - uv sync --locked --project backend
 
   backend-dev:
-    desc: Go外部APIとPython内部サービスを起動
+    desc: Go外部APIとPythonサービスを起動
     cmds:
       - node scripts/dev.mjs --backend-only
 
@@ -72,7 +72,7 @@ tasks:
       - node scripts/dev.mjs --backend-only --subject-list-preview
 
   backend-python-dev:
-    desc: Python内部サービスだけを起動
+    desc: Pythonサービスだけを起動
     dir: backend
     cmds:
       - uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
@@ -164,7 +164,7 @@ tasks:
       - go fmt ./...
 
   go-api-test:
-    desc: Goの入力検証・エラー変換・内部通信をテスト
+    desc: Goの入力検証・エラー変換・ブリッジ通信をテスト
     dir: backend
     cmds:
       - go test -race ./...

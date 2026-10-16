@@ -142,7 +142,7 @@ func TestGradesMapBusinessErrors(t *testing.T) {
 	}
 }
 
-func TestGradeClientValidatesInternalResponse(t *testing.T) {
+func TestGradeClientValidatesBridgeResponse(t *testing.T) {
 	valid := `{"data":{"grades":[{"course_id":"c","attempt_no":1,"result_status":"pending","grade_code":null,"academic_year":null,"term_code":null}],"data_revision":1}}`
 	for body, ok := range map[string]bool{
 		valid: true,
@@ -157,7 +157,7 @@ func TestGradeClientValidatesInternalResponse(t *testing.T) {
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var call application.GradeCall
-			if r.URL.Path != "/internal/grades" || json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != "save" || call.GradeSet == nil {
+			if r.URL.Path != "/bridge/grades" || json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != "save" || call.GradeSet == nil {
 				t.Error("invalid call")
 			}
 			_, _ = w.Write([]byte(body))

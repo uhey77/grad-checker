@@ -1,11 +1,11 @@
 # API基本設計
 
-文書版：1.4（2026年10月15日更新）。[RDD](RDD.md)に基づき、Goの外部HTTP APIとPythonの業務処理・SQLModel・SQLiteを使用する。FastAPIは内部通信を担当する。React / TypeScriptからJSONで通信する。接頭辞は `/api`。現時点で `/v1` は付けない。本書は設計契約であり、エンドポイント・Swagger UIの実装は未完了。
+文書版：1.4（2026年10月15日更新）。[RDD](RDD.md)に基づき、Goの外部HTTP APIとPythonの業務処理・SQLModel・SQLiteを使用する。FastAPIはブリッジ通信を担当する。React / TypeScriptからJSONで通信する。接頭辞は `/api`。現時点で `/v1` は付けない。本書は設計契約であり、エンドポイント・Swagger UIの実装は未完了。
 
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonは内部通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。卒業判定・履歴などは未実装。
+Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。卒業判定・履歴などは未実装。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -165,7 +165,7 @@ GET /checks/{id}は所有者を確認して当時のinputとresultを200で返�
 
 ## 9. ドキュメントと検証
 
-外部入力検証・日本語エラー文字列・HTTPステータスはGoのpresentationに集約する。PythonはPydanticで内部通信契約を検証し、SQLModelでDB処理を行う。外部APIのOpenAPIとSwagger UIは今後整備する。Python内部サービスの/docs・/openapi.jsonは公開しない。Goのtestingで外部HTTPと内部通信クライアントを、pytestでPythonの業務処理・DBとGo／Pythonの実プロセス結合を検証する。本人認可・原子的保存・履歴不変を含む学生向けケースは[テスト仕様](test_specification.md)、起動・初期化・シードの手順は[バックエンドの構成](backend_architecture.md)と[DB設計](database_design.md)を参照する。
+外部入力検証・日本語エラー文字列・HTTPステータスはGoのpresentationに集約する。PythonはPydanticでブリッジ通信契約を検証し、SQLModelでDB処理を行う。外部APIのOpenAPIとSwagger UIは今後整備する。Pythonサービスの/docs・/openapi.jsonは公開しない。Goのtestingで外部HTTPとブリッジ通信クライアントを、pytestでPythonの業務処理・DBとGo／Pythonの実プロセス結合を検証する。本人認可・原子的保存・履歴不変を含む学生向けケースは[テスト仕様](test_specification.md)、起動・初期化・シードの手順は[バックエンドの構成](backend_architecture.md)と[DB設計](database_design.md)を参照する。
 
 関連：[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
 
