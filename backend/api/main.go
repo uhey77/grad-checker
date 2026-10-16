@@ -14,6 +14,7 @@ import (
 
 	"grad-checker/backend/api/presentation"
 	accounts "grad-checker/backend/modules/accounts/infrastructure"
+	grades "grad-checker/backend/modules/grades/infrastructure"
 	"grad-checker/backend/modules/subjects/infrastructure"
 )
 
@@ -35,7 +36,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	profileHandler := presentation.NewProfileHandler(profileClient, *origin, presentation.NewSubjectListHandler(client, *preview))
+	gradeClient, err := grades.NewPythonGradeClient(*pythonURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	courseClient, err := infrastructure.NewPythonCourseCatalogClient(*pythonURL, 5*time.Second)
+	if err != nil {
+		log.Fatal(err)
+	}
+	courseHandler := presentation.NewCourseHandler(courseClient, presentation.NewSubjectListHandler(client, *preview))
+	gradeHandler := presentation.NewGradeHandler(gradeClient, *origin, courseHandler)
+	profileHandler := presentation.NewProfileHandler(profileClient, *origin, gradeHandler)
 	handler, err := presentation.NewAuthHandler(authClient, *origin, profileHandler)
 	if err != nil {
 		log.Fatal(err)

@@ -34,6 +34,11 @@ try {
       "src/modules/accounts/infrastructure/HttpAuthRepository.ts",
       "src/modules/profiles/infrastructure/HttpProfileRepository.ts",
       "src/modules/profiles/application/ProfileUseCases.ts",
+      "src/modules/grades/infrastructure/HttpGradeRepository.ts",
+      "src/modules/grades/application/gradeDraft.ts",
+      "src/modules/subjects/infrastructure/course-catalog/HttpCourseCatalogRepository.ts",
+      "src/modules/subjects/application/course-catalog/CourseCatalogUseCases.ts",
+      "src/modules/subjects/application/course-catalog/filterCatalogCourses.ts",
     ],
     { stdio: "inherit" },
   );
@@ -47,6 +52,8 @@ try {
         "tests/architecture.test.mjs",
         "tests/accounts.test.mjs",
         "tests/profiles.test.mjs",
+        "tests/grades.test.mjs",
+        "tests/course-catalog.test.mjs",
       ],
       {
         stdio: "inherit",

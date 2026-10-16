@@ -17,3 +17,20 @@ export {
   type SubjectSortOrder,
 } from "./application/subject-list/sortSubjects.ts";
 export { SubjectListError } from "./application/errors/SubjectListError.ts";
+export type {
+  CatalogCategory,
+  CatalogCourse,
+  CatalogCurriculum,
+  CourseCatalog,
+  CoursePlacement,
+  CourseType,
+} from "./domain/course-catalog/models.ts";
+export type { CourseCatalogUseCases } from "./application/course-catalog/CourseCatalogUseCases.ts";
+export {
+  emptyCatalogFilters,
+  filterCatalogCourses,
+  facultyOptions,
+  departmentOptions,
+  type CatalogFilters,
+} from "./application/course-catalog/filterCatalogCourses.ts";
+export { CourseCatalogError } from "./application/errors/CourseCatalogError.ts";

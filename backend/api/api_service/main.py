@@ -9,6 +9,12 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from api.api_service.presentation.internal_auth import router as internal_auth_router
+from api.api_service.presentation.internal_courses import (
+    router as internal_courses_router,
+)
+from api.api_service.presentation.internal_grades import (
+    router as internal_grades_router,
+)
 from api.api_service.presentation.internal_profile import (
     router as internal_profile_router,
 )
@@ -21,6 +27,9 @@ from modules.accounts.grad_checker_accounts.infrastructure.passwords import (
 )
 from modules.accounts.grad_checker_accounts.infrastructure.schema import (
     create_account_schema,
+)
+from modules.grades.grad_checker_grades.infrastructure.schema import (
+    create_grade_schema,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
@@ -38,6 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 connection.execute(text("SELECT 1"))
             create_database_schema(engine)
             create_account_schema(engine)
+            create_grade_schema(engine)
             application.state.database_engine = engine
             application.state.settings = runtime_settings
             application.state.passwords = ArgonPasswords()
@@ -63,6 +73,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(internal_subject_list_router)
     application.include_router(internal_auth_router)
     application.include_router(internal_profile_router)
+    application.include_router(internal_courses_router)
+    application.include_router(internal_grades_router)
     return application
 
 
