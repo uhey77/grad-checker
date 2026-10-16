@@ -5,7 +5,7 @@
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。卒業判定・履歴などは未実装。
+Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）も実装済み。ダッシュボード・履歴・おすすめは未実装。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -180,3 +180,24 @@ GET /checks/{id}は所有者を確認して当時のinputとresultを200で返�
 Goの`-subject-list-preview`は既定falseで、無効時は404。ローカル確認時だけ有効にして
 127.0.0.1へバインドする。GETのみ・no-store・DBからの読取のみで、学生データは扱わない。
 公開環境にはこの設定を引き継がない。学生向けの `/api/courses` 等は引き続き認証必須として実装する。
+
+
+## 卒業要件判定APIの実装範囲（2026年10月16日）
+
+`GET /api/me/graduation-requirements` はCookieの本人セッションから所属・成績を取得し、
+同じSQLite読取りスナップショットのマスタで判定する。本文・クエリで本人IDや単位数を
+指定する契約は設けない。取得時に履歴・成績・data_revisionは変更しない。
+
+成功200は `EvaluationResult` にUTCの `evaluated_at` を付けたJSONを返す。
+`result`、`data_revision`、`curriculum`、`rule_revisions`、`total`、`categories`、
+`requirements`、`courses`、`missing_required_courses`、`allocations` を含む。
+`curriculum.id` はカリキュラムIDで、名称・コード・revision・出典・確認状態も保持する。
+条件はid/code/name/kind/parent_id/classification_idと必要・修得・算入・不足・result、
+科目はcourse_id/name/classification_id/credits/status/latest_attemptを持つ。
+履歴API、おすすめ、他学部算入はこの段階では含まない。
+
+所属未設定・適用年度未確認・マスタ不足・未確認算入規則・未対応の課程外修得科目は409、
+未認証は401、未知科目は400、DB障害は503、ブリッジ障害は502。
+Goが業務コードに対応した日本語detailを返し、未達成の200と区別する。
+内部の例外文字列・SQLは返さない。公開GETから呼ばれるPythonの入口は
+`POST /bridge/graduation-requirements`（tokenのみ）とする。
