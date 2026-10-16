@@ -74,7 +74,7 @@ export function GradeFilters({
       </div>
       {select(
         "categoryId",
-        "科目区分（本人課程）",
+        "科目区分",
         treeOrder(categories).map((c) => [
           c.id,
           `${"　".repeat(c.level)}${c.name}`,
