@@ -5,6 +5,8 @@ Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/c
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
 現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。卒業判定・推薦は未実装。
 
+卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類、applicationはPydanticの投入契約と集合検証、infrastructureは5テーブルと追加投入を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIの追加は後続の対象。
+
 ```text
 React / Vite :5173
   → Go presentation :8000
@@ -149,6 +151,8 @@ Pythonサービスは127.0.0.1:8001で起動し、外部には公開しない。
 Pythonの`/api`・Swagger UIは削除しており、画面はGoを介して取得する。外部OpenAPI/Swagger UIの整備は今後実施する。
 
 起動時にデータは自動投入しない。必要な場合だけ`backend-seed`を実行する。
+
+卒業要件・算入規則は科目投入後に `task backend-requirements-seed` / `make backend-requirements-seed` で追加する。JSONの再生成は `backend-requirements-build`。起動時は `create_requirement_schema` でテーブルのみを生成する。[要件シード](../backend/seeds/requirements.md)も参照。
 結合テストは一時DBへ投入し、Go・Pythonを実プロセスで起動して検証する。GoがPATHにない場合はスキップされる。
 科目一覧URLと起動方法の変更に合わせ、フロントエンド・Task・Make・関連設計も更新する。
 

@@ -1,0 +1,89 @@
+{
+  "document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
+  "filename": "2026hcgakuseibinran.pdf",
+  "sha256": "e86a956f9dfc906cdfdee9c9f7c357139f45689f74f14766990ce966ca59704f",
+  "booklet_page": 94,
+  "pdf_page": 96,
+  "verified_on": "2026-10-16",
+  "scope": "CS学部の卒業単位要件。表の値の照合であり入学年度の適用確認ではない。",
+  "columns": ["分類コードの集合", "必修単位（横線はnull）", "選択必修単位（横線はnull）"],
+  "majors": {
+    "advanced": {
+      "title": "先進情報専攻",
+      "programs": ["CS-ADV-INFRA", "CS-ADV-HUMAN", "CS-ADV-AI"],
+      "sections": [
+        {
+          "classification": "general", "required": 16, "selective": 14, "elective": 8, "total": 38,
+          "rows": [
+            [["general.comprehensive", "general.humanities", "general.social", "general.science", "general.wellbeing"], null, 10],
+            [["general.language"], 4, 2],
+            [["general.information-math"], 6, 2],
+            [["general.career"], 6, null],
+            [["general.community"], null, null]
+          ]
+        },
+        {
+          "classification": "foundation", "required": 21, "selective": 18, "elective": 3, "total": 42,
+          "rows": [
+            [["foundation.math"], 4, 4],
+            [["foundation.management"], null, 2],
+            [["foundation.computer-business"], 17, 12]
+          ]
+        },
+        {
+          "classification": "specialized", "required": 21, "selective": 15, "elective": 8, "total": 44,
+          "rows": [
+            [["specialized.core"], null, 12],
+            [["specialized.experiment"], 21, 3]
+          ]
+        }
+      ],
+      "totals": {"required": 58, "selective": 47, "elective": 19, "total": 124}
+    },
+    "social": {
+      "title": "社会情報専攻",
+      "programs": ["CS-SOCIAL"],
+      "sections": [
+        {
+          "classification": "general", "required": 16, "selective": 14, "elective": 8, "total": 38,
+          "rows": [
+            [["general.comprehensive", "general.humanities", "general.social", "general.science", "general.wellbeing"], null, 10],
+            [["general.language"], 4, 2],
+            [["general.information-math"], 6, 2],
+            [["general.career"], 6, null],
+            [["general.community"], null, null]
+          ]
+        },
+        {
+          "classification": "foundation", "required": 18, "selective": 21, "elective": 3, "total": 42,
+          "rows": [
+            [["foundation.math"], 4, 2],
+            [["foundation.management"], null, 4],
+            [["foundation.computer-business"], 14, 15]
+          ]
+        },
+        {
+          "classification": "specialized", "required": 21, "selective": 15, "elective": 8, "total": 44,
+          "rows": [
+            [["specialized.core"], null, 12],
+            [["specialized.experiment"], 21, 3]
+          ]
+        }
+      ],
+      "totals": {"required": 55, "selective": 50, "elective": 19, "total": 124}
+    }
+  },
+  "notes": {
+    "overflow": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
+    "subminimum": "人文から2単位以上、社会から2単位以上を修得すること。"
+  },
+  "subminimums": {"general.humanities": 2, "general.social": 2},
+  "unresolved_overflow": "Q02: 総合等10単位超過時に人文・社会の内訳が不足する場合の換算は未確認。",
+  "other_faculty": {
+    "booklet_page": 53,
+    "pdf_page": 55,
+    "max_credits": 6,
+    "summary": "同じキャンパスの他学部他学科の専門基礎教育・専門教育に属する選択または選択必修の講義科目。専門基礎・専門教育それぞれの選択に算入し、合計6単位まで。超過分は自由科目。演習・実習・実験を除く。",
+    "unresolved_reason": "Q09: 複数算入先にまたがる上限超過時の配分順序、および対象他学部科目の照合・転記は未完了。"
+  }
+}

@@ -32,6 +32,9 @@ from modules.accounts.grad_checker_accounts.infrastructure.schema import (
 from modules.grades.grad_checker_grades.infrastructure.schema import (
     create_grade_schema,
 )
+from modules.requirements.grad_checker_requirements.infrastructure.schema import (
+    create_requirement_schema,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
     create_database_schema,
@@ -49,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             create_database_schema(engine)
             create_account_schema(engine)
             create_grade_schema(engine)
+            create_requirement_schema(engine)
             application.state.database_engine = engine
             application.state.settings = runtime_settings
             application.state.passwords = ArgonPasswords()

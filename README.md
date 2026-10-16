@@ -37,4 +37,6 @@ make dev
 
 ログイン後は所属設定から課程・カリキュラムを保存し、成績入力から本人の成績を入力・保存できます。選択肢が空の場合は `task backend-seed` または `make backend-seed` で科目マスタを投入してください。CS学部4課程の適用入学年度は未確認です。
 
+CS学部4課程の卒業要件・算入規則マスタは、科目マスタ投入後に `task backend-requirements-seed` / `make backend-requirements-seed` で追加できます。再生成は `backend-requirements-build`。出典と未確認規則は[卒業要件マスタ](backend/seeds/requirements.md)を参照してください。判定処理・判定画面はまだ実装していません。
+
 設定・復旧・旧DBの扱いは[認証の開発手順](docs/auth_development.md)を参照してください。

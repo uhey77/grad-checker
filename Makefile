@@ -1,11 +1,14 @@
 .DEFAULT_GOAL := help
 .PHONY: auth-dev
+.PHONY: backend-requirements-seed backend-requirements-build
 
 .PHONY: dev-go go-api-dev go-api-check go-api-test go-api-format backend-python-dev
 
 .PHONY: help check test frontend-test format backend-check frontend-check setup frontend-install backend-install backend-dev backend-subject-list backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
 
 help:
+	@echo "backend-requirements-seed CS4課程の卒業要件・算入規則を追加投入（科目投入後）"
+	@echo "backend-requirements-build 卒業要件シードを再生成"
 	@echo "auth-dev          ユーザー名認証の画面・バックエンドを起動"
 	@echo "go-api-format     Goコードを整形"
 	@echo "backend-python-dev Pythonサービスだけを起動"
@@ -118,6 +121,12 @@ pre-commit:
 
 backend-seed:
 	cd backend && uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
+
+backend-requirements-seed:
+	cd backend && uv run --locked python -m scripts.seed_requirements --file seeds/cs_requirements_2026.json
+
+backend-requirements-build:
+	cd backend && uv run --locked python seeds/build_cs_requirements_seed.py
 
 dev:
 	node scripts/dev.mjs
