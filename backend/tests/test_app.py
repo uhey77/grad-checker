@@ -31,6 +31,7 @@ def test_startup_and_internal_service(tmp_path: Path) -> None:
             "student_credentials",
             "auth_sessions",
             "auth_attempts",
+            "grade_attempts",
         }
         with application.state.database_engine.connect() as connection:
             assert connection.execute(text("SELECT 1")).scalar_one() == 1

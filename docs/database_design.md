@@ -1,6 +1,6 @@
 # DB基本設計
 
-文書版：1.4（2026年10月15日更新）。[RDD](RDD.md)に基づき、SQLModel / SQLiteを採用する。2026年10月11日に課程・カリキュラム・分類・科目・開講期・課程別科目の6テーブルとシードを実装した。認証用4テーブルと、空の旧メール認証DB向けの移行処理も実装した。成績・判定・規則モデルの実装と、既存メール認証アカウントを保持する移行は今後の対象とする。全課程のマスタが既に投入済みという意味ではない。
+文書版：1.4（2026年10月15日更新）。[RDD](RDD.md)に基づき、SQLModel / SQLiteを採用する。2026年10月11日に課程・カリキュラム・分類・科目・開講期・課程別科目の6テーブルとシードを実装した。認証用4テーブルと、空の旧メール認証DB向けの移行処理も実装した。2026年10月16日に成績の`grade_attempts`を追加した。判定・規則モデルの実装と、既存メール認証アカウントを保持する移行は今後の対象とする。全課程のマスタが既に投入済みという意味ではない。
 
 ## 1. 型と共通制約
 
@@ -25,7 +25,7 @@ IDは安定したUUIDをSQLiteではTEXTとして保存する。科目単位数�
 | credit_rule_limits | id, rule_id FK, limit_group_code, max_credits非負整数。複数算入先に共通の上限を1つのグループで定義 |
 | students | id, login_name一意, program_id?, curriculum_id?, admission_year?, name?, data_revision非負整数, created_at |
 | student_credentials | student_id PK/FK, password_hash, recovery_code_hash?, is_active, password_updated_at |
-| grade_attempts | id, student_id FK, course_id FK, attempt_no正整数, result_status, grade_code?, academic_year?, term_code?, updated_at |
+| grade_attempts | id, student_id FK, course_id FK RESTRICT, attempt_no正整数, result_status（finalized/pending）, grade_code?（S/A/B/C/D/X）, academic_year?正整数, term_code?（first/second）, updated_at。UQ(student_id, course_id, attempt_no) |
 | check_results | id UUID PK, student_id FK, input_json, result_json, curriculum_code, curriculum_revision, data_revision, created_at |
 | auth_sessions | id, student_id FK, token_hash一意, csrf_token_hash, created_at, last_seen_at, expires_at, revoked_at? |
 | auth_attempts | key PK（操作とIP／正規化ユーザー名のハッシュ）, window_started_at, count |
@@ -46,7 +46,9 @@ UQ(student_id, course_id, attempt_no)。grade_attempts.course_idはcoursesへ参
 
 finalizedはgrade_codeがS/A/B/C/D/Xのいずれか、pendingはnullというCHECK。記録がない科目は未履修。成績入力を訂正・取り消せるが、単位数や分類を学生が変える列は設けない。
 
-`PUT /api/me/grades` は本人の全成績集合の置換で、リクエストに含まれない履歴は取消となる。検証・置換・data_revision加算を1トランザクションで実行し、1件でも不正なら全体を保存しない。古いrevisionでの更新は409として再取得を要求する。所属変更も同じdata_revisionを使用し、古い画面が新所属を上書きしないようにする。
+同じ科目の回次は1から連番で、確定した不合格（D・X）の後にだけ次の回次を置ける。この並びの検証はアプリ側の業務ルールで行い、DBでは記号・状態・回次の値域を強制する。
+
+`PUT /api/me/grades` は本人の全成績集合の置換で、リクエストに含まれない履歴は取消となる。置換は(course_id, attempt_no)単位の差分で行い、変更した回次だけupdated_atを更新する。検証・置換・data_revision加算を1トランザクションで実行し、1件でも不正なら全体を保存しない。古いrevisionでの更新は409として再取得を要求する。所属変更も同じdata_revisionを使用し、古い画面が新所属を上書きしないようにする。
 
 ## 5. 判定スナップショット
 
@@ -66,7 +68,7 @@ check_resultsは本人の入力と計算済み結果を保存する。input_json
 
 JSONシードを課程→カリキュラム→分類→科目・開講期→課程別科目→要件・規則→テストアカウントの順でコマンド1つで投入する。科目種別・授業形態・各課程の必要値・対象他学部集合・共通上限を検証し、重複投入で同一マスタを増やさない。全データ消去は通常の再投入と分けた明示的な初期化操作とする。
 
-現在はマスタ6テーブルと追加投入CLIを実装済み。コンピュータサイエンス学部の4課程の科目131件・課程別科目498件を便覧の表から転記した。入学年度への適用は未確認のためunverified、適用年度はnullで保持する。学生・認証・復旧コード・試行制限のモデルと、本人所属の取得・保存を実装。所属保存は既存students列を使い、課程との組合せ検証とrevision条件付き更新を同一トランザクションで行う。卒業要件・規則・成績・履歴のモデルは未実装。
+現在はマスタ6テーブルと追加投入CLIを実装済み。コンピュータサイエンス学部の4課程の科目131件・課程別科目498件を便覧の表から転記した。入学年度への適用は未確認のためunverified、適用年度はnullで保持する。学生・認証・復旧コード・試行制限のモデルと、本人所属の取得・保存を実装。所属保存は既存students列を使い、課程との組合せ検証とrevision条件付き更新を同一トランザクションで行う。成績は`grade_attempts`へ保存し、未知科目・版・回次の検証と差分置換・data_revision加算を同一トランザクションで行う。卒業要件・規則・履歴のモデルは未実装。
 
 通常シードは全件の形式・参照・階層を検証し、1トランザクションで追加する。同じ内容はスキップし、既存IDの変更は拒否する。省略した既存データを削除しない。分類循環・階層levelの整合性は投入時に検証し、同課程の親／分類参照・単位数・一意性・削除RESTRICTはDBでも強制する。マイグレーションは未実装。
 

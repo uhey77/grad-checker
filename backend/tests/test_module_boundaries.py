@@ -8,8 +8,9 @@ from config.settings import DEFAULT_DATABASE_PATH, Settings
 BACKEND = Path(__file__).resolve().parents[1]
 
 
-def test_subjects_do_not_import_api_or_configuration() -> None:
-    for source in (BACKEND / "modules/subjects/grad_checker_subjects").rglob("*.py"):
+def imported_modules(package: str) -> list[tuple[Path, list[str]]]:
+    result = []
+    for source in (BACKEND / package).rglob("*.py"):
         tree = ast.parse(source.read_text(), filename=str(source))
         imports = []
         for node in ast.walk(tree):
@@ -17,8 +18,36 @@ def test_subjects_do_not_import_api_or_configuration() -> None:
                 imports.extend(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom) and node.module:
                 imports.append(node.module)
+        result.append((source, imports))
+    return result
+
+
+def test_subjects_do_not_import_api_or_configuration() -> None:
+    for source, imports in imported_modules("modules/subjects/grad_checker_subjects"):
         forbidden = ("api", "config", "fastapi", "uvicorn")
         assert not [name for name in imports if name.split(".")[0] in forbidden], source
+        # 科目モジュールは本人データを扱うモジュールへ依存しない。
+        assert not [
+            name
+            for name in imports
+            if name.startswith(("modules.accounts", "modules.grades"))
+        ], source
+
+
+def test_grades_follow_layer_dependencies() -> None:
+    package = "modules/grades/grad_checker_grades"
+    for source, imports in imported_modules(package):
+        forbidden = ("api", "config", "fastapi", "uvicorn")
+        assert not [name for name in imports if name.split(".")[0] in forbidden], source
+        layer = source.relative_to(BACKEND / package).parts[0]
+        if layer in ("domain", "application"):
+            assert not [
+                name
+                for name in imports
+                if ".infrastructure" in name or name.split(".")[0] in ("sqlmodel",)
+            ], source
+        if layer == "domain":
+            assert not [name for name in imports if ".application" in name], source
 
 
 def test_shared_settings_default_to_backend_data(monkeypatch) -> None:

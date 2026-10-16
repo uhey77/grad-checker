@@ -5,7 +5,7 @@
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonは内部通信で結果またはエラーコードを返す。認証APIと所属選択・本人プロフィール取得・所属保存は実装済み。成績・卒業判定などは未実装。
+Pythonは内部通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。卒業判定・履歴などは未実装。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -26,6 +26,7 @@ IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成�
 | 403 | 不正なOrigin・CSRF検証失敗、許可されないマスタ変更 |
 | 404 | 結果IDがない、または他人の結果ID。存在を区別しない |
 | 409 | 成績版競合、所属未設定、マスタ不足、未確認の換算・配分規則 |
+| 413 | 成績保存の本文が上限（256 KiB）を超える |
 | 415 | JSON更新のContent-Type不正 |
 | 422 | フィールド・成績記号・数値・履修回次・フィルタの検証失敗 |
 | 429 | 認証試行制限 |
@@ -101,6 +102,14 @@ GET /coursesのクエリはcategory_id、faculty_id、department_id、semester�
 
 返却科目はcourse_id、code、name、credits、開講元、授業形態、開講学期、本人課程での区分・科目群・種別、適用確認状態を持つ。他学部の表示では開講元分類と本人の算入先を区別する。GET /categoriesは本人課程の階層と必要値を返す。所属が未設定なら409。
 
+### 科目一覧の実装契約（2026-10-16）
+
+学部・学科のIDに当たるマスタはないため、開講元の絞り込みは`faculty`（開講学部名）と`department`（開講学科名）の完全一致とし、`faculty_id`・`department_id`は使用しない。`category_id`は本人課程の分類IDで、子孫分類の科目も一致する。本人課程にない分類IDは422。`semester`は開講学期`first`（前期）/`second`（後期）。`q`は科目名・科目コードの部分一致（大文字小文字を区別しない）。各条件は1回だけ、1〜100文字。未知の条件・重複・空値は422。
+
+`GET /api/courses` は `{"curriculum": {...}, "courses": [...]}` を返す。curriculumはcurriculum_id、name、verification_status、admission_year_from/to、source_document、source_pages。各科目はcourse_id、code、name、credits、offering_faculty_name、offering_department_name、offering_specialization_name、teaching_type、teaching_type_label、offerings（term_code、semester_order、academic_year、source_note）、placementを持つ。placementは本人課程の科目表にある科目だけclassification_path（上位から{id, name}）とcourse_typeを持ち、科目表にない既知科目はnullで、算入先を推測しない。本人課程の科目を便覧順に先に並べ、続けて課程外の既知科目を科目コード順に返す。
+
+`GET /api/categories` は `{"curriculum": {...}, "categories": [{id, code, name, parent_id, level, display_order}]}` を返す。卒業要件マスタが未整備のため、必要単位は現在返さない。
+
 ## 6. 成績の入力・保存
 
 GET /me/gradesは全成績とdata_revisionを返す。PUTは全集合を置換する。省略した履歴は取消となるため、画面は全集合を取得・編集し、削除意図と未保存変更を確認して送る。
@@ -118,6 +127,12 @@ GET /me/gradesは全成績とdata_revisionを返す。PUTは全集合を置換�
 ```
 
 成功200は保存したgradesと更新後data_revisionを返す。expected_revision不一致なら409で全体不変。未知科目なら400、不正成績・回次重複なら422で全体不変。自学部科目以外でも既知科目の入力は保存でき、卒業への算入可否は判定側が扱う。空gradesは本人の成績全取消で、画面は意図を確認してから送る。
+
+### 成績APIの実装契約（2026-10-16）
+
+各要素はcourse_id、attempt_no、result_status、grade_code、academic_year、term_codeの6項目をすべて持つ（値のnullは許可、項目の省略は不可）。attempt_noは1〜20、academic_yearはnullまたは1900〜2100、term_codeはnullまたは`first`/`second`（本人が履修した学期で、科目の開講学期とは別）。finalizedはS/A/B/C/D/X、pendingはnull。1回の保存は1000件まで。
+
+同じ科目の回次は1から連番とする。再履修（次の回次）は直前の回次が確定した不合格（D・X）の場合だけ追加でき、合格（S/A/B/C）・未確定の後には追加できない。このため同じ科目の合格は高々1件で、常に最新回次になる。違反は422。所属保存と成績保存は同じdata_revisionを使用し、どちらかが更新されると古い版での保存は409になる。GET・PUTの成功応答は `{"grades": [...], "data_revision": n}` で、gradesはcourse_id・attempt_no順。
 
 ## 7. 最新判定と保存判定
 

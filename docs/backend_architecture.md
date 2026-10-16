@@ -3,7 +3,7 @@
 `backend/api/`にHTTPの入口、`backend/modules/subjects/`に科目の業務処理を配置する。
 Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。Goの`go.mod`も`backend/`直下の一つに統一する。
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
-現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存を実装。卒業判定・推薦・成績保存は未実装。
+現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。卒業判定・推薦は未実装。
 
 ```text
 React / Vite :5173
@@ -179,3 +179,18 @@ Pythonの内部HTTPプロセスは引き続き必要。言語を分けたこと�
 `accounts` のapplication/profile.pyにPydantic契約・リポジトリ契約・ユースケースを置き、infrastructure/profile.pyで既存students列と課程マスタを扱う。DB例外はapplication/errors/profile.pyの業務エラーへ変換する。
 Python `/internal/profile` は認証サービスでセッションを検証し、そこから得た本人IDだけをユースケースへ渡す。更新はCSRFを検証した上で、BEGIN IMMEDIATEによる組合せ検証とrevision付きUPDATEを一つのトランザクションで行う。
 Goのpresentation/profile.goが学生向け `/api/programs`・`/api/me`・`/api/me/program` の入力・Origin・HTTP応答を担当し、accounts/applicationの契約を通して内部クライアントを呼ぶ。内部のprofile包絡は外部応答で取り除く。
+
+## 学生向け科目一覧と本人成績（2026-10-16）
+
+| 外部API（Go） | Pythonへの内部呼出し |
+| --- | --- |
+| `GET /api/courses` | `POST /internal/courses`、`operation: courses`と絞り込み条件 |
+| `GET /api/categories` | 同上、`operation: categories` |
+| `GET /api/me/grades` | `POST /internal/grades`、`operation: get` |
+| `PUT /api/me/grades` | 同上、`operation: save`とCSRF・成績の全集合 |
+
+科目一覧は`modules/subjects`に操作を追加した。application/course_catalog.pyが本人課程から見た科目・分類の契約と絞り込み、infrastructure/course_catalog.pyが一つの読取スナップショットでの取得を担う。科目モジュールはaccounts・gradesを参照せず、`internal_courses.py`がセッションと本人所属から課程IDを決めて渡す。所属未設定は`program_not_selected`。
+
+成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と全集合の検証、infrastructureが`grade_attempts`とBEGIN IMMEDIATEによる版確認・差分置換・`students.data_revision`の加算を担う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
+
+Goのpresentation/courses.goとgrades.goが外部入力（クエリ・重複キー・未知フィールド・型・範囲・記号と状態の整合）を検証し、不正ならPythonを呼ばず422等を返す。回次の重複・連番・再履修の条件はPythonの業務ルールで判定し、業務エラーコードをGoが日本語detailへ変換する。
