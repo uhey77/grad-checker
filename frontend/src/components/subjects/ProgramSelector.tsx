@@ -5,9 +5,15 @@ import { programLabel } from "./labels";
 interface Props {
   programs: Program[];
   curriculumId: string;
+  status: "loading" | "ready" | "error";
   onChange: (id: string) => void;
 }
-export function ProgramSelector({ programs, curriculumId, onChange }: Props) {
+export function ProgramSelector({
+  programs,
+  curriculumId,
+  status,
+  onChange,
+}: Props) {
   return (
     <section className="program-panel" aria-labelledby="program-heading">
       <div className="program-select">
@@ -29,7 +35,13 @@ export function ProgramSelector({ programs, curriculumId, onChange }: Props) {
               </option>
             ))
           ) : (
-            <option value="">課程を読み込み中</option>
+            <option value="">
+              {status === "loading"
+                ? "課程を読み込み中"
+                : status === "error"
+                  ? "課程を取得できませんでした"
+                  : "選択できる課程がありません"}
+            </option>
           )}
         </select>
       </div>
