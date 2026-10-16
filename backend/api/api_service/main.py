@@ -13,6 +13,9 @@ from api.api_service.presentation.go_bridge_call import failure
 from api.api_service.presentation.go_bridge_courses import (
     router as bridge_courses_router,
 )
+from api.api_service.presentation.go_bridge_evaluation import (
+    router as bridge_evaluation_router,
+)
 from api.api_service.presentation.go_bridge_grades import (
     router as bridge_grades_router,
 )
@@ -80,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(bridge_profile_router)
     application.include_router(bridge_courses_router)
     application.include_router(bridge_grades_router)
+    application.include_router(bridge_evaluation_router)
     return application
 
 

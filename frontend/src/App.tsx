@@ -62,6 +62,8 @@ function StudentScreens({
           <GradeEntryPage
             catalogUseCases={application.courseCatalog}
             gradeUseCases={application.grades}
+            graduationUseCases={application.requirements}
+            active={screen === "grades"}
             csrf={csrf}
             expire={expire}
             latestRevision={latestRevision}

@@ -3,9 +3,17 @@
 `backend/api/`にHTTPの入口、`backend/modules/subjects/`に科目の業務処理を配置する。
 Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。Goの`go.mod`も`backend/`直下の一つに統一する。
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
-現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。卒業判定・推薦は未実装。
+現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。Pythonの卒業単位判定関数も実装したが、判定APIまで実装済み。判定画面も接続済み。他学部算入・推薦・履歴は未実装。
 
-卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類、applicationはPydanticの投入契約と集合検証、infrastructureは5テーブルと追加投入を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIの追加は後続の対象。
+卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類、applicationはPydanticの投入契約と集合検証、infrastructureは5テーブルと追加投入を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIは以下の読取り専用経路を使用する。
+
+判定も同モジュールのapplicationに置く。`evaluation_models.py`が入力スナップショットと結果の
+Pydantic契約、`evaluation_context.py`がマスタ・所属・成績の検証と対象集合の展開、
+`evaluation.py`が単位計算と全条件判定を担当する。科目・成績モジュールのapplication/domainを
+参照できるが、DB・HTTP・設定を参照せず、既存モジュールから判定へ逆依存させない。
+`SqliteEvaluationRepository`が一貫したDB読取りで入力を取得し、`EvaluationService`が判定と日時の付与を行う。
+Goの`/api/me/graduation-requirements`からPythonの`/bridge/graduation-requirements`を呼び、本人はセッションからのみ決定する。
+具体的な対応範囲と未確認規則の扱いは[判定ロジック](graduation_requirement_logic.md)を参照。
 
 ```text
 React / Vite :5173

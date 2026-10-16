@@ -13,10 +13,15 @@ import { PageHeading } from "../../components/PageHeading";
 import { SaveBar } from "../../components/SaveBar";
 import { ErrorState, LoadingState } from "../../components/StatusPanels";
 import { programLabel } from "../../components/subjects/labels";
+import type { GraduationUseCases } from "../../modules/requirements/public.ts";
+import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck";
+import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel";
 
 export function GradeEntryPage({
   catalogUseCases,
   gradeUseCases,
+  graduationUseCases,
+  active,
   csrf,
   expire,
   latestRevision,
@@ -26,6 +31,8 @@ export function GradeEntryPage({
 }: {
   catalogUseCases: CourseCatalogUseCases;
   gradeUseCases: GradeUseCases;
+  graduationUseCases: GraduationUseCases;
+  active: boolean;
   csrf: string;
   expire: () => void;
   latestRevision: number;
@@ -44,6 +51,21 @@ export function GradeEntryPage({
   );
   const data = entry.data;
   const curriculum = data?.catalog.curriculum;
+  const checkBlocked =
+    !data ||
+    entry.dirty ||
+    entry.busy ||
+    entry.conflict ||
+    latestRevision > data.saved.dataRevision;
+  const check = useGraduationCheck(
+    graduationUseCases,
+    data?.saved.dataRevision ?? 0,
+    curriculum?.curriculumId ?? "",
+    active,
+    checkBlocked,
+    expire,
+    reportRevision,
+  );
   const entered = new Set(entry.draft.map((g) => g.courseId)).size;
   const curriculumLabel =
     curriculum && savedProgram?.curriculumId === curriculum.curriculumId
@@ -52,6 +74,16 @@ export function GradeEntryPage({
   return (
     <div className="grade-page">
       <PageHeading title="成績入力" />
+      {data && (
+        <GraduationCheckPanel
+          busy={check.busy}
+          blocked={checkBlocked}
+          dirty={entry.dirty}
+          check={() => void check.check()}
+          result={check.result}
+          error={check.error}
+        />
+      )}
       {!data ? (
         entry.loadError ? (
           entry.programMissing ? (

@@ -5,6 +5,7 @@ import {
 import { createGradesModule } from "../../modules/grades/composition";
 import { createAccountsModule } from "../../modules/accounts/composition";
 import { createProfilesModule } from "../../modules/profiles/composition";
+import { createRequirementsModule } from "../../modules/requirements/composition";
 
 export function createApplication() {
   return {
@@ -13,6 +14,7 @@ export function createApplication() {
     profiles: createProfilesModule("/api"),
     courseCatalog: createCourseCatalogModule("/api"),
     grades: createGradesModule("/api"),
+    requirements: createRequirementsModule("/api"),
   };
 }
 export type Application = ReturnType<typeof createApplication>;
