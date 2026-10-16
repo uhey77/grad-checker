@@ -44,7 +44,18 @@ export class HttpAuthRepository implements AuthRepository {
           : undefined,
         body: payload ? JSON.stringify(payload) : undefined,
       });
-      const data: unknown = await response.json();
+      let data: unknown;
+      try {
+        data = await response.json();
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        throw new AuthError(
+          response.ok ? 502 : response.status,
+          response.ok
+            ? "サーバーの応答を読み込めません。再試行してください。"
+            : "認証処理に失敗しました。時間をおいて再試行してください。",
+        );
+      }
       if (!response.ok) {
         const detail =
           data &&
@@ -73,7 +84,10 @@ export class HttpAuthRepository implements AuthRepository {
     const policy = value as Record<string, unknown>;
     if (
       !Number.isInteger(policy.password_min_length) ||
-      !Number.isInteger(policy.password_max_length)
+      !Number.isInteger(policy.password_max_length) ||
+      (policy.password_min_length as number) < 1 ||
+      (policy.password_min_length as number) >
+        (policy.password_max_length as number)
     )
       throw new AuthError(502, "認証設定を読み込めません。");
     return {

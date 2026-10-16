@@ -12,13 +12,22 @@ import { useRemote } from "../useRemote";
 import { subjectListErrorMessage } from "./errors";
 
 export function useSubjectList(useCases: SubjectListUseCases) {
-  const [attempt, setAttempt] = useState(0);
+  const [programAttempt, setProgramAttempt] = useState(0);
+  const [subjectAttempt, setSubjectAttempt] = useState(0);
   const [chosenId, setChosenId] = useState("");
   const [filters, setFilters] = useState(emptyFilters);
   const [sortOrder, setSortOrder] = useState<SubjectSortOrder>("handbook");
-  const programState = useRemote("programs", useCases.listPrograms, attempt);
+  const programState = useRemote(
+    "programs",
+    useCases.listPrograms,
+    programAttempt,
+  );
   const programs = programState.status === "ready" ? programState.data : [];
-  const curriculumId = chosenId || programs[0]?.curriculumId || "";
+  const curriculumId =
+    programs.find((program) => program.curriculumId === chosenId)
+      ?.curriculumId ||
+    programs[0]?.curriculumId ||
+    "";
   const loadSubjectList = useCallback(
     (signal: AbortSignal) => useCases.getSubjectList(curriculumId, signal),
     [useCases, curriculumId],
@@ -26,7 +35,7 @@ export function useSubjectList(useCases: SubjectListUseCases) {
   const subjectListState = useRemote(
     curriculumId || null,
     loadSubjectList,
-    attempt,
+    subjectAttempt,
   );
   const subjectList =
     subjectListState.status === "ready" ? subjectListState.data : null;
@@ -67,6 +76,8 @@ export function useSubjectList(useCases: SubjectListUseCases) {
     visible,
     error,
     noPrograms,
+    programStatus: programState.status,
+    hasFilters: Object.values(filters).some(Boolean),
     filters,
     sortOrder,
     changeFilter,
@@ -78,6 +89,10 @@ export function useSubjectList(useCases: SubjectListUseCases) {
       if (isSubjectSortOrder(value)) setSortOrder(value);
     },
     resetFilters: () => setFilters(emptyFilters),
-    retry: () => setAttempt((x) => x + 1),
+    retry: () => {
+      if (programState.status === "error" || noPrograms)
+        setProgramAttempt((value) => value + 1);
+      else setSubjectAttempt((value) => value + 1);
+    },
   };
 }

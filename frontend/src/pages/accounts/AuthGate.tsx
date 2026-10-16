@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   AuthSession,
   AuthUseCases,
 } from "../../modules/accounts/public.ts";
 import { useAuth } from "../../hooks/accounts/useAuth";
+import { RecoveryCode } from "../../components/accounts/RecoveryCode";
 import { AuthForm } from "../../components/accounts/AuthForm";
 
 export function AuthGate({
@@ -17,16 +18,26 @@ export function AuthGate({
   const [mode, setMode] = useState<"login" | "register" | "recover">("login");
   const [notice, setNotice] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
-  const [saved, setSaved] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, [mode, recoveryCode, auth.status, auth.session]);
+  const switchMode = (next: typeof mode) => {
+    setNotice("");
+    auth.clearError();
+    setMode(next);
+  };
   if (auth.status === "loading")
     return (
-      <main>
-        <p role="status">ログイン状態を確認しています…</p>
+      <main id="main-content">
+        <p className="loading" role="status">
+          ログイン状態を確認しています…
+        </p>
       </main>
     );
   if (auth.status === "error" || !auth.policy)
     return (
-      <main>
+      <main id="main-content">
         <p role="alert">{auth.error}</p>
         <button onClick={auth.retry}>再試行</button>
       </main>
@@ -35,7 +46,9 @@ export function AuthGate({
     return (
       <>
         <div className="auth-toolbar">
-          <span>{auth.session.student.loginName}</span>
+          <span>
+            ログイン中：<strong>{auth.session.student.loginName}</strong>
+          </span>
           <button disabled={auth.busy} onClick={auth.logout}>
             ログアウト
           </button>
@@ -50,7 +63,7 @@ export function AuthGate({
     );
   const showRecovery = (code: string) => {
     setRecoveryCode(code);
-    setSaved(false);
+
     setNotice(
       mode === "register"
         ? "登録が完了しました。"
@@ -58,9 +71,9 @@ export function AuthGate({
     );
   };
   return (
-    <main className="auth-page">
+    <main id="main-content" className="auth-page">
       <section className="auth-card">
-        <h1>
+        <h1 ref={heading} tabIndex={-1}>
           {recoveryCode
             ? "復旧コードを保管してください"
             : mode === "register"
@@ -71,42 +84,28 @@ export function AuthGate({
         </h1>
         {notice ? <p role="status">{notice}</p> : null}
         {recoveryCode ? (
-          <>
-            <p>
-              このコードは一度だけ表示します。パスワードを忘れたときに必要です。安全な場所に保管してください。
-            </p>
-            <label htmlFor="issued-recovery">復旧コード</label>
-            <input
-              id="issued-recovery"
-              value={recoveryCode}
-              readOnly
-              onFocus={(event) => event.target.select()}
-            />
-            <p>
-              以前の復旧コードは使えません。コードとパスワードを両方失った場合、アカウントは復旧できません。
-            </p>
-            <label className="recovery-confirm">
-              <input
-                type="checkbox"
-                checked={saved}
-                onChange={(event) => setSaved(event.target.checked)}
-              />
-              復旧コードを保管しました
-            </label>
-            <button
-              disabled={!saved}
-              onClick={() => {
-                setRecoveryCode("");
-                setMode("login");
-                setNotice("ユーザー名とパスワードでログインしてください。");
-              }}
-            >
-              ログインへ進む
-            </button>
-          </>
+          <RecoveryCode
+            code={recoveryCode}
+            proceed={() => {
+              setRecoveryCode("");
+              switchMode("login");
+              setNotice("ユーザー名とパスワードでログインしてください。");
+            }}
+          />
         ) : (
           <>
-            {auth.error ? <p role="alert">{auth.error}</p> : null}
+            {auth.error ? (
+              <p className="form-error" role="alert">
+                {auth.error}
+              </p>
+            ) : null}
+            <p className="auth-help">
+              {mode === "register"
+                ? "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。"
+                : mode === "recover"
+                  ? "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。"
+                  : "アプリ専用のユーザー名とパスワードを入力してください。"}
+            </p>
             <AuthForm
               key={mode}
               mode={mode}
@@ -127,8 +126,7 @@ export function AuthGate({
                   className="auth-switch"
                   disabled={auth.busy}
                   onClick={() => {
-                    setNotice("");
-                    setMode("register");
+                    switchMode("register");
                   }}
                 >
                   新規登録
@@ -137,8 +135,7 @@ export function AuthGate({
                   className="auth-switch"
                   disabled={auth.busy}
                   onClick={() => {
-                    setNotice("");
-                    setMode("recover");
+                    switchMode("recover");
                   }}
                 >
                   パスワードを忘れた場合
@@ -149,8 +146,7 @@ export function AuthGate({
                 className="auth-switch"
                 disabled={auth.busy}
                 onClick={() => {
-                  setNotice("");
-                  setMode("login");
+                  switchMode("login");
                 }}
               >
                 ログインへ戻る

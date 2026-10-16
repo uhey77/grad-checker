@@ -17,37 +17,62 @@ export function AuthForm({
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState({ field: "", message: "" });
   const settingPassword = mode !== "login";
+  const errorProps = (field: string, hint?: string) => ({
+    "aria-invalid": error.field === field || undefined,
+    "aria-describedby":
+      [hint, error.field === field ? "auth-input-error" : ""]
+        .filter(Boolean)
+        .join(" ") || undefined,
+  });
   return (
     <form
+      noValidate
+      aria-busy={busy}
       onSubmit={(event) => {
         event.preventDefault();
-        setError("");
+        if (busy) return;
+        const invalid = (field: string, message: string) => {
+          setError({ field, message });
+          const input = event.currentTarget.elements.namedItem(field);
+          if (input instanceof HTMLInputElement) input.focus();
+        };
         if (!/^[A-Za-z0-9_]{3,32}$/.test(loginName)) {
-          setError(
+          invalid(
+            "username",
             "ユーザー名は半角英数字・アンダースコアの3〜32文字で入力してください。",
           );
           return;
         }
+        if (mode === "recover" && !/^[A-Za-z0-9_-]{43}$/.test(recoveryCode)) {
+          invalid(
+            "recovery_code",
+            "復旧コードは保管した43文字を入力してください。",
+          );
+          return;
+        }
         if (
-          settingPassword &&
-          (Array.from(password).length < policy.passwordMinLength ||
-            Array.from(password).length > policy.passwordMaxLength)
+          !password ||
+          (settingPassword &&
+            (Array.from(password).length < policy.passwordMinLength ||
+              Array.from(password).length > policy.passwordMaxLength))
         ) {
-          setError(
-            `パスワードは${policy.passwordMinLength}〜${policy.passwordMaxLength}文字で入力してください。`,
+          invalid(
+            "password",
+            settingPassword
+              ? `パスワードは${policy.passwordMinLength}〜${policy.passwordMaxLength}文字で入力してください。`
+              : "パスワードを入力してください。",
           );
           return;
         }
         if (settingPassword && password !== confirmation) {
-          setError("確認用パスワードが一致しません。");
+          invalid("confirmation", "確認用パスワードが一致しません。");
           return;
         }
+        setError({ field: "", message: "" });
+        // 失敗したときに再入力を求めない。成功時はフォームの離脱で破棄する。
         submit(loginName, password, recoveryCode);
-        setPassword("");
-        setConfirmation("");
-        setRecoveryCode("");
       }}
     >
       <fieldset disabled={busy}>
@@ -57,20 +82,16 @@ export function AuthForm({
           name="username"
           autoComplete="username"
           required
-          minLength={3}
           maxLength={32}
-          pattern="[A-Za-z0-9_]{3,32}"
           value={loginName}
           autoCapitalize="none"
           spellCheck={false}
-          aria-describedby={mode === "register" ? "username-hint" : undefined}
+          {...errorProps("username", "username-hint")}
           onChange={(event) => setLoginName(event.target.value)}
         />
-        {mode === "register" ? (
-          <p id="username-hint">
-            半角英数字・アンダースコアの3〜32文字。大文字と小文字は区別しません。
-          </p>
-        ) : null}
+        <p id="username-hint" className="field-hint">
+          半角英数字・アンダースコアの3〜32文字。大文字と小文字は区別しません。
+        </p>
         {mode === "recover" ? (
           <>
             <label htmlFor="auth-recovery">復旧コード</label>
@@ -80,9 +101,8 @@ export function AuthForm({
               type="password"
               autoComplete="off"
               required
-              minLength={43}
-              maxLength={43}
               value={recoveryCode}
+              {...errorProps("recovery_code")}
               onChange={(event) => setRecoveryCode(event.target.value)}
             />
           </>
@@ -97,11 +117,15 @@ export function AuthForm({
           autoComplete={settingPassword ? "new-password" : "current-password"}
           required
           value={password}
+          {...errorProps(
+            "password",
+            settingPassword ? "password-hint" : undefined,
+          )}
           onChange={(event) => setPassword(event.target.value)}
         />
         {settingPassword ? (
           <>
-            <p>
+            <p id="password-hint" className="field-hint">
               {policy.passwordMinLength}〜{policy.passwordMaxLength}
               文字で設定してください。
             </p>
@@ -113,12 +137,17 @@ export function AuthForm({
               autoComplete="new-password"
               required
               value={confirmation}
+              {...errorProps("confirmation")}
               onChange={(event) => setConfirmation(event.target.value)}
             />
           </>
         ) : null}
-        {error ? <p role="alert">{error}</p> : null}
-        <button type="submit">
+        {error.message ? (
+          <p id="auth-input-error" className="form-error" role="alert">
+            {error.message}
+          </p>
+        ) : null}
+        <button className="primary-button" type="submit">
           {busy
             ? "処理中…"
             : mode === "register"

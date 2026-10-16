@@ -1,12 +1,21 @@
 import { type Subject } from "../../modules/subjects/public.ts";
 import { subjectTypeLabels, offeringLabels } from "./labels";
 
-export function SubjectTable({ subjects }: { subjects: Subject[] }) {
+export function SubjectTable({
+  subjects,
+  resetFilters,
+}: {
+  subjects: Subject[];
+  resetFilters: () => void;
+}) {
   if (subjects.length === 0) {
     return (
-      <div className="empty">
+      <div className="empty" role="status">
         <strong>条件に一致する科目がありません</strong>
         <p>検索語や絞り込み条件を変更してください。</p>
+        <button type="button" onClick={resetFilters}>
+          すべての条件をクリア
+        </button>
       </div>
     );
   }

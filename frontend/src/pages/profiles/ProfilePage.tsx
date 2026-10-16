@@ -19,7 +19,7 @@ export function ProfilePage({
     (p) => p.curriculumId === profile.state?.profile.curriculumId,
   );
   return (
-    <main>
+    <main id="main-content" tabIndex={-1}>
       <div className="page-heading">
         <h1>所属設定</h1>
       </div>

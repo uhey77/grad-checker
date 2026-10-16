@@ -21,6 +21,8 @@ export function SubjectListPage({
     visible,
     error,
     noPrograms,
+    programStatus,
+    hasFilters,
     filters,
     sortOrder,
     changeFilter,
@@ -41,6 +43,7 @@ export function SubjectListPage({
         <ProgramSelector
           programs={programs}
           curriculumId={curriculumId}
+          status={programStatus}
           onChange={chooseProgram}
         />
         {error ? (
@@ -54,7 +57,7 @@ export function SubjectListPage({
         ) : noPrograms ? (
           <div className="empty" role="status">
             <strong>科目データが登録されていません</strong>
-            <p>科目データを登録してから再読み込みしてください。</p>
+            <p>時間をおいて再読み込みしてください。</p>
             <button type="button" onClick={retry}>
               再読み込み
             </button>
@@ -62,6 +65,14 @@ export function SubjectListPage({
         ) : !subjectList ? (
           <div className="loading" role="status">
             科目一覧を読み込んでいます…
+          </div>
+        ) : subjectList.subjects.length === 0 ? (
+          <div className="empty" role="status">
+            <strong>この課程の科目データが登録されていません</strong>
+            <p>別の課程を選ぶか、時間をおいて再読み込みしてください。</p>
+            <button type="button" onClick={retry}>
+              再読み込み
+            </button>
           </div>
         ) : (
           <>
@@ -88,12 +99,13 @@ export function SubjectListPage({
                     className="reset-button"
                     type="button"
                     onClick={resetFilters}
+                    disabled={!hasFilters}
                   >
                     条件をクリア
                   </button>
                 </div>
               </div>
-              <SubjectTable subjects={visible} />
+              <SubjectTable subjects={visible} resetFilters={resetFilters} />
             </section>
           </>
         )}
