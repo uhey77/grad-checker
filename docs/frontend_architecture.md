@@ -2,7 +2,7 @@
 
 バックエンドと同じ4層の責務・依存方向を維持する。
 domain・application・infrastructureは業務モジュールにまとめ、presentationはReactの役割ごとにsrc直下へ配置する。
-React・TypeScript・Viteを使用する。現在はユーザー名登録・復旧・ログイン画面と、ログイン後の開発用科目一覧。成績保存・卒業判定画面は未実装。
+React・TypeScript・Viteを使用する。現在はユーザー名登録・復旧・ログイン画面、ログイン後の所属設定と開発用科目一覧。成績保存・卒業判定画面は未実装。
 
 ## 配置
 
@@ -157,3 +157,15 @@ Chromiumで、一時SQLiteにCS学部4課程を投入し、Vite → Go → Pytho
 失敗・課程0件・科目0件はブラウザーで応答を差し替えて確認した。
 期限のタイマーは短い有効期限の認証応答を使い、初期認証取得失敗からの再試行も確認した。
 所属保存・成績保存・卒業判定・履歴と、Firefox・Safariは今回の検証に含まない。
+
+## 本人の所属設定
+
+`modules/profiles/` のdomainに本人所属・カリキュラム選択肢、applicationにProfileUseCasesと取得・保存契約、infrastructureにHTTP通信とDTO変換を置く。公開契約はpublic.ts、具体実装の組立てはcomposition.tsとapp/compositionで行う。
+`pages/profiles/ProfilePage.tsx` が画面構成、`components/profiles/ProgramForm.tsx` が選択・表示、`hooks/profiles/useProfile.ts` が取得・保存・競合・未保存の状態を担当する。AuthGateからセッションのCSRFと期限切れ処理を渡す。アカウント切替時は本人画面を作り直し、離脱時には通信をキャンセルする。
+初期取得は本人情報と選択肢を並列取得する。保存は成功応答でのみ保存済み状態を更新し、失敗時は選択を保持する。409後は再取得を要求し、未保存変更の破棄には確認を挟む。開発用科目一覧の閲覧対象は本人の保存済み所属とは独立している。
+
+### 最新mainとの統合確認
+
+所属設定を追加したmainの取込み後、`make frontend-check`、フロントエンドの16テスト、`make build`が成功した。
+一時DBを使ったChromiumの実接続で、登録・復旧コードの保管確認・ログイン・所属未設定表示・所属保存・再読み込みでの復元・開発用科目一覧の展開・検索と条件解除・ログアウトを確認した。
+ログイン後の本文へのスキップリンクは、所属設定画面へ移動する。

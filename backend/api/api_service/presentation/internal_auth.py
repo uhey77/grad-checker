@@ -5,15 +5,11 @@ from typing import Literal, Self
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from api.api_service.presentation.dependencies import SessionDependency
-from modules.accounts.grad_checker_accounts.application.auth import (
-    AuthPolicy,
-    AuthService,
+from api.api_service.presentation.dependencies import (
+    SessionDependency,
+    auth_service,
 )
 from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
-from modules.accounts.grad_checker_accounts.infrastructure.repository import (
-    SqliteAccountRepository,
-)
 
 router = APIRouter(prefix="/internal")
 
@@ -56,17 +52,7 @@ def auth(
     call: AuthCall, request: Request, session: SessionDependency
 ) -> dict[str, object]:
     settings = request.app.state.settings
-    service = AuthService(
-        SqliteAccountRepository(session),
-        request.app.state.passwords,
-        AuthPolicy(
-            session_hours=settings.auth_session_hours,
-            password_min_length=settings.auth_password_min_length,
-            password_max_length=settings.auth_password_max_length,
-            attempt_window_minutes=settings.auth_attempt_window_minutes,
-            attempt_limit=settings.auth_attempt_limit,
-        ),
-    )
+    service = auth_service(request, session)
     try:
         if call.operation == "config":
             return {

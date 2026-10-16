@@ -1,0 +1,118 @@
+package tests
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"grad-checker/backend/api/presentation"
+	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/infrastructure"
+)
+
+type fakeProfile struct {
+	calls []application.ProfileCall
+	err   error
+}
+
+func (f *fakeProfile) Call(_ context.Context, call application.ProfileCall) (application.ProfileResult, error) {
+	f.calls = append(f.calls, call)
+	return application.ProfileResult{Profile: &application.Profile{StudentID: "own", LoginName: "owner"}}, f.err
+}
+
+const validSelection = `{"program_id":"00000000-0000-4000-8000-000000000001","curriculum_id":"00000000-0000-4000-8000-000000000002","expected_revision":0}`
+
+func TestProfileRejectsInvalidCallsBeforeBackend(t *testing.T) {
+	cases := []struct {
+		method, path, body, origin, csrf, cookie string
+		status                                   int
+	}{
+		{"GET", "/api/programs", "", "", "", "", 401},
+		{"GET", "/api/me", "", "", "", "", 401},
+		{"POST", "/api/me", "", "", "", "", 405},
+		{"GET", "/api/me?student_id=other", "", "", "", strings.Repeat("s", 43), 422},
+		{"PUT", "/api/me/program", validSelection, "https://evil.example", strings.Repeat("c", 64), strings.Repeat("s", 43), 403},
+		{"PUT", "/api/me/program", validSelection, "http://127.0.0.1:5173", "", strings.Repeat("s", 43), 403},
+	}
+	for _, body := range []string{
+		`{}`, `null`, `[]`, validSelection + `{}`,
+		strings.Replace(validSelection, `"expected_revision":0`, `"expected_revision":null`, 1),
+		strings.Replace(validSelection, `"expected_revision":0`, `"expected_revision":true`, 1),
+		strings.Replace(validSelection, `"expected_revision":0`, `"expected_revision":-1`, 1),
+		strings.Replace(validSelection, `"expected_revision":0`, `"expected_revision":1.5`, 1),
+		strings.Replace(validSelection, `"expected_revision":0`, `"expected_revision":9007199254740991`, 1),
+		strings.Replace(validSelection, `"expected_revision":0`, `"expected_revision":0,"expected_revision":1`, 1),
+		strings.Replace(validSelection, `"expected_revision":0`, `"expected_revision":0,"student_id":"other"`, 1),
+		strings.Replace(validSelection, "00000000-0000-4000-8000-000000000001", "unknown", 1),
+	} {
+		cases = append(cases, struct {
+			method, path, body, origin, csrf, cookie string
+			status                                   int
+		}{"PUT", "/api/me/program", body, "http://127.0.0.1:5173", strings.Repeat("c", 64), strings.Repeat("s", 43), 422})
+	}
+	for _, tc := range cases {
+		fake := &fakeProfile{}
+		handler := presentation.NewProfileHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler())
+		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
+		req.Header.Set("Origin", tc.origin)
+		req.Header.Set("X-CSRF-Token", tc.csrf)
+		req.Header.Set("Content-Type", "application/json")
+		if tc.cookie != "" {
+			req.AddCookie(&http.Cookie{Name: "grad_checker_session", Value: tc.cookie})
+		}
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+		if recorder.Code != tc.status || len(fake.calls) != 0 {
+			t.Fatalf("%s %s %s: %d %s", tc.method, tc.path, tc.body, recorder.Code, recorder.Body.String())
+		}
+	}
+}
+
+func TestProfileMapsBusinessErrors(t *testing.T) {
+	for code, status := range map[string]int{"invalid_credentials": 401, "invalid_csrf": 403, "invalid_program": 422, "revision_conflict": 409, "profile_unavailable": 503} {
+		fake := &fakeProfile{err: &application.AuthError{Code: code}}
+		handler := presentation.NewProfileHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler())
+		req := httptest.NewRequest("GET", "/api/me", nil)
+		req.AddCookie(&http.Cookie{Name: "grad_checker_session", Value: strings.Repeat("s", 43)})
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+		if recorder.Code != status || !strings.Contains(recorder.Body.String(), `"detail"`) {
+			t.Fatal(code, recorder.Code, recorder.Body.String())
+		}
+		if fake.calls[0].Token != strings.Repeat("s", 43) {
+			t.Fatal("session was not forwarded")
+		}
+	}
+}
+
+func TestProfileClientValidatesInternalResponse(t *testing.T) {
+	for _, body := range []string{
+		`{"data":{"profile":{"student_id":"own","login_name":"owner","program_id":null,"curriculum_id":null,"data_revision":0}}}`,
+		`{"data":{"profile":{}}}`, `{"data":{}}`, `{"data":null}`, `{"data":{"programs":[]}}`,
+		`{"data":{"profile":{"student_id":"own","login_name":"owner","data_revision":-1}}}`,
+		`{"data":{},"error":{"code":"revision_conflict"}}`,
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/internal/profile" {
+				t.Error(r.URL.Path)
+			}
+			var call application.ProfileCall
+			if json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != "me" {
+				t.Error("invalid call")
+			}
+			_, _ = w.Write([]byte(body))
+		}))
+		client, err := infrastructure.NewPythonProfileClient(server.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = client.Call(context.Background(), application.ProfileCall{Operation: "me", Token: strings.Repeat("s", 43)})
+		if (err == nil) != strings.Contains(body, `"data_revision":0`) {
+			t.Fatalf("%s: %v", body, err)
+		}
+		server.Close()
+	}
+}

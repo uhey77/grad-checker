@@ -327,6 +327,33 @@ td .shared-years {
   background: #fff8f5;
   color: #8a4d37;
 }
+.profile-panel {
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #dbe5e7;
+  border-radius: 8px;
+}
+.profile-form {
+  display: grid;
+  gap: 14px;
+  margin-block: 24px;
+}
+.profile-form select {
+  width: 100%;
+  min-width: 0;
+}
+.profile-form button {
+  justify-self: start;
+}
+.profile-source {
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.subject-preview > summary {
+  cursor: pointer;
+  padding: 16px 32px;
+}
 .sr-only {
   position: absolute;
   width: 1px;

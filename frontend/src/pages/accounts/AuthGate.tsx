@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { AuthUseCases } from "../../modules/accounts/public.ts";
+import type {
+  AuthSession,
+  AuthUseCases,
+} from "../../modules/accounts/public.ts";
 import { useAuth } from "../../hooks/accounts/useAuth";
 import { RecoveryCode } from "../../components/accounts/RecoveryCode";
 import { AuthForm } from "../../components/accounts/AuthForm";
@@ -9,7 +12,7 @@ export function AuthGate({
   children,
 }: {
   useCases: AuthUseCases;
-  children: ReactNode;
+  children: (session: AuthSession, expire: () => void) => ReactNode;
 }) {
   const auth = useAuth(useCases);
   const [mode, setMode] = useState<"login" | "register" | "recover">("login");
@@ -55,7 +58,7 @@ export function AuthGate({
             {auth.error}
           </p>
         ) : null}
-        {children}
+        {children(auth.session, auth.expire)}
       </>
     );
   const showRecovery = (code: string) => {

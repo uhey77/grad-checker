@@ -156,6 +156,7 @@ export function useAuth(useCases: AuthUseCases) {
   }
   return {
     ...state,
+    expire,
     busy,
     clearError: () => setState((previous) => ({ ...previous, error: "" })),
     retry: () => {

@@ -136,3 +136,11 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 - ブラウザー：登録・保管確認・ログイン・再読込み・ログアウト・失敗表示・復旧・旧コード拒否・API障害と再試行を確認する。
 
 本節は検証項目の定義であり、実行結果は変更時の検証報告で区別する。
+
+## 本人所属保存の検証
+
+- `backend/tests/test_profile.py`：一時SQLiteで未設定、未確認状態、保存・再ログイン、別アカウント分離、更新失敗時不変、同一revisionの並行更新を検証する。
+- `backend/tests/test_profile_http.py`：実Go→Python→一時DBで認証必須、Origin/CSRF、不正入力、競合、保存・ログアウト・再ログイン後の復元を検証する。
+- `backend/tests/profile_test.go`：公開ハンドラーの入力検証・業務エラー変換、内部通信契約の不正応答拒否を検証する。
+- `frontend/tests/profiles.test.mjs`：DTO変換、未確認状態、Cookie/CSRF/revision、401/409/通信失敗/キャンセルを検証する。
+- 画面では所属選択・保存・再読込・再ログインに加え、保存失敗時の選択保持、競合後の再取得、取得失敗・選択肢0件を確認する。
