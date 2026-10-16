@@ -31,7 +31,7 @@ export function SubjectListPage({
   } = useSubjectList(useCases);
   return (
     <>
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <div className="page-heading">
           <div>
             <p className="eyebrow">コンピュータサイエンス学部</p>

@@ -23,6 +23,7 @@ export function useAuth(useCases: AuthUseCases) {
   const action = useRef<AbortController | null>(null);
   const channel = useRef<BroadcastChannel | null>(null);
   useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
     const broadcast = new BroadcastChannel("grad-checker-auth");
     channel.current = broadcast;
     broadcast.onmessage = (event) => {
@@ -66,16 +67,17 @@ export function useAuth(useCases: AuthUseCases) {
       action.current?.abort();
     };
   }, [useCases, attempt]);
-  const expire = useCallback(
-    () =>
-      setState((previous) => ({
-        ...previous,
-        status: "ready",
-        session: null,
-        error: "ログインの有効期限が切れました。再度ログインしてください。",
-      })),
-    [],
-  );
+  const expire = useCallback(() => {
+    action.current?.abort();
+    action.current = null;
+    setBusy(false);
+    setState((previous) => ({
+      ...previous,
+      status: "ready",
+      session: null,
+      error: "ログインの有効期限が切れました。再度ログインしてください。",
+    }));
+  }, []);
   useEffect(() => {
     const session = state.session;
     if (!session) return;
@@ -83,15 +85,47 @@ export function useAuth(useCases: AuthUseCases) {
       expire,
       Math.max(0, Date.parse(session.expiresAt) - Date.now()),
     );
+    let checking: AbortController | null = null;
     const check = () => {
-      if (Date.parse(session.expiresAt) <= Date.now()) expire();
+      if (document.visibilityState === "hidden") return;
+      if (Date.parse(session.expiresAt) <= Date.now()) {
+        expire();
+        return;
+      }
+      if (checking || action.current) return;
+      const controller = new AbortController();
+      checking = controller;
+      void useCases
+        .session(controller.signal)
+        .then(
+          (current) => {
+            if (controller.signal.aborted || action.current) return;
+            if (!current) expire();
+            else
+              setState((previous) =>
+                previous.session === session
+                  ? { ...previous, session: current }
+                  : previous,
+              );
+          },
+          () => {
+            // 一時的な通信障害で有効なセッションを破棄しない。
+          },
+        )
+        .finally(() => {
+          if (checking === controller) checking = null;
+        });
     };
     window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
     return () => {
+      checking?.abort();
       window.clearTimeout(timer);
       window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
     };
-  }, [state.session, expire]);
+  }, [state.session, expire, useCases]);
+
   async function run<T>(
     operation: (signal: AbortSignal) => Promise<T>,
     done: (result: T) => void,
@@ -123,6 +157,7 @@ export function useAuth(useCases: AuthUseCases) {
   return {
     ...state,
     busy,
+    clearError: () => setState((previous) => ({ ...previous, error: "" })),
     retry: () => {
       setState({ status: "loading", session: null, error: "" });
       setAttempt((value) => value + 1);

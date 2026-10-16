@@ -109,3 +109,35 @@ test("キャンセルは認証エラーへ変換しない", async (context) => {
     (error) => error === reason,
   );
 });
+
+test("JSONでない応答でもHTTPエラーを保ち、成功時の不正応答と区別する", async (context) => {
+  const repository = new HttpAuthRepository("/api/auth");
+  const fetch = context.mock.method(
+    globalThis,
+    "fetch",
+    async () => new Response("Service unavailable", { status: 503 }),
+  );
+  await assert.rejects(repository.session(), (error) => error.status === 503);
+  fetch.mock.mockImplementation(async () => new Response("not json"));
+  await assert.rejects(repository.session(), (error) => error.status === 502);
+  fetch.mock.mockImplementation(
+    async () => new Response("Unauthorized", { status: 401 }),
+  );
+  assert.equal(await repository.session(), null);
+});
+
+test("不正なパスワード長の設定を受け入れない", async (context) => {
+  const repository = new HttpAuthRepository("/api/auth");
+  const fetch = context.mock.method(globalThis, "fetch", async () =>
+    Response.json({
+      policy: { password_min_length: 0, password_max_length: 128 },
+    }),
+  );
+  await assert.rejects(repository.config(), (error) => error.status === 502);
+  fetch.mock.mockImplementation(async () =>
+    Response.json({
+      policy: { password_min_length: 32, password_max_length: 12 },
+    }),
+  );
+  await assert.rejects(repository.config(), (error) => error.status === 502);
+});
