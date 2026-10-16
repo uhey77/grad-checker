@@ -10,6 +10,8 @@ export function useProfile(
   useCases: ProfileUseCases,
   csrf: string,
   expire: () => void,
+  latestRevision = 0,
+  reportRevision: (revision: number) => void = () => {},
 ) {
   const [state, setState] = useState<{
     profile: Profile;
@@ -32,6 +34,7 @@ export function useProfile(
       ([profile, programs]) => {
         if (!controller.signal.aborted) {
           setState({ profile, programs });
+          reportRevision(profile.dataRevision);
           setChosenId(profile.curriculumId ?? "");
           setError("");
           setConflict(false);
@@ -53,7 +56,7 @@ export function useProfile(
       action.current?.abort();
       action.current = null;
     };
-  }, [useCases, attempt, expire]);
+  }, [useCases, attempt, expire, reportRevision]);
   const selected = state?.programs.find((p) => p.curriculumId === chosenId);
   const dirty = !!state && chosenId !== (state.profile.curriculumId ?? "");
   useEffect(() => {
@@ -65,6 +68,14 @@ export function useProfile(
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  // 別画面で成績などが保存された場合、未保存の選択がなければ最新を取得し直す。
+  const stale = !!state && latestRevision > state.profile.dataRevision;
+  useEffect(() => {
+    if (!stale || dirty || action.current) return;
+    setState(null);
+    setNotice("");
+    setAttempt((x) => x + 1);
+  }, [stale, dirty]);
   async function save() {
     if (!state || !selected || action.current || conflict || !dirty) return;
     const controller = new AbortController();
@@ -84,6 +95,7 @@ export function useProfile(
       );
       if (!controller.signal.aborted) {
         setState({ ...state, profile });
+        reportRevision(profile.dataRevision);
         setNotice("所属を保存しました。");
       }
     } catch (error) {

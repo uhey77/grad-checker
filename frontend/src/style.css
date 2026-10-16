@@ -520,3 +520,134 @@ input[aria-invalid="true"] {
     flex-wrap: wrap;
   }
 }
+
+/* 所属設定・成績入力の切替と、成績入力画面。修得状況は色と文字を併記する。 */
+.screen-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid #dde5e7;
+}
+.screen-nav button {
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #4d6168;
+}
+.screen-nav button[aria-current="page"] {
+  border-bottom-color: #2c6560;
+  color: #204e4a;
+  font-weight: 700;
+}
+.page-lead {
+  margin: 10px 0 0;
+  color: #53676f;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.grade-context p {
+  margin: 4px 0 0;
+}
+.list-heading > .grade-context {
+  display: block;
+  flex-shrink: 1;
+  font-size: 12px;
+}
+.grade-filters {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.grade-filters .search-field {
+  grid-column: 1 / -1;
+}
+.grade-table {
+  min-width: 1240px;
+}
+.grade-table tbody th {
+  width: 18%;
+}
+.grade-table tbody th small {
+  display: block;
+  margin-top: 4px;
+  color: #6b7e85;
+  font-size: 11px;
+  font-weight: 400;
+}
+.grade-table td .badge {
+  margin-left: 6px;
+}
+.grade-cell {
+  min-width: 380px;
+}
+.attempt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.attempt select,
+.attempt input {
+  width: auto;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.attempt input {
+  width: 84px;
+}
+.attempt-number {
+  min-width: 3.5em;
+  color: #53676f;
+}
+.earned-row {
+  background: #f1f8f4;
+}
+tbody tr.earned-row:hover {
+  background: #e8f3ed;
+}
+.status-earned {
+  color: #1f5d43;
+  background: #d9efe3;
+}
+.status-failed,
+.status-absent {
+  color: #8a3b26;
+  background: #fbe7e0;
+}
+.status-pending {
+  color: #6f5718;
+  background: #f8edcf;
+}
+.status-not-taken {
+  color: #59656c;
+  background: #eef1f4;
+}
+.save-bar {
+  border-top: 1px solid #e6ebed;
+  padding: 18px 24px 24px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.save-bar [role="group"] button,
+.save-actions button {
+  margin-right: 8px;
+}
+.save-actions {
+  margin-top: 8px;
+}
+@media (max-width: 1050px) {
+  .grade-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .grade-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .save-bar {
+    padding: 16px 18px 20px;
+  }
+}

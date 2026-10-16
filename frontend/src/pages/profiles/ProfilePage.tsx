@@ -9,17 +9,27 @@ export function ProfilePage({
   useCases,
   csrf,
   expire,
+  latestRevision,
+  reportRevision,
 }: {
   useCases: ProfileUseCases;
   csrf: string;
   expire: () => void;
+  latestRevision?: number;
+  reportRevision?: (revision: number) => void;
 }) {
-  const profile = useProfile(useCases, csrf, expire);
+  const profile = useProfile(
+    useCases,
+    csrf,
+    expire,
+    latestRevision,
+    reportRevision,
+  );
   const saved = profile.state?.programs.find(
     (p) => p.curriculumId === profile.state?.profile.curriculumId,
   );
   return (
-    <main id="main-content" tabIndex={-1}>
+    <div className="profile-page">
       <div className="page-heading">
         <h1>所属設定</h1>
       </div>
@@ -66,6 +76,6 @@ export function ProfilePage({
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }

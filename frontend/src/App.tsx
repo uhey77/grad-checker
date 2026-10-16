@@ -1,25 +1,90 @@
+import { useCallback, useState } from "react";
 import type { Application } from "./app/composition/createApplication";
 import { SubjectListPage } from "./pages/subjects/SubjectListPage";
 import { AppLayout } from "./layouts/AppLayout";
 import { AuthGate } from "./pages/accounts/AuthGate";
 import { ProfilePage } from "./pages/profiles/ProfilePage";
+import { GradeEntryPage } from "./pages/grades/GradeEntryPage";
+
+const screens = [
+  { id: "profile", label: "所属設定" },
+  { id: "grades", label: "成績入力" },
+] as const;
+type Screen = (typeof screens)[number]["id"];
+
+// 画面を切り替えても未保存の入力を失わないよう、各画面は表示を切り替えるだけにする。
+function StudentScreens({
+  application,
+  csrf,
+  expire,
+}: {
+  application: Application;
+  csrf: string;
+  expire: () => void;
+}) {
+  const [screen, setScreen] = useState<Screen>("profile");
+  // 所属と成績は同じ更新版を共有する。片方の保存をもう片方の再取得に使う。
+  const [latestRevision, setLatestRevision] = useState(0);
+  const reportRevision = useCallback(
+    (revision: number) =>
+      setLatestRevision((current) => Math.max(current, revision)),
+    [],
+  );
+  return (
+    <>
+      <main id="main-content" tabIndex={-1}>
+        <nav className="screen-nav" aria-label="画面の切り替え">
+          {screens.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-current={screen === item.id ? "page" : undefined}
+              onClick={() => setScreen(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div hidden={screen !== "profile"}>
+          <ProfilePage
+            useCases={application.profiles}
+            csrf={csrf}
+            expire={expire}
+            latestRevision={latestRevision}
+            reportRevision={reportRevision}
+          />
+        </div>
+        <div hidden={screen !== "grades"}>
+          <GradeEntryPage
+            catalogUseCases={application.courseCatalog}
+            gradeUseCases={application.grades}
+            csrf={csrf}
+            expire={expire}
+            latestRevision={latestRevision}
+            reportRevision={reportRevision}
+            showProfile={() => setScreen("profile")}
+          />
+        </div>
+      </main>
+      <details className="subject-preview">
+        <summary>科目一覧（開発用）</summary>
+        <SubjectListPage useCases={application.subjects} />
+      </details>
+    </>
+  );
+}
 
 export function App({ application }: { application: Application }) {
   return (
     <AppLayout>
       <AuthGate useCases={application.accounts}>
         {(session, expire) => (
-          <div key={session.student.id}>
-            <ProfilePage
-              useCases={application.profiles}
-              csrf={session.csrfToken}
-              expire={expire}
-            />
-            <details className="subject-preview">
-              <summary>科目一覧（開発用）</summary>
-              <SubjectListPage useCases={application.subjects} />
-            </details>
-          </div>
+          <StudentScreens
+            key={session.student.id}
+            application={application}
+            csrf={session.csrfToken}
+            expire={expire}
+          />
         )}
       </AuthGate>
     </AppLayout>

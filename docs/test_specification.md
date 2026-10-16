@@ -152,4 +152,5 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 - `backend/tests/test_grades_http.py`：実Go→Python→一時DBで認証必須、所属未設定409、絞り込み、所属保存後の旧revision409、Origin/CSRF、未知科目400・回次と成績記号の422、保存・再取得・全取消、ログアウト後401、別アカウント分離を検証する（I04〜I06・I09・I14・I15）。
 - `backend/tests/grades_test.go`・`courses_test.go`：外部入力の検証（重複・未知キー、型、範囲、記号と状態、Content-Type 415、本文上限413、クエリ）でPythonを呼ばないこと、UUID正規化、業務エラーの変換、内部応答の不正検出を検証する。
 - `backend/tests/test_module_boundaries.py`：科目モジュールがaccounts・gradesを参照しないこと、成績モジュールのdomain・applicationがinfrastructure・SQLModelを参照しないことを検証する。
-- S02画面の表示・操作（V02〜V04）は画面の実装時に検証する。
+- `frontend/tests/grades.test.mjs`・`course-catalog.test.mjs`：成績・科目一覧のDTO変換と不正応答の拒否、全集合PUT・Cookie・CSRF・更新版、401/409/通信失敗/キャンセル、再履修の可否と回次の編集、修得状況・履修年度・学期・区分（子孫）・開講元・検索語の絞り込みを検証する。
+- S02画面の表示・操作（V02〜V04）は一時DBとブラウザーで確認した。範囲は[フロントエンドの構成](frontend_architecture.md)の検証範囲を参照する。
