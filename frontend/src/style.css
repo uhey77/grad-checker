@@ -345,11 +345,6 @@ td .shared-years {
 .profile-form button {
   justify-self: start;
 }
-.profile-source {
-  font-size: 14px;
-  line-height: 1.7;
-  overflow-wrap: anywhere;
-}
 .subject-preview > summary {
   cursor: pointer;
   padding: 16px 32px;
@@ -541,12 +536,6 @@ input[aria-invalid="true"] {
   border-bottom-color: #2c6560;
   color: #204e4a;
   font-weight: 700;
-}
-.page-lead {
-  margin: 10px 0 0;
-  color: #53676f;
-  font-size: 13px;
-  line-height: 1.7;
 }
 .grade-context p {
   margin: 4px 0 0;

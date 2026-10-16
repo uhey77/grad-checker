@@ -40,9 +40,6 @@ export function GradeEntryPage({
     <div className="grade-page">
       <div className="page-heading">
         <h1>成績入力</h1>
-        <p className="page-lead">
-          自己申告の成績を保存します。大学の公式成績・履修手続とは連携しません。卒業要件の判定は未対応です。
-        </p>
       </div>
       {!data ? (
         entry.loadError ? (

@@ -33,7 +33,7 @@ export function ProgramForm({
         void save();
       }}
     >
-      <label htmlFor="profile-program">所属課程・カリキュラム</label>
+      <label htmlFor="profile-program">学部・学科・専攻</label>
       <select
         id="profile-program"
         value={chosenId}
@@ -45,39 +45,22 @@ export function ProgramForm({
         </option>
         {chosenId && !selected ? (
           <option value={chosenId} disabled>
-            保存済みのカリキュラム（選択肢にありません）
+            保存済みの所属（選択肢にありません）
           </option>
         ) : null}
         {programs.map((p) => (
           <option key={p.curriculumId} value={p.curriculumId}>
-            {programName(p)} — {p.curriculumName}（第{p.revision}版・
-            {p.verificationStatus === "verified" ? "確認済み" : "適用未確認"}）
+            {programName(p)}
           </option>
         ))}
       </select>
-      {selected ? (
-        <div className="profile-source">
-          <p>{programName(selected)}</p>
-          <p>
-            {selected.curriculumName}・第{selected.revision}版
-          </p>
-          <p>
-            {selected.verificationStatus === "unverified"
-              ? "適用入学年度は未確認です。卒業要件の判定対応は未完了です。"
-              : `適用入学年度：${selected.admissionYearFrom}年度〜${selected.admissionYearTo === null ? "" : `${selected.admissionYearTo}年度`}`}
-          </p>
-          <p>
-            出典：{selected.sourceDocument}（{selected.sourcePages}）
-          </p>
-        </div>
-      ) : null}
       <p role="status">
         {busy
           ? "保存中…"
           : dirty
             ? "未保存の変更があります。"
             : chosenId
-              ? "保存済みの所属を表示しています。"
+              ? ""
               : "所属は未設定です。"}
       </p>
       <button type="submit" disabled={!selected || !dirty || busy || conflict}>
