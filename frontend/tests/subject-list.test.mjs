@@ -139,7 +139,41 @@ test("ユースケースは注入した取得先に課程IDとキャンセル信
 const { sortSubjects } = await loadModule(
   "modules/subjects/application/subject-list/sortSubjects.js",
 );
-const { offeringLabels } = await loadModule("components/subjects/labels.js");
+const { offeringLabels, programLabel, sharedAcrossYears, joinLabels } =
+  await loadModule("components/subjects/labels.js");
+
+test("課程・分類・開講元は全画面で同じ表記にする", () => {
+  // 所属設定の選択肢（学科あり）と科目一覧の課程（学科なし）を同じ関数で表す。
+  assert.equal(
+    programLabel({
+      facultyName: "CS学部",
+      departmentName: null,
+      specializationName: "先進情報専攻",
+      courseName: "人工知能コース",
+    }),
+    "CS学部 ／ 先進情報専攻 ／ 人工知能コース",
+  );
+  assert.equal(
+    programLabel({
+      facultyName: "CS学部",
+      specializationName: "社会情報専攻",
+      courseName: null,
+    }),
+    "CS学部 ／ 社会情報専攻",
+  );
+  assert.equal(
+    joinLabels([null, "社会情報専攻", "講義・演習"]),
+    "社会情報専攻 / 講義・演習",
+  );
+  const offering = (sourceNote) => ({
+    semesterOrder: 3,
+    termCode: "first",
+    academicYear: null,
+    sourceNote,
+  });
+  assert.ok(sharedAcrossYears([offering(null), offering("学年共通開講")]));
+  assert.ok(!sharedAcrossYears([offering(null)]));
+});
 
 test("並べ替えは単位・最初の開講期を比較し、同順位の便覧順と元データを保つ", () => {
   const base = toSubjectList(dto).subjects[0];

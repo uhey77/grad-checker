@@ -1,11 +1,16 @@
 import { type SubjectListUseCases } from "../../modules/subjects/public.ts";
 import { ProgramSelector } from "../../components/subjects/ProgramSelector";
 import { SubjectSummary } from "../../components/subjects/SubjectSummary";
-
 import { programLabel } from "../../components/subjects/labels";
 import { SubjectTable } from "../../components/subjects/SubjectTable";
 import { SubjectFilters } from "../../components/subjects/SubjectFilters";
 import { useSubjectList } from "../../hooks/subjects/useSubjectList";
+import { PageHeading } from "../../components/PageHeading";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../components/StatusPanels";
 
 export function SubjectListPage({
   useCases,
@@ -34,12 +39,7 @@ export function SubjectListPage({
   return (
     <>
       <main>
-        <div className="page-heading">
-          <div>
-            <p className="eyebrow">コンピュータサイエンス学部</p>
-            <h1>科目一覧</h1>
-          </div>
-        </div>
+        <PageHeading title="科目一覧" />
         <ProgramSelector
           programs={programs}
           curriculumId={curriculumId}
@@ -47,38 +47,33 @@ export function SubjectListPage({
           onChange={chooseProgram}
         />
         {error ? (
-          <section className="error" role="alert">
-            <strong>一覧を読み込めませんでした</strong>
-            <p>{error}</p>
-            <button type="button" onClick={retry}>
-              再試行
-            </button>
-          </section>
+          <ErrorState
+            title="一覧を読み込めませんでした"
+            message={error}
+            actionLabel="再試行"
+            onAction={retry}
+          />
         ) : noPrograms ? (
-          <div className="empty" role="status">
-            <strong>科目データが登録されていません</strong>
-            <p>時間をおいて再読み込みしてください。</p>
-            <button type="button" onClick={retry}>
-              再読み込み
-            </button>
-          </div>
+          <EmptyState
+            title="科目データが登録されていません"
+            message="時間をおいて再読み込みしてください。"
+            actionLabel="再読み込み"
+            onAction={retry}
+          />
         ) : !subjectList ? (
-          <div className="loading" role="status">
-            科目一覧を読み込んでいます…
-          </div>
+          <LoadingState>科目一覧を読み込んでいます…</LoadingState>
         ) : subjectList.subjects.length === 0 ? (
-          <div className="empty" role="status">
-            <strong>この課程の科目データが登録されていません</strong>
-            <p>別の課程を選ぶか、時間をおいて再読み込みしてください。</p>
-            <button type="button" onClick={retry}>
-              再読み込み
-            </button>
-          </div>
+          <EmptyState
+            title="この課程の科目データが登録されていません"
+            message="別の課程を選ぶか、時間をおいて再読み込みしてください。"
+            actionLabel="再読み込み"
+            onAction={retry}
+          />
         ) : (
           <>
             <SubjectSummary subjects={subjectList.subjects} />
             <section
-              className="subject-list-panel"
+              className="panel subject-list-panel"
               aria-labelledby="list-heading"
             >
               <SubjectFilters

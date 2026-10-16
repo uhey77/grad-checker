@@ -68,7 +68,7 @@ Pageは画面構成、各コンポーネントはpropsで受け取るデータ�
 
 画面用Hookはユースケースを呼び、ユースケースはSubjectListRepositoryの取得契約を利用する。
 単純な委譲でもユースケース境界を維持する。
-通信はGoの外部API `/api/dev/subject-list` を利用し、Python内部通信やDBを参照しない。
+通信はGoの外部API `/api/dev/subject-list` を利用し、Pythonのブリッジ通信やDBを参照しない。
 卒業判定の規則はバックエンドに置き、フロントエンドで複製しない。
 
 HTTP失敗はinfrastructureでSubjectListErrorに変換する。404・409・5xx・その他HTTP失敗をコードで区別し、日本語detailを保持する。
@@ -106,7 +106,7 @@ Python応答のタイムアウトによる日本語エラーと、サービス�
 
 ## アカウント認証の追加（2026-10-11）
 
-認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、内部アダプターは `internal_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
+認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
 
 再現手順と認証設定は[認証の開発手順](auth_development.md)を参照する。
 
@@ -199,3 +199,25 @@ Chromiumで、一時SQLiteにCS学部4課程を投入し、Vite → Go → Pytho
 | 表示 | 375px幅でページの横はみ出しがなく、表領域だけが横スクロールすること |
 
 Firefox・Safari、キーボードだけでの全操作は今回の検証に含まない。
+
+## 表示・状態・通信の共通化（2026-10-16）
+
+画面ごとに同じ情報の表記や状態表示が異なっていたため、共通の部品・Hook・通信基盤へ集約した。
+
+| 場所 | 責務 |
+| --- | --- |
+| `components/StatusPanels.tsx` | 読み込み中・取得失敗と再試行・0件・入力エラーの表示 |
+| `components/SaveBar.tsx`・`ConfirmPanel.tsx` | 保存の失敗・状態・操作の並びと、破棄・全件取消の確認 |
+| `components/ScrollTable.tsx`・`FilterFields.tsx`・`PageHeading.tsx` | 横スクロールする表、検索欄と絞り込みの選択欄、画面見出し |
+| `components/subjects/labels.ts` | 課程名（学部 ／ 学科 ／ 専攻 ／ コース）、学期名、分類・開講元の区切り、学年共通開講の判定 |
+| `components/subjects/SubjectCells.tsx`・`NoMatchingSubjects.tsx` | 科目一覧と成績入力で共通の科目名・区分・種別・単位・開講学期・開講元のセルと検索結果0件 |
+| `hooks/useExclusiveAction.ts` | 保存・認証操作を一度に一つだけ実行し、中断した結果を反映しない |
+| `hooks/useUnsavedChangesWarning.ts`・`errorMessage.ts` | 未保存時の離脱確認、業務エラーの日本語メッセージの取り出し |
+| `shared/infrastructure/http.ts` | Cookie・キャッシュ無効・CSRFの送信、JSON解析、detail抽出、通信失敗とキャンセルの区別 |
+| `shared/infrastructure/dtoReader.ts` | DTOの実行時検証。不正値は各モジュールの業務エラーへ変換する |
+
+成績入力の見出しは、所属設定で保存済みの所属と同じ課程の場合に所属設定と同じ課程名で表示する。便覧名・適用入学年度の確認状態は表示しない。所属を取得できない場合は科目APIの課程名で表示する。
+開発用科目一覧の課程名も同じ表記とし、固定の学部名の見出しは表示しない。絞り込みの未選択は全画面で「すべて」とする。
+
+`shared/` は業務モジュールのinfrastructureだけが利用でき、モジュール・UI・Reactを参照しない。境界テストで検査する。
+読込み処理（複数APIの並列取得と画面状態の初期化）は各画面Hookに残している。

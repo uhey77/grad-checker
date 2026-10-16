@@ -6,6 +6,10 @@ from uuid import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
+from modules.shared.grad_checker_shared.infrastructure.transactions import (
+    database_errors,
+    read_snapshot,
+)
 from modules.subjects.grad_checker_subjects.application.errors.subject_list import (
     SubjectListIntegrityError,
     SubjectListNotFoundError,
@@ -19,6 +23,9 @@ from modules.subjects.grad_checker_subjects.application.subject_list import (
     SubjectListProgram,
     SubjectListRepository,
 )
+from modules.subjects.grad_checker_subjects.infrastructure.classification_path import (
+    classification_path,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     AcademicProgram,
     Classification,
@@ -27,6 +34,10 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_models import
     Subject,
     SubjectOffering,
 )
+
+
+def unavailable(_error: SQLAlchemyError) -> SubjectListUnavailableError:
+    return SubjectListUnavailableError()
 
 
 def program_data(
@@ -51,30 +62,22 @@ class SqliteSubjectListRepository(SubjectListRepository):
         self.session = session
 
     def list_programs(self) -> list[SubjectListProgram]:
-        try:
-            return self._list_programs()
-        except SQLAlchemyError as error:
-            raise SubjectListUnavailableError from error
-
-    def _list_programs(self) -> list[SubjectListProgram]:
-        rows = self.session.exec(
-            select(Curriculum, AcademicProgram)
-            .join(
-                AcademicProgram, col(Curriculum.program_id) == col(AcademicProgram.id)
-            )
-            .order_by(AcademicProgram.code, Curriculum.code)
-        ).all()
-        return [program_data(curriculum, program) for curriculum, program in rows]
+        with database_errors(unavailable):
+            rows = self.session.exec(
+                select(Curriculum, AcademicProgram)
+                .join(
+                    AcademicProgram,
+                    col(Curriculum.program_id) == col(AcademicProgram.id),
+                )
+                .order_by(AcademicProgram.code, Curriculum.code)
+            ).all()
+            return [program_data(curriculum, program) for curriculum, program in rows]
 
     def get_subject_list(self, curriculum_id: UUID) -> SubjectList:
-        try:
+        with read_snapshot(self.session, unavailable):
             return self._get_subject_list(curriculum_id)
-        except SQLAlchemyError as error:
-            raise SubjectListUnavailableError from error
 
     def _get_subject_list(self, curriculum_id: UUID) -> SubjectList:
-        # SQLiteの従来トランザクションモードでも複数SELECTの一貫性を保証する。
-        self.session.connection().exec_driver_sql("BEGIN")
         row = self.session.exec(
             select(Curriculum, AcademicProgram)
             .join(
@@ -121,20 +124,9 @@ class SqliteSubjectListRepository(SubjectListRepository):
                 )
         courses = []
         for association, course, offering_program in rows:
-            path = []
-            visited = set()
-            current = association.classification_id
-            while current is not None:
-                if current in visited or current not in classifications:
-                    raise SubjectListIntegrityError
-                visited.add(current)
-                classification = classifications[current]
-                path.append(
-                    SubjectListClassification(
-                        id=classification.id, name=classification.name
-                    )
-                )
-                current = classification.parent_id
+            path = classification_path(classifications, association.classification_id)
+            if path is None:
+                raise SubjectListIntegrityError
             courses.append(
                 SubjectListItem(
                     id=course.id,
@@ -146,7 +138,10 @@ class SqliteSubjectListRepository(SubjectListRepository):
                     specialization_name=offering_program.specialization_name,
                     teaching_type_label=course.teaching_type_label,
                     course_type=association.course_type,
-                    classification_path=list(reversed(path)),
+                    classification_path=[
+                        SubjectListClassification(id=item.id, name=item.name)
+                        for item in path
+                    ],
                     offerings=offerings[course.id],
                 )
             )

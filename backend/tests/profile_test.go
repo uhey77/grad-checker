@@ -88,7 +88,7 @@ func TestProfileMapsBusinessErrors(t *testing.T) {
 	}
 }
 
-func TestProfileClientValidatesInternalResponse(t *testing.T) {
+func TestProfileClientValidatesBridgeResponse(t *testing.T) {
 	for _, body := range []string{
 		`{"data":{"profile":{"student_id":"own","login_name":"owner","program_id":null,"curriculum_id":null,"data_revision":0}}}`,
 		`{"data":{"profile":{}}}`, `{"data":{}}`, `{"data":null}`, `{"data":{"programs":[]}}`,
@@ -96,7 +96,7 @@ func TestProfileClientValidatesInternalResponse(t *testing.T) {
 		`{"data":{},"error":{"code":"revision_conflict"}}`,
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != "/internal/profile" {
+			if r.URL.Path != "/bridge/profile" {
 				t.Error(r.URL.Path)
 			}
 			var call application.ProfileCall
@@ -114,5 +114,37 @@ func TestProfileClientValidatesInternalResponse(t *testing.T) {
 			t.Fatalf("%s: %v", body, err)
 		}
 		server.Close()
+	}
+}
+
+// 本人データを更新するAPIは、Content-Typeの不正を成績保存と同じく415で返す。
+func TestProfileRejectsNonJSONContentType(t *testing.T) {
+	fake := &fakeProfile{}
+	handler := presentation.NewProfileHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler())
+	body := `{"program_id":"00000000-0000-4000-8000-000000000001","curriculum_id":"00000000-0000-4000-8000-000000000002","expected_revision":0}`
+	req := httptest.NewRequest("PUT", "/api/me/program", strings.NewReader(body))
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	req.Header.Set("X-CSRF-Token", strings.Repeat("c", 64))
+	req.Header.Set("Content-Type", "text/plain")
+	req.AddCookie(&http.Cookie{Name: "grad_checker_session", Value: strings.Repeat("s", 43)})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+	if recorder.Code != 415 || len(fake.calls) != 0 {
+		t.Fatalf("%d %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+// 成績・所属・科目で同じ業務エラーコードは同じHTTPステータスに変換する。
+func TestSharedBusinessErrorsMapConsistently(t *testing.T) {
+	for code, status := range map[string]int{"profile_not_found": 401, "revision_conflict": 409, "profile_unavailable": 503} {
+		fake := &fakeProfile{err: &application.AuthError{Code: code}}
+		handler := presentation.NewProfileHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler())
+		req := httptest.NewRequest("GET", "/api/me", nil)
+		req.AddCookie(&http.Cookie{Name: "grad_checker_session", Value: strings.Repeat("s", 43)})
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+		if recorder.Code != status {
+			t.Fatal(code, recorder.Code, recorder.Body.String())
+		}
 	}
 }

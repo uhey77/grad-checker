@@ -8,11 +8,11 @@
 help:
 	@echo "auth-dev          ユーザー名認証の画面・バックエンドを起動"
 	@echo "go-api-format     Goコードを整形"
-	@echo "backend-python-dev Python内部サービスだけを起動"
+	@echo "backend-python-dev Pythonサービスだけを起動"
 	@echo "dev-go            devと同じ構成で起動（互換コマンド）"
 	@echo "go-api-dev        科目一覧のGo APIを起動"
 	@echo "go-api-check      Goの整形状態・静的解析を検証"
-	@echo "go-api-test       Goの入力検証・エラー変換・内部通信をテスト"
+	@echo "go-api-test       Goの入力検証・エラー変換・ブリッジ通信をテスト"
 	@echo "check             バックエンドとフロントエンドのlint・整形状態・型を検証"
 	@echo "test              バックエンドとフロントエンドの全テストを実行"
 	@echo "frontend-test     フロントエンドのテストを実行"

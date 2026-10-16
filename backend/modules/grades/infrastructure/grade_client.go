@@ -1,71 +1,41 @@
-// Python内部サービスとのHTTP通信で、本人成績の取得契約を実装する。
+// PythonサービスとのHTTP通信で、本人成績の取得契約を実装する。
 package infrastructure
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"io"
-	"net/http"
-	"net/url"
 	"time"
 
 	"grad-checker/backend/modules/grades/application"
+	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
 type PythonGradeClient struct {
-	endpoint string
-	client   *http.Client
+	client *pythonbridge.Client
 }
 
 func NewPythonGradeClient(origin string) (*PythonGradeClient, error) {
-	u, err := url.Parse(origin)
-	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
-		return nil, errors.New("python-urlにはhttp/httpsオリジンを指定してください。")
+	client, err := pythonbridge.New(origin, "/bridge/grades", 10*time.Second, 1024*1024)
+	if err != nil {
+		return nil, err
 	}
-	return &PythonGradeClient{origin + "/internal/grades", &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
+	return &PythonGradeClient{client}, nil
 }
 
 func (c *PythonGradeClient) Call(ctx context.Context, call application.GradeCall) (application.StudentGrades, error) {
 	var empty application.StudentGrades
-	body, err := json.Marshal(call)
+	raw, err := c.client.Call(ctx, call)
 	if err != nil {
-		return empty, application.ErrBackend
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
-	if err != nil {
-		return empty, application.ErrBackend
-	}
-	req.Header.Set("Content-Type", "application/json")
-	response, err := c.client.Do(req)
-	if err != nil {
-		return empty, application.ErrBackend
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		return empty, application.ErrBackend
-	}
-	var result struct {
-		Data  *application.StudentGrades `json:"data"`
-		Error *application.GradeError    `json:"error"`
-	}
-	decoder := json.NewDecoder(io.LimitReader(response.Body, 1024*1024))
-	decoder.DisallowUnknownFields()
-	if decoder.Decode(&result) != nil {
-		return empty, application.ErrBackend
-	}
-	var extra any
-	if decoder.Decode(&extra) != io.EOF || (result.Data == nil) == (result.Error == nil) {
-		return empty, application.ErrBackend
-	}
-	if result.Error != nil {
-		if result.Error.Code == "" {
-			return empty, application.ErrBackend
+		var failure *pythonbridge.BusinessError
+		if errors.As(err, &failure) {
+			return empty, &application.GradeError{Code: failure.Code}
 		}
-		return empty, result.Error
+		return empty, application.ErrBackend
 	}
-	data := *result.Data
+	var data application.StudentGrades
+	if pythonbridge.DecodeData(raw, &data) != nil {
+		return empty, application.ErrBackend
+	}
 	if data.Grades == nil || data.DataRevision < 0 {
 		return empty, application.ErrBackend
 	}

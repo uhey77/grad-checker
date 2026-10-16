@@ -66,6 +66,7 @@ include = [
     "modules/subjects/grad_checker_subjects",
     "modules/accounts/grad_checker_accounts",
     "modules/grades/grad_checker_grades",
+    "modules/shared/grad_checker_shared",
     "config",
     "scripts",
     "tests",

@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { errorMessage } from "../errorMessage";
+import { useExclusiveAction } from "../useExclusiveAction";
+import { useUnsavedChangesWarning } from "../useUnsavedChangesWarning";
 import {
   CourseCatalogError,
   emptyCatalogFilters,
@@ -29,10 +32,6 @@ import {
 type Filters = CatalogFilters & GradeFilters;
 const emptyFilters: Filters = { ...emptyCatalogFilters, ...emptyGradeFilters };
 
-function message(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
-
 // 保存済み成績・未保存の全集合・表示対象を分け、絞り込みで入力を失わないようにする。
 export function useGradeEntry(
   catalogUseCases: CourseCatalogUseCases,
@@ -50,14 +49,13 @@ export function useGradeEntry(
   const [loadError, setLoadError] = useState("");
   const [programMissing, setProgramMissing] = useState(false);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [conflict, setConflict] = useState(false);
   const [confirmReload, setConfirmReload] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const action = useRef<AbortController | null>(null);
+  const { busy, running, abort, run } = useExclusiveAction();
   const knownRevision = useRef(latestRevision);
   const missingAt = useRef<number | null>(null);
   useEffect(() => {
@@ -89,30 +87,21 @@ export function useGradeEntry(
         const missing = failure instanceof CourseCatalogError && status === 409;
         missingAt.current = missing ? knownRevision.current : null;
         setProgramMissing(missing);
-        setLoadError(message(failure, "成績入力の情報を取得できません。"));
+        setLoadError(errorMessage(failure, "成績入力の情報を取得できません。"));
       },
     );
     return () => {
       controller.abort();
-      action.current?.abort();
-      action.current = null;
+      abort();
     };
-  }, [catalogUseCases, gradeUseCases, attempt, expire, reportRevision]);
+  }, [catalogUseCases, gradeUseCases, attempt, expire, reportRevision, abort]);
 
   const dirty = !!data && !sameGrades(data.saved.grades, draft);
 
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  useUnsavedChangesWarning(dirty);
 
   function reload() {
-    if (action.current) return;
+    if (running()) return;
     setConfirmReload(false);
     setConfirmClear(false);
     setData(null);
@@ -125,12 +114,13 @@ export function useGradeEntry(
   // 別画面で所属や成績が保存された場合、未保存の変更がなければ最新を取得し直す。
   const stale = !!data && latestRevision > data.saved.dataRevision;
   useEffect(() => {
-    if (!stale || dirty || action.current) return;
+    if (!stale || dirty || running()) return;
     // 外部の保存を検知した時点で、読み込み中の表示へ戻して再取得する。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setData(null);
     setNotice("");
     setAttempt((x) => x + 1);
-  }, [stale, dirty]);
+  }, [stale, dirty, running]);
 
   // 所属未設定で表示できなかった後に所属が保存されたら、科目と成績を取得し直す。
   useEffect(() => {
@@ -161,7 +151,7 @@ export function useGradeEntry(
   }
 
   async function save() {
-    if (!data || action.current || conflict || !dirty) return;
+    if (!data || running() || conflict || !dirty) return;
     const problem = draftProblem(draft);
     if (problem) {
       setError(problem);
@@ -171,33 +161,31 @@ export function useGradeEntry(
       setConfirmClear(true);
       return;
     }
-    const controller = new AbortController();
-    action.current = controller;
-    setBusy(true);
     setError("");
     setNotice("");
     setConfirmClear(false);
-    try {
-      const saved = await gradeUseCases.saveGrades(
-        { expectedRevision: data.saved.dataRevision, grades: draft },
-        csrf,
-        controller.signal,
-      );
-      if (controller.signal.aborted) return;
-      setData({ ...data, saved });
-      setDraft(saved.grades);
-      reportRevision(saved.dataRevision);
-      setNotice("成績を保存しました。");
-    } catch (failure) {
-      if (controller.signal.aborted) return;
-      if (failure instanceof GradeError && failure.status === 401) expire();
-      if (failure instanceof GradeError && failure.status === 409)
-        setConflict(true);
-      setError(message(failure, "成績を保存できません。"));
-    } finally {
-      if (action.current === controller) action.current = null;
-      if (!controller.signal.aborted) setBusy(false);
-    }
+    await run(
+      (signal) =>
+        gradeUseCases.saveGrades(
+          { expectedRevision: data.saved.dataRevision, grades: draft },
+          csrf,
+          signal,
+        ),
+      {
+        onSuccess: (saved) => {
+          setData({ ...data, saved });
+          setDraft(saved.grades);
+          reportRevision(saved.dataRevision);
+          setNotice("成績を保存しました。");
+        },
+        onError: (failure) => {
+          if (failure instanceof GradeError && failure.status === 401) expire();
+          if (failure instanceof GradeError && failure.status === 409)
+            setConflict(true);
+          setError(errorMessage(failure, "成績を保存できません。"));
+        },
+      },
+    );
   }
 
   return {
@@ -240,7 +228,7 @@ export function useGradeEntry(
     save,
     cancelClear: () => setConfirmClear(false),
     retry: () => {
-      if (action.current) return;
+      if (running()) return;
       if (dirty) setConfirmReload(true);
       else reload();
     },

@@ -1,20 +1,22 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 
 from api.api_service.main import create_app
 from api.api_service.presentation.dependencies import SessionDependency
 from config.settings import Settings
+from modules.accounts.grad_checker_accounts.application.auth import AuthService
 
 
-def test_startup_and_internal_service(tmp_path: Path) -> None:
+def test_startup_and_python_service(tmp_path: Path) -> None:
     database_path = tmp_path / "data" / "test.db"
     application = create_app(Settings(database_url=f"sqlite:///{database_path}"))
 
     with TestClient(application) as client:
         response = client.post(
-            "/internal/subject-list", json={"operation": "list_programs"}
+            "/bridge/subject-list", json={"operation": "list_programs"}
         )
         assert response.status_code == 200
         assert response.json() == {"data": []}
@@ -86,3 +88,33 @@ def test_request_sessions_preserve_commits_and_rollback_uncommitted_changes(
         assert client.post("/test/uncommitted").status_code == 200
         assert client.post("/test/error").status_code == 500
         assert client.get("/test/records").json() == [1]
+
+
+@pytest.mark.parametrize(
+    ("path", "call", "target"),
+    [
+        (
+            "/bridge/subject-list",
+            {"operation": "list_programs"},
+            "api.api_service.presentation.go_bridge_subject_list.list_subject_programs",
+        ),
+        ("/bridge/auth", {"operation": "session", "token": "t" * 43}, None),
+        ("/bridge/grades", {"operation": "get", "token": "t" * 43}, None),
+    ],
+)
+def test_unexpected_failures_return_internal_error_code(
+    tmp_path: Path, monkeypatch, path: str, call: dict[str, str], target: str | None
+) -> None:
+    def broken(*_args: object) -> None:
+        raise RuntimeError("テスト用の障害")
+
+    # 全てのブリッジアダプターが同じ包絡形式で予期しない失敗を返す。
+    if target is None:
+        monkeypatch.setattr(AuthService, "session", broken)
+    else:
+        monkeypatch.setattr(target, broken)
+    application = create_app(Settings(database_url=f"sqlite:///{tmp_path / 't.db'}"))
+    with TestClient(application) as client:
+        response = client.post(path, json=call)
+    assert response.status_code == 200
+    assert response.json() == {"error": {"code": "internal_error"}}

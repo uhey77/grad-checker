@@ -32,7 +32,7 @@ def catalog_app(tmp_path):
 
 def call(client, identity, operation="courses", **fields):
     return client.post(
-        "/internal/courses",
+        "/bridge/courses",
         json={"operation": operation, "token": identity["session_token"], **fields},
     ).json()
 
@@ -40,7 +40,7 @@ def call(client, identity, operation="courses", **fields):
 def choose_program(client, identity):
     chosen = selection(client, identity)
     client.post(
-        "/internal/profile",
+        "/bridge/profile",
         json={
             "operation": "save_program",
             "token": identity["session_token"],

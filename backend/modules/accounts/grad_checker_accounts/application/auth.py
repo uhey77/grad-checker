@@ -176,10 +176,15 @@ class AuthService:
             account=identity.account, csrf_token=csrf, expires_at=identity.expires_at
         )
 
-    def logout(self, token: str, csrf: str) -> None:
+    def authorize(self, token: str, csrf: str) -> SessionIdentity:
+        """本人データを変更する要求のセッションとCSRFトークンを確認する。"""
         identity = self.session(token)
         if not secrets.compare_digest(identity.csrf_token, csrf):
             raise AuthError("invalid_csrf")
+        return identity
+
+    def logout(self, token: str, csrf: str) -> None:
+        self.authorize(token, csrf)
         self.repository.revoke_session(digest(token), datetime.now(UTC))
 
     @staticmethod

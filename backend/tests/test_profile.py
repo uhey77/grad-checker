@@ -41,7 +41,7 @@ def profile_app(tmp_path):
 
 def call(client, identity, operation="me", **fields):
     return client.post(
-        "/internal/profile",
+        "/bridge/profile",
         json={"operation": operation, "token": identity["session_token"], **fields},
     ).json()
 

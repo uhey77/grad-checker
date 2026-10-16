@@ -37,7 +37,7 @@ func TestExternalValidationDoesNotCallPython(t *testing.T) {
 		{"GET", "/api/dev/subject-list/invalid", true, 422},
 		{"GET", "/api/dev/subject-list/programs", false, 404},
 		{"POST", "/api/dev/subject-list/programs", true, 405},
-		{"GET", "/internal/subject-list", true, 404},
+		{"GET", "/bridge/subject-list", true, 404},
 		{"GET", "/api/dev/subject-list/id/extra", true, 404},
 		{"GET", "/api/health", true, 200},
 	} {
@@ -70,7 +70,7 @@ func TestUUIDNormalizationAndResponse(t *testing.T) {
 			t.Fatal(err)
 		}
 		if result["program"] == nil || result["data"] != nil {
-			t.Fatal("internal envelope leaked")
+			t.Fatal("bridge envelope leaked")
 		}
 	}
 }

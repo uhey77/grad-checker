@@ -1,8 +1,7 @@
-// 外部HTTPの入力検証・応答形式・業務エラーのHTTP変換を担当する。
+// 開発用科目一覧APIと稼働確認API。
 package presentation
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,17 +9,6 @@ import (
 
 	"grad-checker/backend/modules/subjects/application"
 )
-
-func writeJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
-}
-
-func writeError(w http.ResponseWriter, status int, detail string) {
-	writeJSON(w, status, map[string]string{"detail": detail})
-}
 
 func NewSubjectListHandler(reader application.SubjectListReader, preview bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,9 +19,7 @@ func NewSubjectListHandler(reader application.SubjectListReader, preview bool) h
 			writeError(w, 404, "APIが見つかりません。")
 			return
 		}
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", "GET")
-			writeError(w, 405, "GETのみ利用できます。")
+		if !allowMethod(w, r, http.MethodGet) {
 			return
 		}
 		if path == "/api/health" {
@@ -63,20 +49,6 @@ func NewSubjectListHandler(reader application.SubjectListReader, preview bool) h
 		}
 		writeJSON(w, 200, data)
 	})
-}
-
-// 従来のPythonのUUIDコンストラクターが受け付けていた表記を標準形へ揃える。
-func normalizeUUID(value string) (string, error) {
-	value = strings.ReplaceAll(strings.ReplaceAll(value, "urn:", ""), "uuid:", "")
-	value = strings.ReplaceAll(strings.Trim(value, "{}"), "-", "")
-	if len(value) != 32 {
-		return "", errors.New("invalid UUID")
-	}
-	if _, err := hex.DecodeString(value); err != nil {
-		return "", err
-	}
-	value = strings.ToLower(value)
-	return value[:8] + "-" + value[8:12] + "-" + value[12:16] + "-" + value[16:20] + "-" + value[20:], nil
 }
 
 func writeSubjectListError(w http.ResponseWriter, err error) {

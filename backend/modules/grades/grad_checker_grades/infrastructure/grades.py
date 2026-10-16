@@ -15,11 +15,19 @@ from modules.grades.grad_checker_grades.application.grades import (
 from modules.grades.grad_checker_grades.infrastructure.models import (
     GradeAttemptRecord,
 )
+from modules.shared.grad_checker_shared.infrastructure.transactions import (
+    read_snapshot,
+    write_transaction,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     Subject,
 )
 
 VALUE_FIELDS = ("result_status", "grade_code", "academic_year", "term_code")
+
+
+def unavailable(_error: SQLAlchemyError) -> GradeError:
+    return GradeError("grades_unavailable")
 
 
 def attempt_data(record: GradeAttemptRecord) -> GradeAttempt:
@@ -50,9 +58,8 @@ class SqliteGradeRepository:
         )
 
     def get_grades(self, student_id: str) -> StudentGrades:
-        try:
-            # 成績とdata_revisionを同じ読取スナップショットから返す。
-            self.db.connection().exec_driver_sql("BEGIN")
+        # 成績とdata_revisionを同じ読取スナップショットから返す。
+        with read_snapshot(self.db, unavailable):
             student = self.db.get(Student, student_id, populate_existing=True)
             if student is None:
                 raise GradeError("student_not_found")
@@ -60,13 +67,10 @@ class SqliteGradeRepository:
                 grades=ordered([attempt_data(r) for r in self._records(student_id)]),
                 data_revision=student.data_revision,
             )
-        except SQLAlchemyError as error:
-            raise GradeError("grades_unavailable") from error
 
     def replace_grades(self, student_id: str, grade_set: GradeSet) -> StudentGrades:
-        try:
-            # 最初に書込みロックを取得し、版の確認から置換・版の加算までを直列化する。
-            self.db.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        # 書込みロックの下で、版の確認から置換・版の加算までを直列化する。
+        with write_transaction(self.db, unavailable):
             student = self.db.get(Student, student_id, populate_existing=True)
             if student is None:
                 raise GradeError("student_not_found")
@@ -112,15 +116,7 @@ class SqliteGradeRepository:
             student.data_revision += 1
             self.db.add(student)
             self.db.flush()
-            saved = StudentGrades(
+            return StudentGrades(
                 grades=ordered(list(grade_set.grades)),
                 data_revision=student.data_revision,
             )
-            self.db.commit()
-            return saved
-        except GradeError:
-            self.db.rollback()
-            raise
-        except SQLAlchemyError as error:
-            self.db.rollback()
-            raise GradeError("grades_unavailable") from error

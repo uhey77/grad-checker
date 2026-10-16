@@ -39,6 +39,8 @@ try {
       "src/modules/subjects/infrastructure/course-catalog/HttpCourseCatalogRepository.ts",
       "src/modules/subjects/application/course-catalog/CourseCatalogUseCases.ts",
       "src/modules/subjects/application/course-catalog/filterCatalogCourses.ts",
+      "src/shared/infrastructure/http.ts",
+      "src/shared/infrastructure/dtoReader.ts",
     ],
     { stdio: "inherit" },
   );
@@ -54,6 +56,7 @@ try {
         "tests/profiles.test.mjs",
         "tests/grades.test.mjs",
         "tests/course-catalog.test.mjs",
+        "tests/shared-http.test.mjs",
       ],
       {
         stdio: "inherit",

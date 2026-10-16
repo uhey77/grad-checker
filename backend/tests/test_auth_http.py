@@ -62,7 +62,7 @@ def auth_services(tmp_path):
             )
             processes.append(process)
             url = (
-                f"http://127.0.0.1:{python_port}/internal/auth"
+                f"http://127.0.0.1:{python_port}/bridge/auth"
                 if index == 0
                 else f"http://127.0.0.1:{go_port}/api/health"
             )

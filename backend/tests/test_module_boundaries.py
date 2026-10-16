@@ -50,6 +50,27 @@ def test_grades_follow_layer_dependencies() -> None:
             assert not [name for name in imports if ".application" in name], source
 
 
+def test_shared_module_does_not_depend_on_business_modules() -> None:
+    package = "modules/shared/grad_checker_shared"
+    for source, imports in imported_modules(package):
+        forbidden = ("api", "config", "fastapi", "uvicorn")
+        assert not [name for name in imports if name.split(".")[0] in forbidden], source
+        # 共通処理は業務モジュールを参照せず、業務エラーへの変換は呼出し側が渡す。
+        assert not [
+            name
+            for name in imports
+            if name.startswith("modules.") and not name.startswith("modules.shared")
+        ], source
+        layer = source.relative_to(BACKEND / package).parts[0]
+        if layer == "application":
+            assert not [
+                name
+                for name in imports
+                if ".infrastructure" in name
+                or name.split(".")[0] in ("sqlalchemy", "sqlmodel")
+            ], source
+
+
 def test_shared_settings_default_to_backend_data(monkeypatch) -> None:
     monkeypatch.delenv("DATABASE_URL", raising=False)
     assert DEFAULT_DATABASE_PATH == BACKEND / "data/grad_checker.db"

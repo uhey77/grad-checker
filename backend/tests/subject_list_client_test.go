@@ -14,7 +14,7 @@ import (
 	"grad-checker/backend/modules/subjects/infrastructure"
 )
 
-func TestInternalProtocol(t *testing.T) {
+func TestBridgeProtocol(t *testing.T) {
 	for _, tc := range []struct {
 		body   string
 		status int
@@ -31,8 +31,8 @@ func TestInternalProtocol(t *testing.T) {
 		{`{"data":[]} {}`, 200, "", false},
 	} {
 		python := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != "POST" || r.URL.Path != "/internal/subject-list" || r.Header.Get("Content-Type") != "application/json" {
-				t.Errorf("unexpected internal request: %v", r)
+			if r.Method != "POST" || r.URL.Path != "/bridge/subject-list" || r.Header.Get("Content-Type") != "application/json" {
+				t.Errorf("unexpected bridge request: %v", r)
 			}
 			var call map[string]string
 			if err := json.NewDecoder(r.Body).Decode(&call); err != nil {
@@ -67,7 +67,7 @@ func TestInternalProtocol(t *testing.T) {
 	}
 }
 
-func TestInternalTimeoutAndCancellation(t *testing.T) {
+func TestBridgeTimeoutAndCancellation(t *testing.T) {
 	python := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.Copy(io.Discard, r.Body)
 		select {
@@ -90,7 +90,7 @@ func TestInternalTimeoutAndCancellation(t *testing.T) {
 	}
 }
 
-func TestInternalConnectionFailure(t *testing.T) {
+func TestBridgeConnectionFailure(t *testing.T) {
 	client, _ := infrastructure.NewPythonSubjectListClient("http://127.0.0.1:1", time.Second)
 	_, err := client.ListPrograms(context.Background())
 	if !errors.Is(err, application.ErrUnavailable) {

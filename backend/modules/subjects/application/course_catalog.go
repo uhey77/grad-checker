@@ -27,7 +27,7 @@ type CourseCatalogError struct {
 func (e *CourseCatalogError) Error() string { return e.Code }
 
 // CourseCatalogReaderは本人課程から見た科目・分類を取得する契約。
-// 結果は既存の科目モデルに従うJSONとし、内部通信の包絡形式は渡さない。
+// 結果は既存の科目モデルに従うJSONとし、ブリッジ通信の包絡形式は渡さない。
 type CourseCatalogReader interface {
 	Call(context.Context, CourseCatalogCall) (json.RawMessage, error)
 }

@@ -1,63 +1,35 @@
 package infrastructure
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"io"
-	"net/http"
-	"strings"
+	"time"
 
 	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
-type PythonProfileClient struct{ auth *PythonAuthClient }
+type PythonProfileClient struct {
+	client *pythonbridge.Client
+}
 
 func NewPythonProfileClient(origin string) (*PythonProfileClient, error) {
-	auth, err := NewPythonAuthClient(origin)
+	client, err := pythonbridge.New(origin, "/bridge/profile", 10*time.Second, 1024*1024)
 	if err != nil {
 		return nil, err
 	}
-	return &PythonProfileClient{auth}, nil
+	return &PythonProfileClient{client}, nil
 }
 
 func (c *PythonProfileClient) Call(ctx context.Context, call application.ProfileCall) (application.ProfileResult, error) {
 	var empty application.ProfileResult
-	body, err := json.Marshal(call)
+	raw, err := c.client.Call(ctx, call)
 	if err != nil {
+		return empty, accountError(err)
+	}
+	var data application.ProfileResult
+	if pythonbridge.DecodeData(raw, &data) != nil {
 		return empty, application.ErrBackend
 	}
-	endpoint := strings.TrimSuffix(c.auth.endpoint, "/auth") + "/profile"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return empty, application.ErrBackend
-	}
-	req.Header.Set("Content-Type", "application/json")
-	response, err := c.auth.client.Do(req)
-	if err != nil {
-		return empty, application.ErrBackend
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		return empty, application.ErrBackend
-	}
-	var result struct {
-		Data  *application.ProfileResult `json:"data"`
-		Error *application.AuthError     `json:"error"`
-	}
-	decoder := json.NewDecoder(io.LimitReader(response.Body, 1024*1024))
-	decoder.DisallowUnknownFields()
-	if decoder.Decode(&result) != nil {
-		return empty, application.ErrBackend
-	}
-	var extra any
-	if decoder.Decode(&extra) != io.EOF || (result.Data == nil) == (result.Error == nil) {
-		return empty, application.ErrBackend
-	}
-	if result.Error != nil {
-		return empty, result.Error
-	}
-	data := *result.Data
 	if call.Operation == "programs" {
 		if data.Programs == nil || data.Profile != nil {
 			return empty, application.ErrBackend

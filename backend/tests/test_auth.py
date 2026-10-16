@@ -36,7 +36,7 @@ def auth(tmp_path: Path):
 def call(client, operation, **fields):
     if operation in {"register", "recover", "login"}:
         fields.setdefault("client_key", "127.0.0.1")
-    return client.post("/internal/auth", json={"operation": operation, **fields}).json()
+    return client.post("/bridge/auth", json={"operation": operation, **fields}).json()
 
 
 def register(client, username=USERNAME):

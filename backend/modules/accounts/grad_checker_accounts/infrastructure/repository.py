@@ -1,7 +1,6 @@
 """認証の保存処理。登録・復旧コードの消費はSQLiteトランザクションで行う。"""
 
-from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, update
@@ -21,6 +20,15 @@ from modules.accounts.grad_checker_accounts.infrastructure.models import (
     Credential,
     Student,
 )
+from modules.shared.grad_checker_shared.infrastructure.transactions import (
+    write_transaction,
+)
+
+
+def auth_failure(error: SQLAlchemyError) -> AuthError:
+    if isinstance(error, IntegrityError):
+        return AuthError("registration_conflict")
+    return AuthError("auth_unavailable")
 
 
 def utc(value: datetime) -> datetime:
@@ -31,20 +39,9 @@ class SqliteAccountRepository:
     def __init__(self, session: Session) -> None:
         self.db = session
 
-    @contextmanager
-    def transaction(self) -> Generator[None]:
-        try:
-            yield
-            self.db.commit()
-        except AuthError:
-            self.db.rollback()
-            raise
-        except IntegrityError as error:
-            self.db.rollback()
-            raise AuthError("registration_conflict") from error
-        except SQLAlchemyError as error:
-            self.db.rollback()
-            raise AuthError("auth_unavailable") from error
+    def transaction(self) -> AbstractContextManager[None]:
+        # 各処理は先頭のUPSERT・条件付きUPDATEで書込みロックを取る。
+        return write_transaction(self.db, auth_failure, immediate=False)
 
     def take_attempt(self, key: str, now: datetime, window: int, limit: int) -> None:
         with self.transaction():

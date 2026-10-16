@@ -1,33 +1,11 @@
+import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
 import { ProfileError } from "../application/ProfileUseCases.ts";
 import type { Profile, ProgramOption } from "../domain/models.ts";
 
-function invalid(): never {
-  throw new ProfileError(502, "所属情報を読み込めません。");
-}
-function record(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    return invalid();
-  return value as Record<string, unknown>;
-}
-function text(value: unknown): string {
-  if (typeof value !== "string" || !value.trim()) return invalid();
-  return value;
-}
-function nullableText(value: unknown): string | null {
-  return value === null ? null : text(value);
-}
-function integer(value: unknown, minimum = 0): number {
-  if (
-    typeof value !== "number" ||
-    !Number.isSafeInteger(value) ||
-    value < minimum
-  )
-    return invalid();
-  return value;
-}
-function year(value: unknown): number | null {
-  return value === null ? null : integer(value, 1);
-}
+const { invalid, record, text, nullableText, integer, nullableInteger } =
+  createDtoReader(() => {
+    throw new ProfileError(502, "所属情報を読み込めません。");
+  });
 
 export function toProfile(data: unknown): Profile {
   const value = record(data);
@@ -61,8 +39,8 @@ export function toPrograms(data: unknown): ProgramOption[] {
       curriculumName: text(p.curriculum_name),
       revision: integer(p.revision, 1),
       verificationStatus: status,
-      admissionYearFrom: year(p.admission_year_from),
-      admissionYearTo: year(p.admission_year_to),
+      admissionYearFrom: nullableInteger(p.admission_year_from),
+      admissionYearTo: nullableInteger(p.admission_year_to),
       sourceDocument: text(p.source_document),
       sourcePages: text(p.source_pages),
     };

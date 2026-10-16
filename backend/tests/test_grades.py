@@ -46,7 +46,7 @@ def grades_app(tmp_path):
 
 def call(client, identity, operation="get", **fields):
     return client.post(
-        "/internal/grades",
+        "/bridge/grades",
         json={"operation": operation, "token": identity["session_token"], **fields},
     ).json()
 
@@ -147,7 +147,7 @@ def test_courses_outside_own_curriculum_can_be_saved(grades_app):
     _, client, identity = grades_app
     chosen = selection(client, identity)
     profile = client.post(
-        "/internal/profile",
+        "/bridge/profile",
         json={
             "operation": "save_program",
             "token": identity["session_token"],

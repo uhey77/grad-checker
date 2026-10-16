@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AuthPolicy } from "../../modules/accounts/public.ts";
+import { FormError } from "../StatusPanels";
 
 type Mode = "login" | "register" | "recover";
 export function AuthForm({
@@ -143,9 +144,7 @@ export function AuthForm({
           </>
         ) : null}
         {error.message ? (
-          <p id="auth-input-error" className="form-error" role="alert">
-            {error.message}
-          </p>
+          <FormError id="auth-input-error">{error.message}</FormError>
         ) : null}
         <button className="primary-button" type="submit">
           {busy

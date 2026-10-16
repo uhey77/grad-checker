@@ -1,103 +1,65 @@
+import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
+import {
+  requestJson,
+  type JsonRequest,
+} from "../../../shared/infrastructure/http.ts";
 import { AuthError, type AuthRepository } from "../application/AuthUseCases.ts";
 import type { AuthSession, AuthPolicy } from "../domain/models.ts";
 
+const recoveryCodePattern = /^[A-Za-z0-9_-]{43}$/;
+
+function reader(message: string) {
+  return createDtoReader(() => {
+    throw new AuthError(502, message);
+  });
+}
+const sessionReader = reader("認証情報を読み込めません。");
+const policyReader = reader("認証設定を読み込めません。");
+const recoveryReader = reader("登録・復旧の結果を読み込めません。");
+const logoutReader = reader("ログアウト結果を読み込めません。");
+
 function toSession(data: unknown): AuthSession {
-  if (!data || typeof data !== "object")
-    throw new AuthError(502, "認証情報を読み込めません。");
-  const value = data as Record<string, unknown>;
-  const student = value.student as Record<string, unknown> | undefined;
-  if (
-    value.authenticated !== true ||
-    !student ||
-    typeof student.id !== "string" ||
-    typeof student.login_name !== "string" ||
-    typeof value.csrf_token !== "string" ||
-    typeof value.expires_at !== "string" ||
-    !Number.isFinite(Date.parse(value.expires_at))
-  )
-    throw new AuthError(502, "認証情報を読み込めません。");
+  const { record, text, invalid } = sessionReader;
+  const value = record(data);
+  const student = record(value.student);
+  const expiresAt = text(value.expires_at);
+  if (value.authenticated !== true || !Number.isFinite(Date.parse(expiresAt)))
+    return invalid();
   return {
-    student: { id: student.id, loginName: student.login_name },
-    csrfToken: value.csrf_token,
-    expiresAt: value.expires_at,
+    student: { id: text(student.id), loginName: text(student.login_name) },
+    csrfToken: text(value.csrf_token),
+    expiresAt,
   };
 }
+
 export class HttpAuthRepository implements AuthRepository {
   constructor(private readonly base: string) {}
-  private async request(
-    path: string,
-    payload?: object,
-    signal?: AbortSignal,
-    csrf?: string,
-  ): Promise<unknown> {
-    try {
-      const response = await fetch(this.base + path, {
-        method: payload ? "POST" : "GET",
-        credentials: "same-origin",
-        cache: "no-store",
-        signal,
-        headers: payload
-          ? {
-              "Content-Type": "application/json",
-              ...(csrf ? { "X-CSRF-Token": csrf } : {}),
-            }
-          : undefined,
-        body: payload ? JSON.stringify(payload) : undefined,
-      });
-      let data: unknown;
-      try {
-        data = await response.json();
-      } catch (error) {
-        if (signal?.aborted) throw error;
-        throw new AuthError(
-          response.ok ? 502 : response.status,
-          response.ok
-            ? "サーバーの応答を読み込めません。再試行してください。"
-            : "認証処理に失敗しました。時間をおいて再試行してください。",
-        );
-      }
-      if (!response.ok) {
-        const detail =
-          data &&
-          typeof data === "object" &&
-          "detail" in data &&
-          typeof data.detail === "string"
-            ? data.detail
-            : "認証処理に失敗しました。";
-        throw new AuthError(response.status, detail);
-      }
-      return data;
-    } catch (error) {
-      if (signal?.aborted || error instanceof AuthError) throw error;
-      throw new AuthError(
-        0,
-        "サーバーへ接続できません。時間をおいて再試行してください。",
-      );
-    }
+  private request(path: string, request: JsonRequest): Promise<unknown> {
+    return requestJson(
+      this.base + path,
+      request,
+      (status, message) => new AuthError(status, message),
+      {
+        unreadable: "サーバーの応答を読み込めません。再試行してください。",
+        unreadableFailure:
+          "認証処理に失敗しました。時間をおいて再試行してください。",
+        failed: "認証処理に失敗しました。",
+      },
+    );
   }
   async config(signal?: AbortSignal): Promise<AuthPolicy> {
-    const data = await this.request("/config", undefined, signal);
-    const value =
-      data && typeof data === "object" && "policy" in data ? data.policy : null;
-    if (!value || typeof value !== "object")
-      throw new AuthError(502, "認証設定を読み込めません。");
-    const policy = value as Record<string, unknown>;
-    if (
-      !Number.isInteger(policy.password_min_length) ||
-      !Number.isInteger(policy.password_max_length) ||
-      (policy.password_min_length as number) < 1 ||
-      (policy.password_min_length as number) >
-        (policy.password_max_length as number)
-    )
-      throw new AuthError(502, "認証設定を読み込めません。");
-    return {
-      passwordMinLength: policy.password_min_length as number,
-      passwordMaxLength: policy.password_max_length as number,
-    };
+    const { record, integer, invalid } = policyReader;
+    const policy = record(
+      record(await this.request("/config", { signal })).policy,
+    );
+    const passwordMinLength = integer(policy.password_min_length, 1);
+    const passwordMaxLength = integer(policy.password_max_length, 1);
+    if (passwordMinLength > passwordMaxLength) return invalid();
+    return { passwordMinLength, passwordMaxLength };
   }
   async session(signal?: AbortSignal) {
     try {
-      return toSession(await this.request("/session", undefined, signal));
+      return toSession(await this.request("/session", { signal }));
     } catch (error) {
       if (error instanceof AuthError && error.status === 401) return null;
       throw error;
@@ -107,24 +69,20 @@ export class HttpAuthRepository implements AuthRepository {
     data: unknown,
     field: "registered" | "recovered",
   ): string {
-    if (!data || typeof data !== "object")
-      throw new AuthError(502, "登録・復旧の結果を読み込めません。");
-    const result = data as Record<string, unknown>;
-    if (
-      result[field] !== true ||
-      typeof result.recovery_code !== "string" ||
-      !/^[A-Za-z0-9_-]{43}$/.test(result.recovery_code)
-    )
-      throw new AuthError(502, "登録・復旧の結果を読み込めません。");
-    return result.recovery_code;
+    const { record, text, invalid } = recoveryReader;
+    const result = record(data);
+    const code = text(result.recovery_code);
+    if (result[field] !== true || !recoveryCodePattern.test(code))
+      return invalid();
+    return code;
   }
   async register(loginName: string, password: string, signal?: AbortSignal) {
     return this.recoveryResult(
-      await this.request(
-        "/register",
-        { login_name: loginName, password },
+      await this.request("/register", {
+        method: "POST",
+        payload: { login_name: loginName, password },
         signal,
-      ),
+      }),
       "registered",
     );
   }
@@ -135,27 +93,37 @@ export class HttpAuthRepository implements AuthRepository {
     signal?: AbortSignal,
   ) {
     return this.recoveryResult(
-      await this.request(
-        "/recover",
-        { login_name: loginName, recovery_code: recoveryCode, password },
+      await this.request("/recover", {
+        method: "POST",
+        payload: {
+          login_name: loginName,
+          recovery_code: recoveryCode,
+          password,
+        },
         signal,
-      ),
+      }),
       "recovered",
     );
   }
   async login(loginName: string, password: string, signal?: AbortSignal) {
     return toSession(
-      await this.request("/login", { login_name: loginName, password }, signal),
+      await this.request("/login", {
+        method: "POST",
+        payload: { login_name: loginName, password },
+        signal,
+      }),
     );
   }
   async logout(csrf: string, signal?: AbortSignal) {
-    const data = await this.request("/logout", {}, signal, csrf);
-    if (
-      !data ||
-      typeof data !== "object" ||
-      !("authenticated" in data) ||
-      data.authenticated !== false
-    )
-      throw new AuthError(502, "ログアウト結果を読み込めません。");
+    const { record, invalid } = logoutReader;
+    const data = record(
+      await this.request("/logout", {
+        method: "POST",
+        payload: {},
+        csrf,
+        signal,
+      }),
+    );
+    if (data.authenticated !== false) invalid();
   }
 }

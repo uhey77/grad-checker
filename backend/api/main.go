@@ -1,4 +1,4 @@
-// GoのHTTP起動入口。内部通信の取得先を外部HTTPハンドラーへ注入する。
+// GoのHTTP起動入口。ブリッジ通信の取得先を外部HTTPハンドラーへ注入する。
 package main
 
 import (
@@ -20,7 +20,7 @@ import (
 
 func main() {
 	listen := flag.String("listen", "127.0.0.1:8000", "外部APIの待受アドレス")
-	pythonURL := flag.String("python-url", "http://127.0.0.1:8001", "Python内部サービスのオリジン")
+	pythonURL := flag.String("python-url", "http://127.0.0.1:8001", "Pythonサービスのオリジン")
 	preview := flag.Bool("subject-list-preview", false, "開発用科目一覧APIを有効にする")
 	origin := flag.String("public-origin", "http://127.0.0.1:5173", "認証で許可する画面のオリジン")
 	flag.Parse()
@@ -64,7 +64,7 @@ func main() {
 			log.Print(err)
 		}
 	}()
-	log.Printf("Go API: http://%s → Python内部サービス: %s", *listen, *pythonURL)
+	log.Printf("Go API: http://%s → Pythonサービス: %s", *listen, *pythonURL)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

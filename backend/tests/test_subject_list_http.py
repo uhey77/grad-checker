@@ -133,7 +133,7 @@ def services(tmp_path_factory):
                     return (
                         request(
                             python_port,
-                            "/internal/subject-list",
+                            "/bridge/subject-list",
                             {"operation": "list_programs"},
                         )[0]
                         == 200
@@ -168,9 +168,9 @@ def test_external_results_match_python_use_cases(services):
     assert len(programs) == 4
     assert (
         programs
-        == request(
-            python_port, "/internal/subject-list", {"operation": "list_programs"}
-        )[1]["data"]
+        == request(python_port, "/bridge/subject-list", {"operation": "list_programs"})[
+            1
+        ]["data"]
     )
     for program in programs:
         identifier = program["curriculum_id"]
@@ -183,14 +183,14 @@ def test_external_results_match_python_use_cases(services):
             result
             == request(
                 python_port,
-                "/internal/subject-list",
+                "/bridge/subject-list",
                 {"operation": "get_subject_list", "curriculum_id": identifier},
             )[1]["data"]
         )
         assert headers["Cache-Control"] == "no-store"
 
 
-def test_external_validation_and_internal_boundary(services):
+def test_external_validation_and_bridge_boundary(services):
     python_port, external_port, disabled_port, _engine = services
     assert request(external_port, BASE + "/invalid")[:2] == (
         422,
@@ -204,9 +204,9 @@ def test_external_validation_and_internal_boundary(services):
     assert request(disabled_port, BASE + "/programs")[0] == 404
     assert request(python_port, BASE + "/programs")[0] == 404
     assert (
-        request(
-            external_port, "/internal/subject-list", {"operation": "list_programs"}
-        )[0]
+        request(external_port, "/bridge/subject-list", {"operation": "list_programs"})[
+            0
+        ]
         == 404
     )
 
@@ -236,7 +236,7 @@ def test_database_errors_are_mapped_by_go(services):
         )
     assert request(
         python_port,
-        "/internal/subject-list",
+        "/bridge/subject-list",
         {"operation": "get_subject_list", "curriculum_id": identifier},
     )[1] == {"error": {"code": "classification_inconsistent"}}
     assert request(external_port, BASE + "/" + identifier)[0] == 409
@@ -244,7 +244,7 @@ def test_database_errors_are_mapped_by_go(services):
         connection.execute(text("DROP TABLE curriculum_courses"))
     assert request(
         python_port,
-        "/internal/subject-list",
+        "/bridge/subject-list",
         {"operation": "get_subject_list", "curriculum_id": identifier},
     )[1] == {"error": {"code": "subject_list_unavailable"}}
     assert request(external_port, BASE + "/" + identifier)[:2] == (

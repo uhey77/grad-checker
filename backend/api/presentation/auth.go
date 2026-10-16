@@ -55,13 +55,7 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "APIが見つかりません。")
 		return
 	}
-	if r.Method != method {
-		w.Header().Set("Allow", method)
-		writeError(w, 405, "HTTPメソッドが不正です。")
-		return
-	}
-	if r.URL.RawQuery != "" {
-		writeError(w, 422, "クエリパラメーターは指定できません。")
+	if !allowMethod(w, r, method) || rejectQuery(w, r) {
 		return
 	}
 	if method == http.MethodPost && r.Header.Get("Origin") != h.origin {
