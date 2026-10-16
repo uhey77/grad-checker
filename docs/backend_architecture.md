@@ -194,3 +194,9 @@ Goのpresentation/profile.goが学生向け `/api/programs`・`/api/me`・`/api/
 成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と全集合の検証、infrastructureが`grade_attempts`とBEGIN IMMEDIATEによる版確認・差分置換・`students.data_revision`の加算を担う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
 
 Goのpresentation/courses.goとgrades.goが外部入力（クエリ・重複キー・未知フィールド・型・範囲・記号と状態の整合）を検証し、不正ならPythonを呼ばず422等を返す。回次の重複・連番・再履修の条件はPythonの業務ルールで判定し、業務エラーコードをGoが日本語detailへ変換する。
+
+## 内部通信と外部HTTPの共通化（2026-10-16）
+
+GoからPythonを呼ぶ5つの内部クライアントは `modules/shared/internalhttp` を使い、包絡形式 `{"data": ...}` / `{"error": {"code": ...}}` の解析、応答本文の上限、タイムアウト・接続失敗・形式違反の区別を共通化した。業務エラー型への変換と `data` の業務上の検証は各モジュールのinfrastructureに残す。
+Goの外部ハンドラーは `api/presentation/http.go` の共通関数で、メソッド・セッションCookie・クエリ・Origin／CSRF・JSON本文を検証する。JSON更新のContent-Type不正は415、本文の上限超過は413で揃えた（所属保存は従来422だった）。成績・所属・科目で共通の業務エラーコード（未認証・CSRF不一致・更新版の競合・利用不可）は同じステータスと文言に変換する。
+

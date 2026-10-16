@@ -25,20 +25,16 @@ func NewCourseHandler(reader application.CourseCatalogReader, fallback http.Hand
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", "GET")
-			writeError(w, 405, "GETのみ利用できます。")
+		if !allowMethod(w, r, http.MethodGet) {
 			return
 		}
-		token, ok := sessionToken(r)
+		token, ok := requireSession(w, r)
 		if !ok {
-			writeError(w, 401, "ログインしてください。")
 			return
 		}
 		call := application.CourseCatalogCall{Operation: operation, Token: token}
 		if operation == "categories" {
-			if r.URL.RawQuery != "" {
-				writeError(w, 422, "クエリパラメーターは指定できません。")
+			if rejectQuery(w, r) {
 				return
 			}
 		} else {
@@ -93,7 +89,7 @@ func writeCourseError(w http.ResponseWriter, err error) {
 	if errors.As(err, &business) {
 		switch business.Code {
 		case "invalid_credentials", "profile_not_found":
-			writeAuthError(w, "invalid_credentials")
+			writeSharedError(w, business.Code, "科目データ")
 		case "program_not_selected":
 			writeError(w, 409, "所属課程を設定してから科目を表示してください。")
 		case "unknown_category":

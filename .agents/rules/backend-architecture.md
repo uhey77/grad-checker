@@ -14,6 +14,8 @@
 | `modules/subjects/grad_checker_subjects/infrastructure/` | PythonのDB・ファイルアクセス | SQLModel、リポジトリ |
 | `modules/subjects/application/`・`infrastructure/` | Goの取得契約と内部通信の実装 | PythonへのHTTPクライアント |
 | `api/presentation/`・`api/api_service/presentation/` | Goの外部HTTP、Pythonの内部通信アダプター | 入力検証、業務エラー変換、Session管理 |
+| `modules/shared/internalhttp/` | GoからPython内部サービスを呼ぶ共通処理 | 内部通信の包絡形式、タイムアウト・接続失敗・形式違反の区別 |
+| `api/presentation/http.go` | Goの外部HTTPで共通の検証と応答 | メソッド・セッション・CSRF・JSON本文の検証、共通の業務エラー変換 |
 | `api/main.go`・`api/api_service/main.py` | 設定・起動・終了と依存関係の組立て | ハンドラー注入、DB起動終了 |
 | `config/settings.py` | Pythonの環境設定 | DB接続URL |
 | `scripts/seed_subjects.py` | 開発者向けCLIの入口 | 引数処理、投入処理の呼出し、終了コード |
@@ -38,6 +40,8 @@
 - Goは`api/main.go`、Pythonは`api/api_service/main.py`とCLIの入口で具体的な依存関係を組み立てる。
 - Pythonの内部アダプターはSessionからリポジトリを生成してユースケースを呼び、結果または業務エラーコードを返す。この依存解決に限り`presentation`から`infrastructure`を参照できる。
 - Goの外部ハンドラーは`application`の取得契約を使用する。具体的なPython HTTPクライアントは参照しない。
+- 各モジュールのGoの`infrastructure`は`modules/shared/internalhttp`で内部通信を行い、包絡形式の解析を重複させない。`internalhttp`は業務モジュールを参照しない。業務エラー型への変換と応答内容の検証は各モジュールで行う。
+- Goの外部ハンドラーは`api/presentation/http.go`の共通関数で検証・エラー応答を行い、同じ失敗を画面ごとに異なるステータス・文言で返さない。
 
 ## 実装ルール
 
