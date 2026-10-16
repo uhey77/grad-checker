@@ -129,6 +129,18 @@ tasks:
     cmds:
       - uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
 
+  backend-requirements-seed:
+    desc: 科目マスタ投入後にCS4課程の卒業要件・算入規則を追加投入
+    dir: backend
+    cmds:
+      - uv run --locked python -m scripts.seed_requirements --file seeds/cs_requirements_2026.json
+
+  backend-requirements-build:
+    desc: 照合済み転記と科目シードから卒業要件シードを再生成
+    dir: backend
+    cmds:
+      - uv run --locked python seeds/build_cs_requirements_seed.py
+
   dev:
     desc: フロントエンドと科目一覧APIを同時に起動
     cmds:

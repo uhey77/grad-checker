@@ -30,7 +30,9 @@ def test_subjects_do_not_import_api_or_configuration() -> None:
         assert not [
             name
             for name in imports
-            if name.startswith(("modules.accounts", "modules.grades"))
+            if name.startswith(
+                ("modules.accounts", "modules.grades", "modules.requirements")
+            )
         ], source
 
 
@@ -69,6 +71,23 @@ def test_shared_module_does_not_depend_on_business_modules() -> None:
                 if ".infrastructure" in name
                 or name.split(".")[0] in ("sqlalchemy", "sqlmodel")
             ], source
+
+
+def test_requirements_follow_layer_dependencies() -> None:
+    package = "modules/requirements/grad_checker_requirements"
+    for source, imports in imported_modules(package):
+        forbidden = ("api", "config", "fastapi", "uvicorn")
+        assert not [name for name in imports if name.split(".")[0] in forbidden], source
+        layer = source.relative_to(BACKEND / package).parts[0]
+        if layer in ("domain", "application"):
+            assert not [
+                name
+                for name in imports
+                if ".infrastructure" in name
+                or name.split(".")[0] in ("sqlalchemy", "sqlmodel")
+            ], source
+        if layer == "domain":
+            assert not [name for name in imports if ".application" in name], source
 
 
 def test_shared_settings_default_to_backend_data(monkeypatch) -> None:
