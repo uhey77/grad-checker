@@ -32,6 +32,8 @@ try {
       "src/modules/subjects/infrastructure/subject-list/HttpSubjectListRepository.ts",
       "src/hooks/subjects/errors.ts",
       "src/modules/accounts/infrastructure/HttpAuthRepository.ts",
+      "src/modules/profiles/infrastructure/HttpProfileRepository.ts",
+      "src/modules/profiles/application/ProfileUseCases.ts",
     ],
     { stdio: "inherit" },
   );
@@ -44,6 +46,7 @@ try {
         "tests/subject-list.test.mjs",
         "tests/architecture.test.mjs",
         "tests/accounts.test.mjs",
+        "tests/profiles.test.mjs",
       ],
       {
         stdio: "inherit",

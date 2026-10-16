@@ -5,7 +5,7 @@
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonは内部通信で結果またはエラーコードを返す。以下の学生向けAPIのURL・JSON契約は維持するが、認証APIは実装済み。所属保存・成績・卒業判定などは未実装。
+Pythonは内部通信で結果またはエラーコードを返す。認証APIと所属選択・本人プロフィール取得・所属保存は実装済み。成績・卒業判定などは未実装。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -79,11 +79,21 @@ POST/PUT/PATCH/DELETEはOriginを検証する。登録・確認にもOrigin検�
 
 `POST /auth/login` は `{"login_name":"student_01","password":"..."}` を受け取る。成功200はauthenticated、student: {id, login_name}、csrf_token、expires_atを返す。パスワード・復旧コード・セッション原値は返さない。セッション原値はCookieだけで送信する。アカウント不在・パスワード不一致は同じ401。
 
-認証要求の接続元はGoが実接続のIPから決め、Forwardedヘッダーを信用しない。公開プロキシ配下の接続元認定は配備時の検討事項。認証応答はCache-Control: no-store。所属保存・成績保存用の `/me` 等は次の実装対象。
+認証要求の接続元はGoが実接続のIPから決め、Forwardedヘッダーを信用しない。公開プロキシ配下の接続元認定は配備時の検討事項。認証・本人情報の応答はCache-Control: no-store。所属保存用の `/me` 等は実装済み。成績保存は今後の対象。
 
 GET /auth/sessionは認証有効なら200、無効なら401。POST /auth/logoutはCSRFを確認して200 `{"authenticated": false}`。Cookieも削除する。CSRFの再取得後の再試行はログアウトや保存を無制限に繰り返さない。
 
 GET /programsは存在する所属階層と対象カリキュラム、整備状態を返す。未整備を利用可能と表示しない。GET /meは本人の課程とdata_revisionを返す。PUT /me/programはprogram_id、curriculum_id、expected_revisionを受け、有効な組合せを検証し、200で保存後の課程・data_revisionを返す。成績を黙って削除せず、新課程の対象範囲で再計算する。既存成績に未確認の規則が必要なら判定側で409とし、入力成績を失わせない。
+
+### 所属APIの実装契約
+
+`GET /api/programs` は `{"programs": [...]}` を返す。各要素はprogram_id、curriculum_id、faculty_name、department_name、specialization_name、course_name、curriculum_name、revision、verification_status、admission_year_from/to、source_document、source_pagesを持つ。存在しない階層・未確認の年度はnull。現在のCS4課程はunverifiedのまま選択・保存できるが、卒業判定へ対応済みという意味ではない。カリキュラム未登録の課程は選択肢に含めず、0件は空配列を返す。
+
+`GET /api/me` と保存成功時は `{"student_id":"本人UUID","login_name":"student_01","program_id":null,"curriculum_id":null,"data_revision":0}` の形式。所属保存後は2つのIDが設定される。本人IDを入力で指定する経路はなく、セッションから決める。氏名・入学年度の入力は今回の対象外。
+
+`PUT /api/me/program` はOrigin、Cookie、X-CSRF-Tokenを要求する。JSONはprogram_id、curriculum_id、expected_revisionの3項目だけ。IDはUUID、expected_revisionは0〜9007199254740990の整数。未知・不一致の組合せは422、古いrevisionは409。組合せ検証と条件付きUPDATE・revision加算を同じSQLiteトランザクションで行い、失敗時は全体不変。既存のstudents列を使い、新たなスキーマ変更は行わない。成績を削除・更新しない。成績・判定の再計算自体は今後の実装対象。
+
+画面はログイン後に所属設定を表示する。保存中・未保存・成功・失敗・更新競合を区別し、保存失敗時は選択を保持する。409時は再取得するまで再保存を止め、未保存の選択を破棄する再取得では確認する。401時はログインへ戻る。既存科目一覧は開発用の独立したプレビューで、そこでの課程切替は本人の所属を変更しない。
 
 ## 5. 科目とフィルタ
 

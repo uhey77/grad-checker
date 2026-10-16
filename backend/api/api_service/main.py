@@ -9,6 +9,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from api.api_service.presentation.internal_auth import router as internal_auth_router
+from api.api_service.presentation.internal_profile import (
+    router as internal_profile_router,
+)
 from api.api_service.presentation.internal_subject_list import (
     router as internal_subject_list_router,
 )
@@ -59,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.include_router(internal_subject_list_router)
     application.include_router(internal_auth_router)
+    application.include_router(internal_profile_router)
     return application
 
 
