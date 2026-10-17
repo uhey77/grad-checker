@@ -7,8 +7,8 @@ from fastapi import APIRouter, Request
 from pydantic import Field, model_validator
 
 from api.api_service.presentation.dependencies import (
-    SessionDependency,
     current_identity,
+    database_engine,
 )
 from api.api_service.presentation.go_bridge_call import WritableSessionCall, respond
 from modules.requirements.grad_checker_requirements.application import check_results
@@ -33,12 +33,10 @@ class CheckCall(WritableSessionCall):
 
 
 @router.post("/checks")
-def checks(
-    call: CheckCall, request: Request, session: SessionDependency
-) -> dict[str, object]:
+def checks(call: CheckCall, request: Request) -> dict[str, object]:
     def run() -> object:
         service = check_results.CheckService(
-            check_storage.SqliteCheckRepository(session)
+            check_storage.SqliteCheckUnitOfWork(database_engine(request))
         )
         if call.operation == "create":
             identity = current_identity(request, call.token, call.csrf)

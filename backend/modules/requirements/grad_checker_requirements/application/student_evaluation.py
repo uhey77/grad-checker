@@ -3,12 +3,21 @@
 from datetime import UTC, datetime
 from typing import Protocol
 
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
+
 from .evaluation import evaluate_graduation
 from .evaluation_models import EvaluationResult, EvaluationSnapshot
 
 
 class EvaluationRepository(Protocol):
-    def get_snapshot(self, student_id: str) -> EvaluationSnapshot: ...
+    def get_snapshot(self, student_id: str) -> EvaluationSnapshot:
+        """所属・成績・マスタを、呼出し側が開始したトランザクション内で読む。"""
+        ...
+
+
+class EvaluationUnitOfWork(UnitOfWork, Protocol):
+    @property
+    def evaluation(self) -> EvaluationRepository: ...
 
 
 class StudentEvaluation(EvaluationResult):
@@ -23,9 +32,12 @@ def evaluate_student(
 
 
 class EvaluationService:
-    def __init__(self, repository: EvaluationRepository) -> None:
-        self.repository = repository
+    def __init__(self, uow: EvaluationUnitOfWork) -> None:
+        self.uow = uow
 
     def evaluate(self, student_id: str) -> StudentEvaluation:
-        snapshot = self.repository.get_snapshot(student_id)
+        # 読取り専用。履歴作成や成績版の更新は行わない。
+        with self.uow.read():
+            snapshot = self.uow.evaluation.get_snapshot(student_id)
+        # 判定の計算はスナップショットの取得後、トランザクションの外で行う。
         return evaluate_student(snapshot, datetime.now(UTC))

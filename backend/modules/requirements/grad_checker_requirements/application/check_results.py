@@ -1,6 +1,5 @@
 """本人が実行した卒業要件チェックを、当時の入力・結果とともに履歴として保存する。"""
 
-from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -8,10 +7,14 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from modules.grades.grad_checker_grades.application.grades import GradeAttempt
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 from .errors.evaluation import EvaluationError
-from .evaluation_models import EvaluationSnapshot
-from .student_evaluation import StudentEvaluation, evaluate_student
+from .student_evaluation import (
+    EvaluationRepository,
+    StudentEvaluation,
+    evaluate_student,
+)
 
 MAX_REVISION = 9007199254740990
 
@@ -39,23 +42,28 @@ class SavedCheck(BaseModel):
     result: StudentEvaluation
 
 
-type BuildCheck = Callable[[EvaluationSnapshot], SavedCheck]
-
-
 class CheckRepository(Protocol):
-    def create_check(self, student_id: str, build: BuildCheck) -> SavedCheck:
-        """同じ書込みトランザクションで読んだスナップショットから履歴を作り保存する。"""
-        ...
+    def add(self, student_id: str, check: SavedCheck) -> None: ...
+    def get(self, student_id: str, check_id: UUID) -> SavedCheck | None: ...
 
-    def get_check(self, student_id: str, check_id: UUID) -> SavedCheck | None: ...
+
+class CheckUnitOfWork(UnitOfWork, Protocol):
+    @property
+    def evaluation(self) -> EvaluationRepository: ...
+
+    @property
+    def checks(self) -> CheckRepository: ...
 
 
 class CheckService:
-    def __init__(self, repository: CheckRepository) -> None:
-        self.repository = repository
+    def __init__(self, uow: CheckUnitOfWork) -> None:
+        self.uow = uow
 
     def create_check(self, student_id: str, request: CheckRequest) -> SavedCheck:
-        def build(snapshot: EvaluationSnapshot) -> SavedCheck:
+        # 判定に使った成績版のまま保存するため、所属・成績・マスタの読取りから
+        # 版の照合・判定・保存までを一つの書込みロックの下で行う。
+        with self.uow.write():
+            snapshot = self.uow.evaluation.get_snapshot(student_id)
             # 画面が最後に保存・取得した成績版で判定したことを保証する。
             if snapshot.data_revision != request.expected_revision:
                 raise EvaluationError(
@@ -65,7 +73,7 @@ class CheckService:
             grades = sorted(
                 snapshot.grades, key=lambda grade: (grade.course_id, grade.attempt_no)
             )
-            return SavedCheck(
+            check = SavedCheck(
                 id=uuid4(),
                 created_at=created_at,
                 input=CheckInput(
@@ -76,12 +84,14 @@ class CheckService:
                 ),
                 result=evaluate_student(snapshot, created_at),
             )
-
-        return self.repository.create_check(student_id, build)
+            self.uow.checks.add(student_id, check)
+        # commitが成功してから結果を返す。
+        return check
 
     def get_check(self, student_id: str, check_id: UUID) -> SavedCheck:
+        with self.uow.read():
+            check = self.uow.checks.get(student_id, check_id)
         # 他人の履歴と存在しない履歴を区別しない。
-        check = self.repository.get_check(student_id, check_id)
         if check is None:
             raise EvaluationError("check_not_found", "判定履歴が見つかりません。")
         return check

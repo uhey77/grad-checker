@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 
 from api.api_service.main import create_app
-from api.api_service.presentation.dependencies import SessionDependency
 from config.settings import Settings
 from modules.accounts.grad_checker_accounts.application.auth import AuthService
 
@@ -54,46 +53,6 @@ def test_database_url_is_loaded_at_startup(tmp_path: Path, monkeypatch) -> None:
 
     with TestClient(application):
         assert Path(application.state.database_engine.url.database) == database_path
-
-
-def test_request_sessions_preserve_commits_and_rollback_uncommitted_changes(
-    tmp_path: Path,
-) -> None:
-    application = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}"))
-
-    # テスト専用ルートで、実際のFastAPI依存解決とリクエスト終了を検証する。
-    @application.post("/test/committed")
-    def committed(session: SessionDependency) -> dict[str, str]:
-        session.connection().execute(text("INSERT INTO records (id) VALUES (1)"))
-        session.commit()
-        return {"status": "ok"}
-
-    @application.post("/test/uncommitted")
-    def uncommitted(session: SessionDependency) -> dict[str, str]:
-        session.connection().execute(text("INSERT INTO records (id) VALUES (2)"))
-        return {"status": "ok"}
-
-    @application.post("/test/error")
-    def error(session: SessionDependency) -> None:
-        session.connection().execute(text("INSERT INTO records (id) VALUES (3)"))
-        raise RuntimeError("テスト用の障害")
-
-    @application.get("/test/records")
-    def records(session: SessionDependency) -> list[int]:
-        return list(
-            session.connection()
-            .execute(text("SELECT id FROM records ORDER BY id"))
-            .scalars()
-        )
-
-    with TestClient(application, raise_server_exceptions=False) as client:
-        with application.state.database_engine.begin() as connection:
-            connection.execute(text("CREATE TABLE records (id INTEGER PRIMARY KEY)"))
-
-        assert client.post("/test/committed").status_code == 200
-        assert client.post("/test/uncommitted").status_code == 200
-        assert client.post("/test/error").status_code == 500
-        assert client.get("/test/records").json() == [1]
 
 
 @pytest.mark.parametrize(

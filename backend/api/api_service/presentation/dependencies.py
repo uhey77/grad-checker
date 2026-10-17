@@ -1,11 +1,7 @@
 """ブリッジ呼出しごとのPythonリソース管理。"""
 
-from collections.abc import Iterator
-from typing import Annotated
-
-from fastapi import Depends, Request
+from fastapi import Request
 from sqlalchemy import Engine
-from sqlmodel import Session
 
 from modules.accounts.grad_checker_accounts.application.auth import (
     AuthPolicy,
@@ -20,15 +16,6 @@ from modules.accounts.grad_checker_accounts.infrastructure.repository import (
 def database_engine(request: Request) -> Engine:
     """各モジュールのUnit of Workへ渡すDBエンジン。"""
     return request.app.state.database_engine
-
-
-def get_session(request: Request) -> Iterator[Session]:
-    # commitはユースケース側で明示する。終了時に未commitの変更は破棄される。
-    with Session(request.app.state.database_engine) as session:
-        yield session
-
-
-SessionDependency = Annotated[Session, Depends(get_session)]
 
 
 def auth_service(request: Request) -> AuthService:

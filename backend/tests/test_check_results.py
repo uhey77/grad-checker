@@ -12,8 +12,11 @@ from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
 
 from api.api_service.main import create_app
 from config.settings import Settings
-from modules.requirements.grad_checker_requirements.infrastructure.seed import (
+from modules.requirements.grad_checker_requirements.application.seed_import import (
     import_requirements,
+)
+from modules.requirements.grad_checker_requirements.infrastructure.seed import (
+    SqliteRequirementUnitOfWork,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_import import (
     import_subject_data,
@@ -29,7 +32,7 @@ def checks_app(tmp_path, snapshot):  # noqa: F811
     with TestClient(app) as client:
         engine = app.state.database_engine
         import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
-        import_requirements(engine, snapshot.requirements)
+        import_requirements(SqliteRequirementUnitOfWork(engine), snapshot.requirements)
         register(client)
         identity = login(client)
         selected = bridge(

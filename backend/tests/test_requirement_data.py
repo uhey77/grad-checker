@@ -22,6 +22,9 @@ from modules.requirements.grad_checker_requirements.application.errors.seed impo
 from modules.requirements.grad_checker_requirements.application.seed import (
     RequirementSeed,
 )
+from modules.requirements.grad_checker_requirements.application.seed_import import (
+    import_requirements,
+)
 from modules.requirements.grad_checker_requirements.application.validation import (
     validate_requirements,
 )
@@ -35,7 +38,7 @@ from modules.requirements.grad_checker_requirements.infrastructure.schema import
     create_requirement_schema,
 )
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
-    import_requirements,
+    SqliteRequirementUnitOfWork,
     load_requirement_seed,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_import import (
@@ -201,7 +204,7 @@ def test_revision_updates_only_exact_old_rules_and_preserves_other_data(engine, 
         seed.credit_rules[index] = type(seed.credit_rules[index]).model_validate(
             previous
         )
-    import_requirements(engine, seed)
+    import_requirements(SqliteRequirementUnitOfWork(engine), seed)
     before = counts(engine)
     # 独自編集した旧規則を勝手に置き換えない。
     customized = cs_2026_revision.REVISIONS[0][0]["id"]
@@ -258,13 +261,13 @@ def test_legacy_schema_adds_policy_column_and_migrates_atomically(tmp_path, subj
 
 def test_persistent_idempotent_and_parent_order_independent(engine, seed):
     seed.graduation_requirements.reverse()
-    assert import_requirements(engine, seed) == {
+    assert import_requirements(SqliteRequirementUnitOfWork(engine), seed) == {
         name: len(getattr(seed, name)) for name in RequirementSeed.model_fields
     }
     before = counts(engine)
-    assert import_requirements(engine, seed) == dict.fromkeys(
-        RequirementSeed.model_fields, 0
-    )
+    assert import_requirements(
+        SqliteRequirementUnitOfWork(engine), seed
+    ) == dict.fromkeys(RequirementSeed.model_fields, 0)
     create_requirement_schema(engine)
     reopened = create_database_engine(str(engine.url))
     try:
@@ -363,22 +366,22 @@ def test_invalid_graph_rejected_without_writes(engine, seed, mutation):
     elif mutation == "unknown_rule":
         seed.credit_rule_courses[0].rule_id = uuid4()
     with pytest.raises(RequirementSeedError):
-        import_requirements(engine, seed)
+        import_requirements(SqliteRequirementUnitOfWork(engine), seed)
     assert counts(engine) == dict.fromkeys(RequirementSeed.model_fields, 0)
 
 
 def test_existing_changes_rejected_and_omitted_rows_preserved(engine, seed):
-    import_requirements(engine, seed)
+    import_requirements(SqliteRequirementUnitOfWork(engine), seed)
     before = counts(engine)
     empty = RequirementSeed.model_validate(
         {name: [] for name in RequirementSeed.model_fields}
     )
-    assert import_requirements(engine, empty) == dict.fromkeys(
-        RequirementSeed.model_fields, 0
-    )
+    assert import_requirements(
+        SqliteRequirementUnitOfWork(engine), empty
+    ) == dict.fromkeys(RequirementSeed.model_fields, 0)
     seed.graduation_requirements[0].required_credits += 1
     with pytest.raises(RequirementSeedError, match="既存データ"):
-        import_requirements(engine, seed)
+        import_requirements(SqliteRequirementUnitOfWork(engine), seed)
     assert counts(engine) == before
     with engine.connect() as connection:
         assert (
@@ -402,7 +405,7 @@ def test_db_failure_mid_import_rolls_back_all_tables(engine, seed):
     event.listen(engine, "before_cursor_execute", fail_on_rules)
     try:
         with pytest.raises(RequirementSeedError, match="全件"):
-            import_requirements(engine, seed)
+            import_requirements(SqliteRequirementUnitOfWork(engine), seed)
     finally:
         event.remove(engine, "before_cursor_execute", fail_on_rules)
     assert counts(engine) == dict.fromkeys(RequirementSeed.model_fields, 0)
@@ -422,13 +425,13 @@ def test_db_failure_mid_import_rolls_back_all_tables(engine, seed):
     ],
 )
 def test_database_constraints(engine, seed, sql):
-    import_requirements(engine, seed)
+    import_requirements(SqliteRequirementUnitOfWork(engine), seed)
     with pytest.raises(IntegrityError), engine.begin() as connection:
         connection.execute(text(sql))
 
 
 def test_database_rejects_cross_curriculum_links(engine, seed):
-    import_requirements(engine, seed)
+    import_requirements(SqliteRequirementUnitOfWork(engine), seed)
     other = seed.graduation_requirements[21].classification_id
     own = seed.graduation_requirements[1].id
     with pytest.raises(IntegrityError), engine.begin() as connection:

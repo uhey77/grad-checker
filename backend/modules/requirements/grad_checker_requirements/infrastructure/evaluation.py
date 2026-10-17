@@ -1,13 +1,16 @@
-"""本人の所属・成績・マスタを同じSQLite読取り時点で取得する。"""
+"""本人の所属・成績・マスタの取得。同じ読取り時点はUnit of Workが保証する。"""
 
 from pydantic import ValidationError
+from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
 from modules.accounts.grad_checker_accounts.infrastructure.models import Student
 from modules.grades.grad_checker_grades.infrastructure.grades import attempt_data
 from modules.grades.grad_checker_grades.infrastructure.models import GradeAttemptRecord
-from modules.shared.grad_checker_shared.infrastructure.transactions import read_snapshot
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
+    SqlUnitOfWork,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     TABLE_MAPPING as SUBJECT_MAPPING,
 )
@@ -26,12 +29,6 @@ class SqliteEvaluationRepository:
         self.db = session
 
     def get_snapshot(self, student_id: str) -> EvaluationSnapshot:
-        with read_snapshot(self.db, unavailable):
-            # 読取り専用。履歴作成や成績版の更新は行わない。
-            return self.load_snapshot(student_id)
-
-    def load_snapshot(self, student_id: str) -> EvaluationSnapshot:
-        """呼出し側が開始したトランザクション内で、所属・成績・マスタを読む。"""
         try:
             student = self.db.get(Student, student_id, populate_existing=True)
             if student is None:
@@ -68,3 +65,12 @@ class SqliteEvaluationRepository:
             ]
             for name, model, schema in mapping
         }
+
+
+class SqliteEvaluationUnitOfWork(SqlUnitOfWork):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(engine, unavailable)
+
+    @property
+    def evaluation(self) -> SqliteEvaluationRepository:
+        return SqliteEvaluationRepository(self.session)
