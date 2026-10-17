@@ -75,74 +75,78 @@ class SqliteSubjectListRepository(SubjectListRepository):
 
     def get_subject_list(self, curriculum_id: UUID) -> SubjectList:
         with read_snapshot(self.session, unavailable):
-            return self._get_subject_list(curriculum_id)
-
-    def _get_subject_list(self, curriculum_id: UUID) -> SubjectList:
-        row = self.session.exec(
-            select(Curriculum, AcademicProgram)
-            .join(
-                AcademicProgram, col(Curriculum.program_id) == col(AcademicProgram.id)
-            )
-            .where(Curriculum.id == str(curriculum_id))
-        ).first()
-        if row is None:
-            raise SubjectListNotFoundError
-        curriculum, program = row
-        classifications = {
-            item.id: item
-            for item in self.session.exec(
-                select(Classification).where(
-                    Classification.curriculum_id == curriculum.id
+            row = self.session.exec(
+                select(Curriculum, AcademicProgram)
+                .join(
+                    AcademicProgram,
+                    col(Curriculum.program_id) == col(AcademicProgram.id),
                 )
+                .where(Curriculum.id == str(curriculum_id))
+            ).first()
+            if row is None:
+                raise SubjectListNotFoundError
+            curriculum, program = row
+            classifications = {
+                item.id: item
+                for item in self.session.exec(
+                    select(Classification).where(
+                        Classification.curriculum_id == curriculum.id
+                    )
+                ).all()
+            }
+            rows = self.session.exec(
+                select(CurriculumSubject, Subject, AcademicProgram)
+                .join(Subject, col(CurriculumSubject.course_id) == col(Subject.id))
+                .join(
+                    AcademicProgram,
+                    col(Subject.offering_program_id) == col(AcademicProgram.id),
+                )
+                .where(CurriculumSubject.curriculum_id == curriculum.id)
+                .order_by(col(CurriculumSubject.display_order), col(Subject.code))
             ).all()
-        }
-        rows = self.session.exec(
-            select(CurriculumSubject, Subject, AcademicProgram)
-            .join(Subject, col(CurriculumSubject.course_id) == col(Subject.id))
-            .join(
-                AcademicProgram,
-                col(Subject.offering_program_id) == col(AcademicProgram.id),
-            )
-            .where(CurriculumSubject.curriculum_id == curriculum.id)
-            .order_by(col(CurriculumSubject.display_order), col(Subject.code))
-        ).all()
-        offerings = defaultdict(list)
-        if rows:
-            course_ids = [course.id for _, course, _ in rows]
-            for offering in self.session.exec(
-                select(SubjectOffering)
-                .where(col(SubjectOffering.course_id).in_(course_ids))
-                .order_by(col(SubjectOffering.semester_order), col(SubjectOffering.id))
-            ).all():
-                offerings[offering.course_id].append(
-                    SubjectListOffering(
-                        term_code=offering.term_code,
-                        semester_order=offering.semester_order,
-                        academic_year=offering.academic_year,
-                        source_note=offering.source_note,
+            offerings = defaultdict(list)
+            if rows:
+                course_ids = [course.id for _, course, _ in rows]
+                for offering in self.session.exec(
+                    select(SubjectOffering)
+                    .where(col(SubjectOffering.course_id).in_(course_ids))
+                    .order_by(
+                        col(SubjectOffering.semester_order), col(SubjectOffering.id)
+                    )
+                ).all():
+                    offerings[offering.course_id].append(
+                        SubjectListOffering(
+                            term_code=offering.term_code,
+                            semester_order=offering.semester_order,
+                            academic_year=offering.academic_year,
+                            source_note=offering.source_note,
+                        )
+                    )
+            courses = []
+            for association, course, offering_program in rows:
+                path = classification_path(
+                    classifications, association.classification_id
+                )
+                if path is None:
+                    raise SubjectListIntegrityError
+                courses.append(
+                    SubjectListItem(
+                        id=course.id,
+                        code=course.code,
+                        name=course.name,
+                        credits=course.credits,
+                        faculty_name=offering_program.faculty_name,
+                        department_name=offering_program.department_name,
+                        specialization_name=offering_program.specialization_name,
+                        teaching_type_label=course.teaching_type_label,
+                        course_type=association.course_type,
+                        classification_path=[
+                            SubjectListClassification(id=item.id, name=item.name)
+                            for item in path
+                        ],
+                        offerings=offerings[course.id],
                     )
                 )
-        courses = []
-        for association, course, offering_program in rows:
-            path = classification_path(classifications, association.classification_id)
-            if path is None:
-                raise SubjectListIntegrityError
-            courses.append(
-                SubjectListItem(
-                    id=course.id,
-                    code=course.code,
-                    name=course.name,
-                    credits=course.credits,
-                    faculty_name=offering_program.faculty_name,
-                    department_name=offering_program.department_name,
-                    specialization_name=offering_program.specialization_name,
-                    teaching_type_label=course.teaching_type_label,
-                    course_type=association.course_type,
-                    classification_path=[
-                        SubjectListClassification(id=item.id, name=item.name)
-                        for item in path
-                    ],
-                    offerings=offerings[course.id],
-                )
+            return SubjectList(
+                program=program_data(curriculum, program), courses=courses
             )
-        return SubjectList(program=program_data(curriculum, program), courses=courses)
