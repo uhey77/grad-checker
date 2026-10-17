@@ -8,15 +8,17 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from modules.shared.grad_checker_shared.application.errors import BusinessError
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 type TranslateError = Callable[[SQLAlchemyError], BusinessError]
 
 
-class SqlUnitOfWork:
+class SqlUnitOfWork(UnitOfWork):
     """``read`` ・ ``write`` のブロックごとにSessionを開き、終了時に閉じる。
 
-    各モジュールは ``session`` からリポジトリを生成するプロパティを定義し、
-    DB例外を自モジュールの業務エラーへ変換する関数を渡す。
+    各モジュールはこれと自モジュールのUnit of Work契約を継承し、``session`` から
+    リポジトリを生成するプロパティを定義する。DB例外を自モジュールの業務エラーへ
+    変換する関数を渡す。
     """
 
     def __init__(self, engine: Engine, translate: TranslateError) -> None:

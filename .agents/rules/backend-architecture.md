@@ -45,12 +45,13 @@
 - 各モジュールのGoの`infrastructure`は`modules/shared/pythonbridge`でブリッジ通信を行い、包絡形式の解析を重複させない。`pythonbridge`は業務モジュールを参照しない。業務エラー型への変換と応答内容の検証は各モジュールで行う。
 - Goの外部ハンドラーは`api/presentation/http.go`の共通関数で検証・エラー応答を行い、同じ失敗を画面ごとに異なるステータス・文言で返さない。
 - Pythonの業務エラーは`grad_checker_shared`の`BusinessError`を継承し、コードを持たせる。`grad_checker_shared`は業務モジュール・API・設定を参照せず、DB例外から業務エラーへの変換関数は呼出し側のモジュールが渡す。
-- Pythonのトランザクション境界は`application`のユースケースがUnit of Workの`read`・`write`で決める。各モジュールは`application`に`UnitOfWork`を継承した契約（使うリポジトリをプロパティで公開）を定義し、`infrastructure`で`SqlUnitOfWork`を継承して実装する。リポジトリはトランザクションの開始・commit・ロールバックを行わず、ブロック外で使用しない。BEGIN・commit・ロールバック・DB例外の変換を重複させない。
+- Pythonのトランザクション境界は`application`のユースケースがUnit of Workの`read`・`write`で決める。各モジュールは`application`に`UnitOfWork`を継承した契約（使うリポジトリを抽象プロパティで宣言）を定義し、`infrastructure`で`SqlUnitOfWork`とその契約を継承して実装する。リポジトリはトランザクションの開始・commit・ロールバックを行わず、ブロック外で使用しない。BEGIN・commit・ロールバック・DB例外の変換を重複させない。
 - Pythonのブリッジアダプターは`go_bridge_call.py`の`respond`で包絡形式を返し、予期しない例外は`internal_error`としてログに残す。本人セッションの確認は`current_identity`、変更操作はCSRFトークンを渡して照合する。
 
 ## 実装ルール
 
 - 新しい業務処理は `application` に置き、必要な取得・保存の契約をそこで定義する。DB処理は `infrastructure` に実装する。
+- Pythonの`application`の取得・保存契約（リポジトリ・Unit of Work・外部処理）はABCの抽象メソッドで定義する。`infrastructure`の実装とテストのFakeは契約を継承し、実装する契約を明示する。
 - SQLModelのテーブルモデルを、そのまま業務契約として他の層へ広げない。リポジトリで入出力モデルへ変換する。
 - Pythonの業務エラーは`application/errors/`に定義する。DBライブラリの例外は`infrastructure`で業務エラーへ変換する。外部HTTPステータスと日本語`detail`への変換はGoの`presentation`で行う。Pythonのブリッジアダプターには外部APIのメッセージ・ヘッダー・ステータスの判断を置かない。
 - SessionはUnit of Workの`read`・`write`のブロックごとに開閉する。`write`は正常終了でcommitし、一連の処理が失敗した場合は全体をロールバックする。`read`は変更を残さない。ブロック外やリクエスト終了時に自動commitしない。

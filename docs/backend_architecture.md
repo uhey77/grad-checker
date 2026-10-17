@@ -226,8 +226,8 @@ Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` 
 | --- | --- |
 | `grad_checker_shared/application/unit_of_work.py` | `UnitOfWork`契約。`read()`は一つの読取スナップショットで変更を残さず、`write()`は正常終了でcommit・例外でロールバックする |
 | `grad_checker_shared/infrastructure/unit_of_work.py` | `SqlUnitOfWork`。ブロックごとにSessionを開閉し、`read`は`BEGIN`、`write`は`BEGIN IMMEDIATE`で始める。DB例外は各モジュールが渡す関数で業務エラーへ変換する。ブロックの外でのリポジトリ利用と入れ子は`RuntimeError`にする |
-| 各モジュールの`application` | `UnitOfWork`を継承した契約で、使うリポジトリをプロパティとして宣言する。ユースケースが`with uow.read():`・`with uow.write():`で範囲を決める |
-| 各モジュールの`infrastructure` | `SqlUnitOfWork`を継承し、ブロック中のSessionからリポジトリを生成する。リポジトリはcommit・ロールバックを行わない |
+| 各モジュールの`application` | `UnitOfWork`（ABC）を継承した契約で、使うリポジトリを抽象プロパティとして宣言する。ユースケースが`with uow.read():`・`with uow.write():`で範囲を決める |
+| 各モジュールの`infrastructure` | `SqlUnitOfWork`と自モジュールの契約を継承し、ブロック中のSessionからリポジトリを生成する。リポジトリも契約（ABC）を継承し、commit・ロールバックを行わない |
 | ブリッジアダプター・CLI | DBエンジンからUoWを生成してユースケースへ渡す |
 
 範囲は、部分的な成功が業務上許されるかで決める。
