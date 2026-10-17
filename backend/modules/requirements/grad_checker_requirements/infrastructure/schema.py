@@ -1,4 +1,4 @@
-"""要件スキーマと、照合済みのCS2026規則改訂を適用する。"""
+"""要件・判定履歴のスキーマと、照合済みのCS2026規則改訂を適用する。"""
 
 from sqlalchemy import Engine, inspect, text
 from sqlmodel import SQLModel
@@ -7,12 +7,14 @@ from modules.requirements.grad_checker_requirements.infrastructure.models import
     REQUIREMENT_TABLES,
 )
 
+from .check_models import CHECK_TABLES, IMMUTABLE_TRIGGER
 from .cs_2026_revision import revise_cs_2026
 
 
 def create_requirement_schema(engine: Engine) -> None:
-    SQLModel.metadata.create_all(engine, tables=REQUIREMENT_TABLES)
+    SQLModel.metadata.create_all(engine, tables=REQUIREMENT_TABLES + CHECK_TABLES)
     with engine.begin() as connection:
+        connection.execute(text(IMMUTABLE_TRIGGER))
         if "allocation_policy" not in {
             col["name"] for col in inspect(connection).get_columns("credit_rules")
         }:

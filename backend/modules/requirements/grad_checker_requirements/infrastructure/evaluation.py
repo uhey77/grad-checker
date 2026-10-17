@@ -26,31 +26,35 @@ class SqliteEvaluationRepository:
         self.db = session
 
     def get_snapshot(self, student_id: str) -> EvaluationSnapshot:
+        with read_snapshot(self.db, unavailable):
+            # 読取り専用。履歴作成や成績版の更新は行わない。
+            return self.load_snapshot(student_id)
+
+    def load_snapshot(self, student_id: str) -> EvaluationSnapshot:
+        """呼出し側が開始したトランザクション内で、所属・成績・マスタを読む。"""
         try:
-            with read_snapshot(self.db, unavailable):
-                student = self.db.get(Student, student_id, populate_existing=True)
-                if student is None:
-                    raise EvaluationError("student_not_found", "本人が見つかりません。")
-                if student.program_id is None or student.curriculum_id is None:
-                    raise EvaluationError(
-                        "program_not_selected", "所属を設定してください。"
-                    )
-                grades = self.db.exec(
-                    select(GradeAttemptRecord).where(
-                        col(GradeAttemptRecord.student_id) == student_id
-                    )
-                ).all()
-                # 読取り専用。履歴作成や成績版の更新は行わない。
-                return EvaluationSnapshot.model_validate(
-                    {
-                        "program_id": student.program_id,
-                        "curriculum_id": student.curriculum_id,
-                        "data_revision": student.data_revision,
-                        "grades": [attempt_data(row) for row in grades],
-                        "subjects": self._master(SUBJECT_MAPPING),
-                        "requirements": self._master(TABLE_MAPPING),
-                    }
+            student = self.db.get(Student, student_id, populate_existing=True)
+            if student is None:
+                raise EvaluationError("student_not_found", "本人が見つかりません。")
+            if student.program_id is None or student.curriculum_id is None:
+                raise EvaluationError(
+                    "program_not_selected", "所属を設定してください。"
                 )
+            grades = self.db.exec(
+                select(GradeAttemptRecord).where(
+                    col(GradeAttemptRecord.student_id) == student_id
+                )
+            ).all()
+            return EvaluationSnapshot.model_validate(
+                {
+                    "program_id": student.program_id,
+                    "curriculum_id": student.curriculum_id,
+                    "data_revision": student.data_revision,
+                    "grades": [attempt_data(row) for row in grades],
+                    "subjects": self._master(SUBJECT_MAPPING),
+                    "requirements": self._master(TABLE_MAPPING),
+                }
+            )
         except ValidationError as error:
             raise EvaluationError(
                 "invalid_evaluation_input", "保存済みの判定データが不正です。"

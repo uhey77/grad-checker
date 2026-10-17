@@ -15,11 +15,17 @@ class StudentEvaluation(EvaluationResult):
     evaluated_at: datetime
 
 
+def evaluate_student(
+    snapshot: EvaluationSnapshot, evaluated_at: datetime
+) -> StudentEvaluation:
+    result = evaluate_graduation(snapshot)
+    return StudentEvaluation(**result.model_dump(), evaluated_at=evaluated_at)
+
+
 class EvaluationService:
     def __init__(self, repository: EvaluationRepository) -> None:
         self.repository = repository
 
     def evaluate(self, student_id: str) -> StudentEvaluation:
         snapshot = self.repository.get_snapshot(student_id)
-        result = evaluate_graduation(snapshot)
-        return StudentEvaluation(**result.model_dump(), evaluated_at=datetime.now(UTC))
+        return evaluate_student(snapshot, datetime.now(UTC))

@@ -30,6 +30,14 @@ func (c *PythonEvaluationClient) Call(ctx context.Context, call application.Eval
 		}
 		return nil, application.ErrBackend
 	}
+	if !validEvaluation(data) {
+		return nil, application.ErrBackend
+	}
+	return data, nil
+}
+
+// validEvaluationは判定結果の必須フィールドと値域を検証する。単位の再計算は行わない。
+func validEvaluation(data json.RawMessage) bool {
 	var shape struct {
 		Result       string `json:"result"`
 		DataRevision *int64 `json:"data_revision"`
@@ -55,20 +63,17 @@ func (c *PythonEvaluationClient) Call(ctx context.Context, call application.Eval
 		RuleRevisions       map[string]int64   `json:"rule_revisions"`
 	}
 	if json.Unmarshal(data, &shape) != nil || !judgment(shape.Result) || shape.DataRevision == nil || *shape.DataRevision < 0 || shape.Curriculum == nil || shape.Curriculum.ID == "" || shape.Curriculum.Revision == nil || *shape.Curriculum.Revision < 1 || shape.Total == nil || shape.Requirements == nil || len(*shape.Requirements) == 0 || shape.Categories == nil || shape.Missing == nil || shape.Courses == nil || shape.Allocations == nil || shape.ExternalAllocations == nil || shape.Warnings == nil || shape.RuleRevisions == nil {
-		return nil, application.ErrBackend
+		return false
 	}
 	if _, err := time.Parse(time.RFC3339Nano, shape.EvaluatedAt); err != nil {
-		return nil, application.ErrBackend
+		return false
 	}
 	for _, value := range []*int64{shape.Total.Required, shape.Total.Earned, shape.Total.Credited, shape.Total.Shortage} {
 		if value == nil || *value < 0 {
-			return nil, application.ErrBackend
+			return false
 		}
 	}
-	if !judgment(shape.Total.Result) {
-		return nil, application.ErrBackend
-	}
-	return data, nil
+	return judgment(shape.Total.Result)
 }
 
 func judgment(value string) bool { return value == "pass" || value == "fail" }

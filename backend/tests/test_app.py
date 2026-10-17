@@ -39,6 +39,7 @@ def test_startup_and_python_service(tmp_path: Path) -> None:
             "credit_rules",
             "credit_rule_courses",
             "credit_rule_limits",
+            "check_results",
         }
         with application.state.database_engine.connect() as connection:
             assert connection.execute(text("SELECT 1")).scalar_one() == 1

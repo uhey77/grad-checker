@@ -51,7 +51,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	evaluationHandler := presentation.NewEvaluationHandler(evaluationClient, gradeHandler)
+	checkClient, err := requirements.NewPythonCheckClient(*pythonURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	checkHandler := presentation.NewCheckHandler(checkClient, *origin, gradeHandler)
+	evaluationHandler := presentation.NewEvaluationHandler(evaluationClient, checkHandler)
 	profileHandler := presentation.NewProfileHandler(profileClient, *origin, evaluationHandler)
 	handler, err := presentation.NewAuthHandler(authClient, *origin, profileHandler)
 	if err != nil {
