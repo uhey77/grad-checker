@@ -8,6 +8,7 @@ from pydantic import model_validator
 from api.api_service.presentation.dependencies import (
     SessionDependency,
     current_identity,
+    database_engine,
 )
 from api.api_service.presentation.go_bridge_call import SessionCall, respond
 from modules.accounts.grad_checker_accounts.application.profile import ProfileService
@@ -19,7 +20,7 @@ from modules.subjects.grad_checker_subjects.application.course_catalog import (
     CourseFilters,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.course_catalog import (
-    SqliteCourseCatalogRepository,
+    SqliteCourseCatalogUnitOfWork,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -45,7 +46,9 @@ def courses(
         curriculum_id = ProfileService(
             SqliteProfileRepository(session)
         ).selected_curriculum(identity.account.id)
-        service = CourseCatalogService(SqliteCourseCatalogRepository(session))
+        service = CourseCatalogService(
+            SqliteCourseCatalogUnitOfWork(database_engine(request))
+        )
         if call.operation == "categories":
             return service.list_categories(curriculum_id)
         return service.list_courses(curriculum_id, call.filters or CourseFilters())

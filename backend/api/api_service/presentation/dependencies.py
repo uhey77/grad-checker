@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy import Engine
 from sqlmodel import Session
 
 from modules.accounts.grad_checker_accounts.application.auth import (
@@ -14,6 +15,11 @@ from modules.accounts.grad_checker_accounts.application.auth import (
 from modules.accounts.grad_checker_accounts.infrastructure.repository import (
     SqliteAccountRepository,
 )
+
+
+def database_engine(request: Request) -> Engine:
+    """各モジュールのUnit of Workへ渡すDBエンジン。"""
+    return request.app.state.database_engine
 
 
 def get_session(request: Request) -> Iterator[Session]:

@@ -38,12 +38,15 @@ from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     import_requirements,
     load_requirement_seed,
 )
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    import_subject_data,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
     create_database_schema,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
+    SqliteSubjectDataUnitOfWork,
     load_seed,
 )
 from seeds.build_cs_requirements_seed import build_seed
@@ -68,7 +71,7 @@ def subjects():
 def engine(tmp_path, subjects):
     database = create_database_engine(f"sqlite:///{tmp_path / 'requirements.db'}")
     create_database_schema(database)
-    import_subject_data(database, subjects)
+    import_subject_data(SqliteSubjectDataUnitOfWork(database), subjects)
     create_requirement_schema(database)
     try:
         yield database
@@ -222,7 +225,7 @@ def test_legacy_schema_adds_policy_column_and_migrates_atomically(tmp_path, subj
     engine = create_database_engine(f"sqlite:///{tmp_path / 'legacy.db'}")
     try:
         create_database_schema(engine)
-        import_subject_data(engine, subjects)
+        import_subject_data(SqliteSubjectDataUnitOfWork(engine), subjects)
         ddl = str(CreateTable(SQLModel.metadata.tables["credit_rules"]).compile(engine))
         ddl = re.sub(r"\s*allocation_policy VARCHAR,?", "", ddl)
         ddl = re.sub(r"\s*CHECK \(allocation_policy[^\n]+\n", "", ddl)

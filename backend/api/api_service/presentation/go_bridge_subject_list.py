@@ -3,17 +3,17 @@
 from typing import Literal, Self
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from api.api_service.presentation.dependencies import SessionDependency
+from api.api_service.presentation.dependencies import database_engine
 from api.api_service.presentation.go_bridge_call import respond
 from modules.subjects.grad_checker_subjects.application.subject_list import (
     get_subject_list,
     list_subject_programs,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_list import (
-    SqliteSubjectListRepository,
+    SqliteSubjectListUnitOfWork,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -34,14 +34,12 @@ class SubjectListCall(BaseModel):
 
 
 @router.post("/subject-list")
-def subject_list(
-    call: SubjectListCall, session: SessionDependency
-) -> dict[str, object]:
-    repository = SqliteSubjectListRepository(session)
+def subject_list(call: SubjectListCall, request: Request) -> dict[str, object]:
+    uow = SqliteSubjectListUnitOfWork(database_engine(request))
 
     def run() -> object:
         if call.curriculum_id is None:
-            return list_subject_programs(repository)
-        return get_subject_list(repository, call.curriculum_id)
+            return list_subject_programs(uow)
+        return get_subject_list(uow, call.curriculum_id)
 
     return respond(run)

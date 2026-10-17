@@ -10,8 +10,11 @@ from test_profile import selection
 
 from api.api_service.main import create_app
 from config.settings import Settings
-from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
     import_subject_data,
+)
+from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+    SqliteSubjectDataUnitOfWork,
     load_seed,
 )
 
@@ -24,7 +27,8 @@ def catalog_app(tmp_path):
     app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'catalog.db'}"))
     with TestClient(app) as client:
         import_subject_data(
-            app.state.database_engine, load_seed(BACKEND / "seeds/cs_2026.json")
+            SqliteSubjectDataUnitOfWork(app.state.database_engine),
+            load_seed(BACKEND / "seeds/cs_2026.json"),
         )
         register(client)
         yield client, login(client)

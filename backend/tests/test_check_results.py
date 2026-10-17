@@ -15,8 +15,11 @@ from config.settings import Settings
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     import_requirements,
 )
-from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
     import_subject_data,
+)
+from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+    SqliteSubjectDataUnitOfWork,
 )
 
 
@@ -25,7 +28,7 @@ def checks_app(tmp_path, snapshot):  # noqa: F811
     app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'checks.db'}"))
     with TestClient(app) as client:
         engine = app.state.database_engine
-        import_subject_data(engine, snapshot.subjects)
+        import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
         import_requirements(engine, snapshot.requirements)
         register(client)
         identity = login(client)

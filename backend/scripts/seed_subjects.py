@@ -11,12 +11,15 @@ from config.settings import Settings
 from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
     SeedError,
 )
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    import_subject_data,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
     create_database_schema,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
+    SqliteSubjectDataUnitOfWork,
     load_seed,
 )
 
@@ -32,7 +35,7 @@ def main() -> int:
         seed = load_seed(arguments.file)
         engine = create_database_engine(Settings().database_url)
         create_database_schema(engine)
-        result = import_subject_data(engine, seed)
+        result = import_subject_data(SqliteSubjectDataUnitOfWork(engine), seed)
     except (SeedError, SQLAlchemyError, ValueError) as error:
         message = (
             str(error)

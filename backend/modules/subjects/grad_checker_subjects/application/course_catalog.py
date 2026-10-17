@@ -4,6 +4,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 from modules.subjects.grad_checker_subjects.application.errors.course_catalog import (
     CourseCatalogError,
 )
@@ -124,12 +125,22 @@ def matches(course: CatalogCourse, filters: CourseFilters) -> bool:
     return True
 
 
+class CourseCatalogUnitOfWork(UnitOfWork, Protocol):
+    @property
+    def catalog(self) -> CourseCatalogRepository: ...
+
+
 class CourseCatalogService:
-    def __init__(self, repository: CourseCatalogRepository) -> None:
-        self.repository = repository
+    def __init__(self, uow: CourseCatalogUnitOfWork) -> None:
+        self.uow = uow
+
+    def _catalog(self, curriculum_id: str) -> CourseCatalog:
+        # 絞り込みはスナップショットの取得後に行い、読取りを短くする。
+        with self.uow.read():
+            return self.uow.catalog.get_catalog(curriculum_id)
 
     def list_courses(self, curriculum_id: str, filters: CourseFilters) -> CourseList:
-        catalog = self.repository.get_catalog(curriculum_id)
+        catalog = self._catalog(curriculum_id)
         if filters.category_id is not None and all(
             category.id != filters.category_id for category in catalog.categories
         ):
@@ -140,7 +151,7 @@ class CourseCatalogService:
         )
 
     def list_categories(self, curriculum_id: str) -> CategoryList:
-        catalog = self.repository.get_catalog(curriculum_id)
+        catalog = self._catalog(curriculum_id)
         return CategoryList(
             curriculum=catalog.curriculum, categories=catalog.categories
         )

@@ -9,11 +9,14 @@ from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     import_requirements,
 )
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    import_subject_data,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
+    SqliteSubjectDataUnitOfWork,
 )
 
 
@@ -49,7 +52,7 @@ def test_check_snapshot_is_saved_and_read_only_by_owner(
             ).scalar()
 
     try:
-        import_subject_data(engine, snapshot.subjects)
+        import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
         import_requirements(engine, snapshot.requirements)
         assert (
             client.post("/api/checks", json={"expected_revision": 0}).status_code == 401

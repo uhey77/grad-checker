@@ -1,9 +1,12 @@
 """科目データの読取契約。開発用一覧でも所属を保存・変更しない。"""
 
 from abc import ABC, abstractmethod
+from typing import Protocol
 from uuid import UUID
 
 from pydantic import BaseModel
+
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 
 class SubjectListProgram(BaseModel):
@@ -60,13 +63,16 @@ class SubjectListRepository(ABC):
         """指定課程の科目一覧を取得する。"""
 
 
-def list_subject_programs(
-    repository: SubjectListRepository,
-) -> list[SubjectListProgram]:
-    return repository.list_programs()
+class SubjectListUnitOfWork(UnitOfWork, Protocol):
+    @property
+    def subject_list(self) -> SubjectListRepository: ...
 
 
-def get_subject_list(
-    repository: SubjectListRepository, curriculum_id: UUID
-) -> SubjectList:
-    return repository.get_subject_list(curriculum_id)
+def list_subject_programs(uow: SubjectListUnitOfWork) -> list[SubjectListProgram]:
+    with uow.read():
+        return uow.subject_list.list_programs()
+
+
+def get_subject_list(uow: SubjectListUnitOfWork, curriculum_id: UUID) -> SubjectList:
+    with uow.read():
+        return uow.subject_list.get_subject_list(curriculum_id)
