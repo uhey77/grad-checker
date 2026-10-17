@@ -49,12 +49,6 @@ export const subjectSortLabels: Record<SubjectSortOrder, string> = {
   semester: "開講学年・学期順",
 };
 
-function termLabel(term: string): string {
-  return term in termLabels
-    ? termLabels[term as keyof typeof termLabels]
-    : term;
-}
-
 export function offeringLabels(offerings: Offering[]): string[] {
   const years = new Map<number, Set<string>>();
   for (const offering of offerings) {
@@ -70,7 +64,7 @@ export function offeringLabels(offerings: Offering[]): string[] {
       const labels = [
         ...order.filter((term) => terms.has(term)),
         ...[...terms].filter((term) => !order.includes(term)),
-      ].map(termLabel);
+      ].map((term) => termLabels[term as keyof typeof termLabels] ?? term);
       return `${year}年次${labels.join("・")}`;
     });
 }
