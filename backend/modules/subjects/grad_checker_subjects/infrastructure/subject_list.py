@@ -22,6 +22,7 @@ from modules.subjects.grad_checker_subjects.application.subject_list import (
     SubjectListOffering,
     SubjectListProgram,
     SubjectListRepository,
+    SubjectListUnitOfWork,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.classification_path import (
     classification_path,
@@ -144,7 +145,7 @@ class SqliteSubjectListRepository(SubjectListRepository):
         return SubjectList(program=program_data(curriculum, program), courses=courses)
 
 
-class SqliteSubjectListUnitOfWork(SqlUnitOfWork):
+class SqliteSubjectListUnitOfWork(SqlUnitOfWork, SubjectListUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

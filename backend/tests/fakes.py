@@ -3,8 +3,10 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
-class FakeUnitOfWork:
+
+class FakeUnitOfWork(UnitOfWork):
     """開始したブロックとcommit・ロールバックを ``events`` に記録する。
 
     メモリ上のリポジトリは ``require_block`` で、ブロック外の使用を拒否する。

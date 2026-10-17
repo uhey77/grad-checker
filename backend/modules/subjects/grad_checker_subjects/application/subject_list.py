@@ -1,7 +1,6 @@
 """科目データの読取契約。開発用一覧でも所属を保存・変更しない。"""
 
 from abc import ABC, abstractmethod
-from typing import Protocol
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -63,8 +62,9 @@ class SubjectListRepository(ABC):
         """指定課程の科目一覧を取得する。"""
 
 
-class SubjectListUnitOfWork(UnitOfWork, Protocol):
+class SubjectListUnitOfWork(UnitOfWork):
     @property
+    @abstractmethod
     def subject_list(self) -> SubjectListRepository: ...
 
 

@@ -14,6 +14,10 @@ from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
 from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
     SeedError,
 )
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    SubjectDataStore,
+    SubjectDataUnitOfWork,
+)
 from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
     AcademicProgramData,
     ClassificationData,
@@ -62,7 +66,7 @@ def load_seed(path: Path) -> SubjectDataSeed:
         ) from error
 
 
-class SqliteSubjectDataStore:
+class SqliteSubjectDataStore(SubjectDataStore):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -95,7 +99,7 @@ class SqliteSubjectDataStore:
                 self.db.flush()
 
 
-class SqliteSubjectDataUnitOfWork(SqlUnitOfWork):
+class SqliteSubjectDataUnitOfWork(SqlUnitOfWork, SubjectDataUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

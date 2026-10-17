@@ -17,6 +17,8 @@ from modules.subjects.grad_checker_subjects.application.course_catalog import (
     CatalogOffering,
     CatalogPlacement,
     CourseCatalog,
+    CourseCatalogRepository,
+    CourseCatalogUnitOfWork,
 )
 from modules.subjects.grad_checker_subjects.application.errors.course_catalog import (
     CourseCatalogError,
@@ -43,7 +45,7 @@ def unavailable(_error: SQLAlchemyError) -> CourseCatalogError:
     return CourseCatalogError("catalog_unavailable")
 
 
-class SqliteCourseCatalogRepository:
+class SqliteCourseCatalogRepository(CourseCatalogRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -153,7 +155,7 @@ class SqliteCourseCatalogRepository:
         )
 
 
-class SqliteCourseCatalogUnitOfWork(SqlUnitOfWork):
+class SqliteCourseCatalogUnitOfWork(SqlUnitOfWork, CourseCatalogUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

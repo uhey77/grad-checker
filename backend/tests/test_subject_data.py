@@ -16,6 +16,8 @@ from modules.subjects.grad_checker_subjects.application.errors.subject_data impo
     SeedError,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    SubjectDataStore,
+    SubjectDataUnitOfWork,
     import_subject_data,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
@@ -50,7 +52,7 @@ def engine(tmp_path):
         database.dispose()
 
 
-class FakeSubjectDataStore:
+class FakeSubjectDataStore(SubjectDataStore):
     def __init__(self, uow: FakeUnitOfWork, existing: SubjectDataSeed) -> None:
         self.uow = uow
         self.existing = existing
@@ -65,7 +67,7 @@ class FakeSubjectDataStore:
         self.inserted.append(additions)
 
 
-class FakeSubjectDataUnitOfWork(FakeUnitOfWork):
+class FakeSubjectDataUnitOfWork(FakeUnitOfWork, SubjectDataUnitOfWork):
     def __init__(self, existing: SubjectDataSeed) -> None:
         super().__init__()
         self.store = FakeSubjectDataStore(self, existing)

@@ -1,6 +1,6 @@
 """検証済みの課程・科目データの原子的な追加投入。同じ内容の再投入は変更しない。"""
 
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
@@ -41,18 +41,19 @@ def record_key(
     return (record.id,)
 
 
-class SubjectDataStore(Protocol):
+class SubjectDataStore(ABC):
+    @abstractmethod
     def load(self) -> SubjectDataSeed:
         """投入済みの課程・科目データをすべて読む。"""
-        ...
 
+    @abstractmethod
     def insert(self, additions: SubjectDataSeed) -> None:
         """テーブルの順、各テーブル内では並びの順に追加する。"""
-        ...
 
 
-class SubjectDataUnitOfWork(UnitOfWork, Protocol):
+class SubjectDataUnitOfWork(UnitOfWork):
     @property
+    @abstractmethod
     def subject_data(self) -> SubjectDataStore: ...
 
 
