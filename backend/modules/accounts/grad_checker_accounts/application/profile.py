@@ -1,6 +1,7 @@
 """本人の所属とカリキュラムの取得・保存契約。"""
 
-from typing import Literal, Protocol
+from abc import ABC, abstractmethod
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,14 +44,20 @@ class ProgramSelection(BaseModel):
     expected_revision: int = Field(ge=0, le=9007199254740990)
 
 
-class ProfileRepository(Protocol):
+class ProfileRepository(ABC):
+    @abstractmethod
     def list_programs(self) -> list[ProgramOption]: ...
+
+    @abstractmethod
     def get_profile(self, student_id: str) -> Profile: ...
+
+    @abstractmethod
     def save_program(self, student_id: str, selection: ProgramSelection) -> Profile: ...
 
 
-class ProfileUnitOfWork(UnitOfWork, Protocol):
+class ProfileUnitOfWork(UnitOfWork):
     @property
+    @abstractmethod
     def profiles(self) -> ProfileRepository: ...
 
 

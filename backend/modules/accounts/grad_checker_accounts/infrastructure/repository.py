@@ -9,6 +9,8 @@ from sqlmodel import Session, col, select
 
 from modules.accounts.grad_checker_accounts.application.auth import (
     Account,
+    AccountRepository,
+    AccountUnitOfWork,
     StoredSession,
     digest,
 )
@@ -34,7 +36,7 @@ def utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
-class SqliteAccountRepository:
+class SqliteAccountRepository(AccountRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -208,7 +210,7 @@ class SqliteAccountRepository:
         )
 
 
-class SqliteAccountUnitOfWork(SqlUnitOfWork):
+class SqliteAccountUnitOfWork(SqlUnitOfWork, AccountUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, auth_failure)
 

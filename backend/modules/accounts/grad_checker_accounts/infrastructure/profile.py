@@ -10,6 +10,8 @@ from modules.accounts.grad_checker_accounts.application.errors.profile import (
 )
 from modules.accounts.grad_checker_accounts.application.profile import (
     Profile,
+    ProfileRepository,
+    ProfileUnitOfWork,
     ProgramOption,
     ProgramSelection,
     VerificationStatus,
@@ -28,7 +30,7 @@ def unavailable(_error: SQLAlchemyError) -> ProfileError:
     return ProfileError("profile_unavailable")
 
 
-class SqliteProfileRepository:
+class SqliteProfileRepository(ProfileRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -104,7 +106,7 @@ class SqliteProfileRepository:
         return Profile.model_validate(dict(row))
 
 
-class SqliteProfileUnitOfWork(SqlUnitOfWork):
+class SqliteProfileUnitOfWork(SqlUnitOfWork, ProfileUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

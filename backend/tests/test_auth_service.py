@@ -6,8 +6,11 @@ import pytest
 
 from modules.accounts.grad_checker_accounts.application.auth import (
     Account,
+    AccountRepository,
+    AccountUnitOfWork,
     AuthPolicy,
     AuthService,
+    Passwords,
     StoredSession,
     digest,
 )
@@ -26,7 +29,7 @@ POLICY = AuthPolicy(
 )
 
 
-class FakeAccountRepository:
+class FakeAccountRepository(AccountRepository):
     def __init__(self, uow: FakeUnitOfWork) -> None:
         self.uow = uow
         self.attempts: list[str] = []
@@ -93,7 +96,7 @@ class FakeAccountRepository:
         self.uow.require_block()
 
 
-class FakeAccountUnitOfWork(FakeUnitOfWork):
+class FakeAccountUnitOfWork(FakeUnitOfWork, AccountUnitOfWork):
     def __init__(self) -> None:
         super().__init__()
         self.repository = FakeAccountRepository(self)
@@ -103,7 +106,7 @@ class FakeAccountUnitOfWork(FakeUnitOfWork):
         return self.repository
 
 
-class FakePasswords:
+class FakePasswords(Passwords):
     """ハッシュ計算と照合がトランザクション外で行われることを確認する。"""
 
     def __init__(self, uow: FakeUnitOfWork) -> None:
