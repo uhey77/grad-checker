@@ -37,10 +37,10 @@ def grades(
     def run() -> object:
         service = GradeService(SqliteGradeRepository(session))
         if call.operation == "save":
-            identity = current_identity(request, session, call.token, call.csrf)
+            identity = current_identity(request, call.token, call.csrf)
             assert call.grade_set is not None
             return service.save_grades(identity.account.id, call.grade_set)
-        identity = current_identity(request, session, call.token)
+        identity = current_identity(request, call.token)
         return service.get_grades(identity.account.id)
 
     return respond(run)

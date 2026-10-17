@@ -22,7 +22,7 @@ def graduation_requirements(
     call: SessionCall, request: Request, session: SessionDependency
 ) -> dict[str, object]:
     def run() -> object:
-        identity = current_identity(request, session, call.token)
+        identity = current_identity(request, call.token)
         service = student_evaluation.EvaluationService(
             SqliteEvaluationRepository(session)
         )

@@ -13,7 +13,7 @@ from modules.accounts.grad_checker_accounts.application.auth import (
     SessionIdentity,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.repository import (
-    SqliteAccountRepository,
+    SqliteAccountUnitOfWork,
 )
 
 
@@ -31,10 +31,10 @@ def get_session(request: Request) -> Iterator[Session]:
 SessionDependency = Annotated[Session, Depends(get_session)]
 
 
-def auth_service(request: Request, session: Session) -> AuthService:
+def auth_service(request: Request) -> AuthService:
     settings = request.app.state.settings
     return AuthService(
-        SqliteAccountRepository(session),
+        SqliteAccountUnitOfWork(database_engine(request)),
         request.app.state.passwords,
         AuthPolicy(
             session_hours=settings.auth_session_hours,
@@ -47,10 +47,10 @@ def auth_service(request: Request, session: Session) -> AuthService:
 
 
 def current_identity(
-    request: Request, session: Session, token: str, csrf: str | None = None
+    request: Request, token: str, csrf: str | None = None
 ) -> SessionIdentity:
     """本人をセッションから決定する。変更操作はCSRFトークンを渡して照合する。"""
-    service = auth_service(request, session)
+    service = auth_service(request)
     if csrf is None:
         return service.session(token)
     return service.authorize(token, csrf)

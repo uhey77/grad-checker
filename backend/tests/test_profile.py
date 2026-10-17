@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlmodel import Session
 from test_auth import login, register
 
 from api.api_service.main import create_app
@@ -15,10 +14,11 @@ from modules.accounts.grad_checker_accounts.application.errors.profile import (
     ProfileError,
 )
 from modules.accounts.grad_checker_accounts.application.profile import (
+    ProfileService,
     ProgramSelection,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.profile import (
-    SqliteProfileRepository,
+    SqliteProfileUnitOfWork,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_import import (
     import_subject_data,
@@ -131,11 +131,11 @@ def test_concurrent_revision_updates_have_only_one_winner(profile_app):
     student_id = identity["student"]["id"]
 
     def save(chosen):
-        with Session(app.state.database_engine) as db:
-            try:
-                return SqliteProfileRepository(db).save_program(student_id, chosen)
-            except ProfileError as error:
-                return error.code
+        service = ProfileService(SqliteProfileUnitOfWork(app.state.database_engine))
+        try:
+            return service.save_program(student_id, chosen)
+        except ProfileError as error:
+            return error.code
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(save, choices))

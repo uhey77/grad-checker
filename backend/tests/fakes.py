@@ -31,6 +31,10 @@ class FakeUnitOfWork(UnitOfWork):
                 raise
             self.events.append("commit")
 
+    @property
+    def active(self) -> bool:
+        return self._active
+
     def require_block(self) -> None:
         if not self._active:
             raise RuntimeError("リポジトリはread・writeのブロック内で使用する。")

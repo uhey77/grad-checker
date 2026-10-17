@@ -41,10 +41,10 @@ def checks(
             check_storage.SqliteCheckRepository(session)
         )
         if call.operation == "create":
-            identity = current_identity(request, session, call.token, call.csrf)
+            identity = current_identity(request, call.token, call.csrf)
             assert call.request is not None
             return service.create_check(identity.account.id, call.request)
-        identity = current_identity(request, session, call.token)
+        identity = current_identity(request, call.token)
         assert call.check_id is not None
         return service.get_check(identity.account.id, call.check_id)
 

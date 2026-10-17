@@ -6,14 +6,13 @@ from fastapi import APIRouter, Request
 from pydantic import model_validator
 
 from api.api_service.presentation.dependencies import (
-    SessionDependency,
     current_identity,
     database_engine,
 )
 from api.api_service.presentation.go_bridge_call import SessionCall, respond
 from modules.accounts.grad_checker_accounts.application.profile import ProfileService
 from modules.accounts.grad_checker_accounts.infrastructure.profile import (
-    SqliteProfileRepository,
+    SqliteProfileUnitOfWork,
 )
 from modules.subjects.grad_checker_subjects.application.course_catalog import (
     CourseCatalogService,
@@ -38,17 +37,14 @@ class CourseCall(SessionCall):
 
 
 @router.post("/courses")
-def courses(
-    call: CourseCall, request: Request, session: SessionDependency
-) -> dict[str, object]:
+def courses(call: CourseCall, request: Request) -> dict[str, object]:
     def run() -> object:
-        identity = current_identity(request, session, call.token)
+        identity = current_identity(request, call.token)
+        engine = database_engine(request)
         curriculum_id = ProfileService(
-            SqliteProfileRepository(session)
+            SqliteProfileUnitOfWork(engine)
         ).selected_curriculum(identity.account.id)
-        service = CourseCatalogService(
-            SqliteCourseCatalogUnitOfWork(database_engine(request))
-        )
+        service = CourseCatalogService(SqliteCourseCatalogUnitOfWork(engine))
         if call.operation == "categories":
             return service.list_categories(curriculum_id)
         return service.list_courses(curriculum_id, call.filters or CourseFilters())

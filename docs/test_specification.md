@@ -134,6 +134,7 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 - `test_username.py`：文字種・長さ境界・大小文字の正規化。
 - `test_auth.py`：登録・Argon2id／コードハッシュ保存、重複拒否、復旧コード更新・再使用拒否、全セッション失効、アカウントID維持、並行登録・並行復旧、古いパスワードでのセッション作成拒否、永続的な試行制限。
 - `test_auth_http.py`：実Go／Python／一時SQLiteで登録・ログイン・Cookie・CSRF・復旧・ログアウトを検証。メールサーバーは不要。
+- `test_auth_service.py`：FakeのUnit of Workで、試行回数を操作本体と別にcommitすること、復旧の照合・更新とセッション失効が一つの書込みであること、ハッシュ計算・照合がトランザクション外であること、照合後のパスワード変更でセッションを作らないことを検証。
 - `test_account_schema.py`：空の旧DB移行と再起動、既存メール認証アカウントがあるDBの変更前停止。
 - `auth_test.go`：外部入力・Origin・重複JSON・Cookie属性・接続元IP・原トークン非公開・日本語エラー。
 - `frontend/tests/accounts.test.mjs`：DTO変換、登録・復旧の本文とコード取得、Cookie／CSRF送信、キャンセル、未認証・通信失敗の区別。

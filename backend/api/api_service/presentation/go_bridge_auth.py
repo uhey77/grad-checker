@@ -5,10 +5,7 @@ from typing import Literal, Self
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from api.api_service.presentation.dependencies import (
-    SessionDependency,
-    auth_service,
-)
+from api.api_service.presentation.dependencies import auth_service
 from api.api_service.presentation.go_bridge_call import respond
 
 router = APIRouter(prefix="/bridge")
@@ -48,11 +45,9 @@ class AuthCall(BaseModel):
 
 
 @router.post("/auth")
-def auth(
-    call: AuthCall, request: Request, session: SessionDependency
-) -> dict[str, object]:
+def auth(call: AuthCall, request: Request) -> dict[str, object]:
     settings = request.app.state.settings
-    service = auth_service(request, session)
+    service = auth_service(request)
 
     def run() -> object:
         if call.operation == "config":
