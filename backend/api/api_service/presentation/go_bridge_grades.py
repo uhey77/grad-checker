@@ -6,8 +6,8 @@ from fastapi import APIRouter, Request
 from pydantic import model_validator
 
 from api.api_service.presentation.dependencies import (
-    SessionDependency,
     current_identity,
+    database_engine,
 )
 from api.api_service.presentation.go_bridge_call import WritableSessionCall, respond
 from modules.grades.grad_checker_grades.application.grades import (
@@ -15,7 +15,7 @@ from modules.grades.grad_checker_grades.application.grades import (
     GradeSet,
 )
 from modules.grades.grad_checker_grades.infrastructure.grades import (
-    SqliteGradeRepository,
+    SqliteGradeUnitOfWork,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -31,11 +31,9 @@ class GradeCall(WritableSessionCall):
 
 
 @router.post("/grades")
-def grades(
-    call: GradeCall, request: Request, session: SessionDependency
-) -> dict[str, object]:
+def grades(call: GradeCall, request: Request) -> dict[str, object]:
     def run() -> object:
-        service = GradeService(SqliteGradeRepository(session))
+        service = GradeService(SqliteGradeUnitOfWork(database_engine(request)))
         if call.operation == "save":
             identity = current_identity(request, call.token, call.csrf)
             assert call.grade_set is not None

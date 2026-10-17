@@ -206,7 +206,7 @@ Goのpresentation/profile.goが学生向け `/api/programs`・`/api/me`・`/api/
 
 科目一覧は`modules/subjects`に操作を追加した。application/course_catalog.pyが本人課程から見た科目・分類の契約と絞り込み、infrastructure/course_catalog.pyが一つの読取スナップショットでの取得を担う。科目モジュールはaccounts・gradesを参照せず、`go_bridge_courses.py`がセッションと本人所属から課程IDを決めて渡す。所属未設定は`program_not_selected`。
 
-成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と全集合の検証、infrastructureが`grade_attempts`とBEGIN IMMEDIATEによる版確認・差分置換・`students.data_revision`の加算を担う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
+成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と全集合の検証、infrastructureが`grade_attempts`の版確認・差分置換・`students.data_revision`の加算を担う。`GradeService`が回次を検証してから、これらをUnit of WorkのBEGIN IMMEDIATEによる一つの書込みで行う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
 
 Goのpresentation/courses.goとgrades.goが外部入力（クエリ・重複キー・未知フィールド・型・範囲・記号と状態の整合）を検証し、不正ならPythonを呼ばず422等を返す。回次の重複・連番・再履修の条件はPythonの業務ルールで判定し、業務エラーコードをGoが日本語detailへ変換する。
 

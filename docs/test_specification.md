@@ -152,7 +152,7 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 
 ## 学生向け科目一覧・本人成績の検証（2026-10-16）
 
-- `backend/tests/test_grades.py`：一時SQLiteで全集合の保存・訂正・省略による取消・全取消、別アカウント分離、回次の重複・欠番・合格／未確定後の再履修拒否、未知科目、旧revision、CSRF不正、不正値で全体不変、課程外の既知科目の保存、所属保存とのrevision共有、変更のない回次のupdated_at保持、並行保存の勝者1件、DB障害時のロールバック、DBのCHECK制約を検証する。
+- `backend/tests/test_grades.py`：一時SQLiteで全集合の保存・訂正・省略による取消・全取消、別アカウント分離、回次の重複・欠番・合格／未確定後の再履修拒否、未知科目、旧revision、CSRF不正、不正値で全体不変、課程外の既知科目の保存、所属保存とのrevision共有、変更のない回次のupdated_at保持、並行保存の勝者1件、DB障害時のロールバック、DBのCHECK制約を検証する。FakeのUnit of Workで、回次の検証が書込み開始前に行われ、置換が一つの書込みでcommit・ロールバックされることも検証する。
 - `backend/tests/test_course_catalog.py`：所属未設定、本人課程の分類・種別と課程外科目のplacement=null・並び順、分類一覧、区分（子孫を含む）・開講学部・学科・学期・検索語のAND、未知分類・不正な条件を検証する。
 - `backend/tests/test_grades_http.py`：実Go→Python→一時DBで認証必須、所属未設定409、絞り込み、所属保存後の旧revision409、Origin/CSRF、未知科目400・回次と成績記号の422、保存・再取得・全取消、ログアウト後401、別アカウント分離を検証する（I04〜I06・I09・I14・I15）。
 - `backend/tests/grades_test.go`・`courses_test.go`：外部入力の検証（重複・未知キー、型、範囲、記号と状態、Content-Type 415、本文上限413、クエリ）でPythonを呼ばないこと、UUID正規化、業務エラーの変換、内部応答の不正検出を検証する。

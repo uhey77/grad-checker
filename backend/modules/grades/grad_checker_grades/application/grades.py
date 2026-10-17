@@ -11,6 +11,7 @@ from modules.grades.grad_checker_grades.domain.grade import (
     ResultStatus,
     is_valid_attempt_sequence,
 )
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 MAX_ATTEMPT_NO = 20
 MAX_GRADES = 1000
@@ -54,6 +55,11 @@ class GradeRepository(Protocol):
     def replace_grades(self, student_id: str, grade_set: GradeSet) -> StudentGrades: ...
 
 
+class GradeUnitOfWork(UnitOfWork, Protocol):
+    @property
+    def grades(self) -> GradeRepository: ...
+
+
 def check_attempts(grades: list[GradeAttempt]) -> None:
     by_course: defaultdict[str, list[GradeAttempt]] = defaultdict(list)
     for grade in grades:
@@ -75,13 +81,18 @@ def check_attempts(grades: list[GradeAttempt]) -> None:
 
 
 class GradeService:
-    def __init__(self, repository: GradeRepository) -> None:
-        self.repository = repository
+    def __init__(self, uow: GradeUnitOfWork) -> None:
+        self.uow = uow
 
     def get_grades(self, student_id: str) -> StudentGrades:
-        return self.repository.get_grades(student_id)
+        # 成績とdata_revisionを同じ読取スナップショットから返す。
+        with self.uow.read():
+            return self.uow.grades.get_grades(student_id)
 
     def save_grades(self, student_id: str, grade_set: GradeSet) -> StudentGrades:
         # 省略した回次は取消になるため、全集合を検証してから置換する。
+        # 回次の検証はDBを使わないため、書込みロックの外で行う。
         check_attempts(grade_set.grades)
-        return self.repository.replace_grades(student_id, grade_set)
+        # 版の確認から置換・版の加算までを、同じ書込みロックの下で行う。
+        with self.uow.write():
+            return self.uow.grades.replace_grades(student_id, grade_set)
