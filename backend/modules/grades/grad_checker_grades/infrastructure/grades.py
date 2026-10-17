@@ -10,7 +10,9 @@ from modules.accounts.grad_checker_accounts.infrastructure.models import Student
 from modules.grades.grad_checker_grades.application.errors.grades import GradeError
 from modules.grades.grad_checker_grades.application.grades import (
     GradeAttempt,
+    GradeRepository,
     GradeSet,
+    GradeUnitOfWork,
     StudentGrades,
 )
 from modules.grades.grad_checker_grades.infrastructure.models import (
@@ -44,7 +46,7 @@ def ordered(grades: list[GradeAttempt]) -> list[GradeAttempt]:
     return sorted(grades, key=lambda grade: (grade.course_id, grade.attempt_no))
 
 
-class SqliteGradeRepository:
+class SqliteGradeRepository(GradeRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -118,7 +120,7 @@ class SqliteGradeRepository:
         )
 
 
-class SqliteGradeUnitOfWork(SqlUnitOfWork):
+class SqliteGradeUnitOfWork(SqlUnitOfWork, GradeUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

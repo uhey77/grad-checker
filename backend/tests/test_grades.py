@@ -14,8 +14,10 @@ from api.api_service.main import create_app
 from config.settings import Settings
 from modules.grades.grad_checker_grades.application.errors.grades import GradeError
 from modules.grades.grad_checker_grades.application.grades import (
+    GradeRepository,
     GradeService,
     GradeSet,
+    GradeUnitOfWork,
     StudentGrades,
 )
 from modules.grades.grad_checker_grades.domain.grade import (
@@ -252,7 +254,7 @@ def test_database_rejects_inconsistent_grade_rows(grades_app):
                 )
 
 
-class FakeGradeRepository:
+class FakeGradeRepository(GradeRepository):
     def __init__(self, uow: FakeUnitOfWork) -> None:
         self.uow = uow
         self.replaced: list[GradeSet] = []
@@ -269,7 +271,7 @@ class FakeGradeRepository:
         return StudentGrades(grades=grade_set.grades, data_revision=1)
 
 
-class FakeGradeUnitOfWork(FakeUnitOfWork):
+class FakeGradeUnitOfWork(FakeUnitOfWork, GradeUnitOfWork):
     def __init__(self) -> None:
         super().__init__()
         self.repository = FakeGradeRepository(self)

@@ -1,7 +1,8 @@
 """本人成績の全集合を取得・置換する契約。"""
 
+from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Literal, Protocol, Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -50,13 +51,17 @@ class StudentGrades(BaseModel):
     data_revision: int
 
 
-class GradeRepository(Protocol):
+class GradeRepository(ABC):
+    @abstractmethod
     def get_grades(self, student_id: str) -> StudentGrades: ...
+
+    @abstractmethod
     def replace_grades(self, student_id: str, grade_set: GradeSet) -> StudentGrades: ...
 
 
-class GradeUnitOfWork(UnitOfWork, Protocol):
+class GradeUnitOfWork(UnitOfWork):
     @property
+    @abstractmethod
     def grades(self) -> GradeRepository: ...
 
 
