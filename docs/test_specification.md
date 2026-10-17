@@ -23,12 +23,14 @@ Python・Goのテストは`backend/tests/`へ集約し、Goは対象パッケー
 
 | 対象 | 現在の確認内容 | テストファイル |
 |---|---|---|
-| 起動・DB・Session | 起動時設定、SQLite接続ごとのFK、未commit変更の破棄 | `test_app.py`、`test_database.py` |
+| 起動・DB | 起動時設定、SQLite接続ごとのFK | `test_app.py`、`test_database.py` |
 | 科目マスタ | CS4課程、課程別種別、複数開講期、未確認状態、再投入、入力・DB制約、失敗時の全体ロールバック、CLI | `test_subject_data.py` |
+| Unit of Work | commit・ロールバック・DB例外の変換、ブロック外の利用と入れ子の拒否、リポジトリがトランザクションを制御しないこと、applicationの契約がABCであること。ユースケースの範囲はFake（`fakes.py`）で検証 | `test_unit_of_work.py`、`test_module_boundaries.py` |
 | 取得契約・ブリッジ通信 | 取得先の契約、DBからの一覧、不正なブリッジ要求、業務エラーコード、Pythonの外部ルート削除 | `test_subject_list_repository.py`、`test_subject_list.py` |
 | モジュール境界 | 科目モジュールからAPI・設定・FastAPI・uvicornへの逆依存を検出 | `test_module_boundaries.py` |
 | Go外部API・ブリッジクライアント | 入力不正時にPythonを呼ばない、UUID正規化、日本語HTTPエラー、不正なブリッジ応答、接続失敗・タイムアウト・キャンセル | `subject_list_test.go`、`subject_list_client_test.go` |
 | 実プロセス結合 | 4課程の取得結果一致、422・404・405、開発用表示無効時の404、分類不整合409・DB障害503 | `test_subject_list_http.py` |
+| 判定履歴（I06・I10〜I13・I15・I18） | 保存・本人限定の再取得、他人のID・不正IDの404、旧版・CSRF／Origin不正・設定不足・保存中のDB障害で履歴なし、成績・マスタ更新後とマスタ破損時も過去結果不変、UPDATE拒否、成績保存との同時実行、GET判定で履歴を作らない。Fakeで旧版のロールバック、判定計算がトランザクション外であること | `test_check_results.py`、`test_check_service.py`、`checks_test.go`、`test_check_results_http.py` |
 | フロントエンド | DTO変換で未確認状態・注記を保持、AND検索、取得先の差し替え・失敗伝播、依存方向、並べ替え、学期表示 | `frontend/tests/subject-list.test.mjs` |
 
 ローカル確認画面では、適用入学年度の未確認表示・出典・便覧注記の展開を表示しない。元データをAPI・モデルに保持することと、画面へ表示することを分けて確認する。表示項目は[画面設計](screen_design/student_screen_design.md)に従う。ブラウザーでのロード・失敗・再試行・課程切替時のキャンセル確認は、上記の自動テストだけで代替しない。
@@ -132,6 +134,7 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 - `test_username.py`：文字種・長さ境界・大小文字の正規化。
 - `test_auth.py`：登録・Argon2id／コードハッシュ保存、重複拒否、復旧コード更新・再使用拒否、全セッション失効、アカウントID維持、並行登録・並行復旧、古いパスワードでのセッション作成拒否、永続的な試行制限。
 - `test_auth_http.py`：実Go／Python／一時SQLiteで登録・ログイン・Cookie・CSRF・復旧・ログアウトを検証。メールサーバーは不要。
+- `test_auth_service.py`：FakeのUnit of Workで、試行回数を操作本体と別にcommitすること、復旧の照合・更新とセッション失効が一つの書込みであること、ハッシュ計算・照合がトランザクション外であること、照合後のパスワード変更でセッションを作らないことを検証。
 - `test_account_schema.py`：空の旧DB移行と再起動、既存メール認証アカウントがあるDBの変更前停止。
 - `auth_test.go`：外部入力・Origin・重複JSON・Cookie属性・接続元IP・原トークン非公開・日本語エラー。
 - `frontend/tests/accounts.test.mjs`：DTO変換、登録・復旧の本文とコード取得、Cookie／CSRF送信、キャンセル、未認証・通信失敗の区別。
@@ -149,7 +152,7 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 
 ## 学生向け科目一覧・本人成績の検証（2026-10-16）
 
-- `backend/tests/test_grades.py`：一時SQLiteで全集合の保存・訂正・省略による取消・全取消、別アカウント分離、回次の重複・欠番・合格／未確定後の再履修拒否、未知科目、旧revision、CSRF不正、不正値で全体不変、課程外の既知科目の保存、所属保存とのrevision共有、変更のない回次のupdated_at保持、並行保存の勝者1件、DB障害時のロールバック、DBのCHECK制約を検証する。
+- `backend/tests/test_grades.py`：一時SQLiteで全集合の保存・訂正・省略による取消・全取消、別アカウント分離、回次の重複・欠番・合格／未確定後の再履修拒否、未知科目、旧revision、CSRF不正、不正値で全体不変、課程外の既知科目の保存、所属保存とのrevision共有、変更のない回次のupdated_at保持、並行保存の勝者1件、DB障害時のロールバック、DBのCHECK制約を検証する。FakeのUnit of Workで、回次の検証が書込み開始前に行われ、置換が一つの書込みでcommit・ロールバックされることも検証する。
 - `backend/tests/test_course_catalog.py`：所属未設定、本人課程の分類・種別と課程外科目のplacement=null・並び順、分類一覧、区分（子孫を含む）・開講学部・学科・学期・検索語のAND、未知分類・不正な条件を検証する。
 - `backend/tests/test_grades_http.py`：実Go→Python→一時DBで認証必須、所属未設定409、絞り込み、所属保存後の旧revision409、Origin/CSRF、未知科目400・回次と成績記号の422、保存・再取得・全取消、ログアウト後401、別アカウント分離を検証する（I04〜I06・I09・I14・I15）。
 - `backend/tests/grades_test.go`・`courses_test.go`：外部入力の検証（重複・未知キー、型、範囲、記号と状態、Content-Type 415、本文上限413、クエリ）でPythonを呼ばないこと、UUID正規化、業務エラーの変換、内部応答の不正検出を検証する。

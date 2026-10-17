@@ -18,7 +18,7 @@ from modules.accounts.grad_checker_accounts.infrastructure.models import (
     Student,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.repository import (
-    SqliteAccountRepository,
+    SqliteAccountUnitOfWork,
 )
 
 USERNAME = "student_01"
@@ -174,14 +174,16 @@ def test_recovery_rotates_code_revokes_all_sessions_and_preserves_account(auth):
         == "invalid_recovery"
     )
     # 回数制限は別のテストで検証。新コードでの再復旧をここで確認する。
-    with Session(app.state.database_engine) as db:
-        SqliteAccountRepository(db).recover(
+    uow = SqliteAccountUnitOfWork(app.state.database_engine)
+    with uow.write():
+        assert uow.accounts.reset_credentials(
             USERNAME,
             digest(replacement),
             app.state.passwords.hash(PASSWORD),
             digest("next-code"),
             datetime.now(UTC),
         )
+    with Session(app.state.database_engine) as db:
         assert db.exec(select(Credential)).one().recovery_code_hash == digest(
             "next-code"
         )
@@ -233,14 +235,15 @@ def test_concurrent_registration_creates_one_account(auth):
     hashed = app.state.passwords.hash(PASSWORD)
 
     def attempt(_):
-        with Session(app.state.database_engine) as db:
-            try:
-                SqliteAccountRepository(db).register(
+        uow = SqliteAccountUnitOfWork(app.state.database_engine)
+        try:
+            with uow.write():
+                uow.accounts.register(
                     USERNAME, hashed, digest("code"), datetime.now(UTC)
                 )
-                return "ok"
-            except AuthError as error:
-                return error.code
+            return "ok"
+        except AuthError as error:
+            return error.code
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert sorted(pool.map(attempt, range(2))) == ["ok", "registration_conflict"]
@@ -252,34 +255,36 @@ def test_concurrent_registration_creates_one_account(auth):
 def test_recovery_is_single_use_and_stale_password_cannot_create_session(auth):
     app, client = auth
     recovery = register(client)
-    with Session(app.state.database_engine) as db:
-        credentials = SqliteAccountRepository(db).credentials(USERNAME)
-        assert credentials is not None
-        account, old_hash = credentials
+    uow = SqliteAccountUnitOfWork(app.state.database_engine)
+    with uow.read():
+        credentials = uow.accounts.credentials(USERNAME)
+    assert credentials is not None
+    account, old_hash = credentials
     hashed = app.state.passwords.hash(NEW_PASSWORD)
 
     def attempt(_):
-        with Session(app.state.database_engine) as db:
-            try:
-                SqliteAccountRepository(db).recover(
-                    USERNAME,
-                    digest(recovery),
-                    hashed,
-                    digest("replacement"),
-                    datetime.now(UTC),
-                )
-                return "ok"
-            except AuthError as error:
-                return error.code
+        # 照合とセッション失効は同じ書込みで行い、同じコードは一度だけ成功する。
+        uow = SqliteAccountUnitOfWork(app.state.database_engine)
+        with uow.write():
+            student_id = uow.accounts.reset_credentials(
+                USERNAME,
+                digest(recovery),
+                hashed,
+                digest("replacement"),
+                datetime.now(UTC),
+            )
+            if student_id is None:
+                return "invalid_recovery"
+            uow.accounts.revoke_sessions(student_id, datetime.now(UTC))
+            return "ok"
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert sorted(pool.map(attempt, range(2))) == ["invalid_recovery", "ok"]
-    with Session(app.state.database_engine) as db:
-        with pytest.raises(AuthError, match="invalid_credentials"):
-            SqliteAccountRepository(db).save_session(
-                account,
-                digest("token"),
-                "csrf",
-                datetime.now(UTC) + timedelta(hours=1),
-                old_hash,
-            )
+    with uow.write():
+        assert not uow.accounts.save_session(
+            account,
+            digest("token"),
+            "csrf",
+            datetime.now(UTC) + timedelta(hours=1),
+            old_hash,
+        )

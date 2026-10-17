@@ -7,11 +7,14 @@ from test_auth_http import (
     auth_services,  # noqa: F401 -- pytest fixture
 )
 
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    import_subject_data,
+)
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
+    SqliteSubjectDataUnitOfWork,
     load_seed,
 )
 
@@ -21,7 +24,7 @@ def test_real_profile_flow(auth_services, tmp_path):  # noqa: F811 -- pytest fix
     engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
     try:
         import_subject_data(
-            engine,
+            SqliteSubjectDataUnitOfWork(engine),
             load_seed(Path(__file__).resolve().parents[1] / "seeds/cs_2026.json"),
         )
     finally:

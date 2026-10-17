@@ -5,15 +5,21 @@ from test_auth_http import PASSWORD, auth_services  # noqa: F401
 from test_external_allocation import add_external, external_snapshot  # noqa: F401
 from test_requirement_evaluation import BACKEND, grade, snapshot, uid  # noqa: F401
 
-from modules.requirements.grad_checker_requirements.infrastructure.seed import (
+from modules.requirements.grad_checker_requirements.application.seed_import import (
     import_requirements,
+)
+from modules.requirements.grad_checker_requirements.infrastructure.seed import (
+    SqliteRequirementUnitOfWork,
     load_requirement_seed,
+)
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    import_subject_data,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
+    SqliteSubjectDataUnitOfWork,
     load_seed,
 )
 
@@ -28,8 +34,12 @@ def test_external_allocation_period_prompt_and_warning(
     client = auth_services
     engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
     try:
-        import_subject_data(engine, external_snapshot.subjects)
-        import_requirements(engine, external_snapshot.requirements)
+        import_subject_data(
+            SqliteSubjectDataUnitOfWork(engine), external_snapshot.subjects
+        )
+        import_requirements(
+            SqliteRequirementUnitOfWork(engine), external_snapshot.requirements
+        )
         credentials = {"login_name": "external_check", "password": PASSWORD}
         assert client.post("/api/auth/register", json=credentials).status_code == 201
         auth = client.post("/api/auth/login", json=credentials).json()
@@ -105,8 +115,8 @@ def test_current_cs_seed_evaluates_all_curricula_without_verification_override(
     requirements = load_requirement_seed(BACKEND / "seeds/cs_requirements_2026.json")
     engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
     try:
-        import_subject_data(engine, subjects)
-        import_requirements(engine, requirements)
+        import_subject_data(SqliteSubjectDataUnitOfWork(engine), subjects)
+        import_requirements(SqliteRequirementUnitOfWork(engine), requirements)
         credentials = {"login_name": "current_seed", "password": PASSWORD}
         assert client.post("/api/auth/register", json=credentials).status_code == 201
         auth = client.post("/api/auth/login", json=credentials).json()
@@ -178,8 +188,8 @@ def test_saved_grades_evaluation_and_owner_isolation(auth_services, tmp_path, sn
     client = auth_services
     engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
     try:
-        import_subject_data(engine, snapshot.subjects)
-        import_requirements(engine, snapshot.requirements)
+        import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
+        import_requirements(SqliteRequirementUnitOfWork(engine), snapshot.requirements)
         assert client.get(ENDPOINT).status_code == 401
         credentials = {"login_name": "evaluate_01", "password": PASSWORD}
         assert client.post("/api/auth/register", json=credentials).status_code == 201

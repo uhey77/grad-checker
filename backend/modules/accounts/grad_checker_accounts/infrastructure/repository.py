@@ -1,15 +1,16 @@
-"""認証の保存処理。登録・復旧コードの消費はSQLiteトランザクションで行う。"""
+"""認証の保存処理。トランザクションはUnit of Workで認証ユースケースが決める。"""
 
-from contextlib import AbstractContextManager
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, update
+from sqlalchemy import Engine, delete, update
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session, col, select
 
 from modules.accounts.grad_checker_accounts.application.auth import (
     Account,
+    AccountRepository,
+    AccountUnitOfWork,
     StoredSession,
     digest,
 )
@@ -20,8 +21,8 @@ from modules.accounts.grad_checker_accounts.infrastructure.models import (
     Credential,
     Student,
 )
-from modules.shared.grad_checker_shared.infrastructure.transactions import (
-    write_transaction,
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
+    SqlUnitOfWork,
 )
 
 
@@ -35,72 +36,66 @@ def utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
-class SqliteAccountRepository:
+class SqliteAccountRepository(AccountRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
-    def transaction(self) -> AbstractContextManager[None]:
-        # 各処理は先頭のUPSERT・条件付きUPDATEで書込みロックを取る。
-        return write_transaction(self.db, auth_failure, immediate=False)
-
     def take_attempt(self, key: str, now: datetime, window: int, limit: int) -> None:
-        with self.transaction():
-            # UPSERTを先に行い、並行要求も同じ書込みロックで直列化する。
-            self.db.connection().execute(
-                insert(AuthAttempt)
-                .values(
-                    key=key,
-                    window_started_at=now,
-                    count=0,
-                )
-                .on_conflict_do_nothing(index_elements=["key"])
+        # UPSERTを先に行い、並行要求も同じ書込みロックで直列化する。
+        self.db.connection().execute(
+            insert(AuthAttempt)
+            .values(
+                key=key,
+                window_started_at=now,
+                count=0,
             )
-            attempt = self.db.get(AuthAttempt, key)
-            assert attempt is not None
-            if utc(attempt.window_started_at) + timedelta(minutes=window) <= now:
-                attempt.window_started_at = now
-                attempt.count = 0
-            if attempt.count >= limit:
-                raise AuthError("rate_limited")
-            attempt.count += 1
-            self.db.add(attempt)
-            # 期限切れの別キーを削除し、試行履歴が際限なく増えないようにする。
-            self.db.connection().execute(
-                delete(AuthAttempt).where(
-                    col(AuthAttempt.window_started_at)
-                    < now - timedelta(minutes=window),
-                    col(AuthAttempt.key) != key,
-                )
+            .on_conflict_do_nothing(index_elements=["key"])
+        )
+        attempt = self.db.get(AuthAttempt, key)
+        assert attempt is not None
+        if utc(attempt.window_started_at) + timedelta(minutes=window) <= now:
+            attempt.window_started_at = now
+            attempt.count = 0
+        if attempt.count >= limit:
+            raise AuthError("rate_limited")
+        attempt.count += 1
+        self.db.add(attempt)
+        # 期限切れの別キーを削除し、試行履歴が際限なく増えないようにする。
+        self.db.connection().execute(
+            delete(AuthAttempt).where(
+                col(AuthAttempt.window_started_at) < now - timedelta(minutes=window),
+                col(AuthAttempt.key) != key,
             )
+        )
 
     def register(
         self, username: str, password_hash: str, recovery_hash: str, now: datetime
     ) -> Account:
-        with self.transaction():
-            student = Student(login_name=username, created_at=now)
-            self.db.add(student)
-            self.db.flush()
-            self.db.add(
-                Credential(
-                    student_id=student.id,
-                    password_hash=password_hash,
-                    recovery_code_hash=recovery_hash,
-                    password_updated_at=now,
-                )
+        student = Student(login_name=username, created_at=now)
+        self.db.add(student)
+        self.db.flush()
+        self.db.add(
+            Credential(
+                student_id=student.id,
+                password_hash=password_hash,
+                recovery_code_hash=recovery_hash,
+                password_updated_at=now,
             )
-            return Account(id=student.id, login_name=student.login_name)
+        )
+        return Account(id=student.id, login_name=student.login_name)
 
-    def recover(
+    def reset_credentials(
         self,
         username: str,
         recovery_hash: str,
         password_hash: str,
         new_recovery_hash: str,
         now: datetime,
-    ) -> None:
-        with self.transaction():
-            # 条件付きUPDATEで、同じ復旧コードの並行使用を一度だけ成功させる。
-            result = self.db.connection().execute(
+    ) -> str | None:
+        # 条件付きUPDATEで、同じ復旧コードの並行使用を一度だけ成功させる。
+        return (
+            self.db.connection()
+            .execute(
                 update(Credential)
                 .where(
                     col(Credential.student_id).in_(
@@ -116,34 +111,34 @@ class SqliteAccountRepository:
                 )
                 .returning(col(Credential.student_id))
             )
-            student_id = result.scalar_one_or_none()
-            if student_id is None:
-                raise AuthError("invalid_recovery")
-            self.db.connection().execute(
-                update(AuthSession)
-                .where(
-                    col(AuthSession.student_id) == student_id,
-                    col(AuthSession.revoked_at).is_(None),
-                )
-                .values(revoked_at=now)
+            .scalar_one_or_none()
+        )
+
+    def revoke_sessions(self, student_id: str, now: datetime) -> None:
+        self.db.connection().execute(
+            update(AuthSession)
+            .where(
+                col(AuthSession.student_id) == student_id,
+                col(AuthSession.revoked_at).is_(None),
             )
+            .values(revoked_at=now)
+        )
 
     def credentials(self, username: str) -> tuple[Account, str] | None:
-        with self.transaction():
-            row = self.db.exec(
-                select(Student, Credential)
-                .join(Credential)
-                .where(
-                    col(Student.login_name) == username,
-                    col(Credential.is_active),
-                )
-            ).first()
-            if row is None:
-                return None
-            student, credential = row
-            return Account(
-                id=student.id, login_name=student.login_name
-            ), credential.password_hash
+        row = self.db.exec(
+            select(Student, Credential)
+            .join(Credential)
+            .where(
+                col(Student.login_name) == username,
+                col(Credential.is_active),
+            )
+        ).first()
+        if row is None:
+            return None
+        student, credential = row
+        return Account(
+            id=student.id, login_name=student.login_name
+        ), credential.password_hash
 
     def save_session(
         self,
@@ -152,66 +147,73 @@ class SqliteAccountRepository:
         csrf: str,
         expires: datetime,
         password_hash: str,
-    ) -> None:
+    ) -> bool:
         now = datetime.now(UTC)
-        with self.transaction():
-            # 復旧と直列化し、古いパスワードで検証済みの要求からセッションを作らない。
-            current = (
-                self.db.connection()
-                .execute(
-                    update(Credential)
-                    .where(
-                        col(Credential.student_id) == account.id,
-                        col(Credential.password_hash) == password_hash,
-                        col(Credential.is_active),
-                    )
-                    .values(password_hash=password_hash)
-                    .returning(col(Credential.student_id))
-                )
-                .scalar_one_or_none()
-            )
-            if current is None:
-                raise AuthError("invalid_credentials")
-            self.db.add(
-                AuthSession(
-                    student_id=account.id,
-                    token_hash=token_hash,
-                    csrf_token_hash=digest(csrf),
-                    created_at=now,
-                    last_seen_at=now,
-                    expires_at=expires,
-                )
-            )
-
-    def session(self, token_hash: str, now: datetime) -> StoredSession | None:
-        with self.transaction():
-            row = self.db.exec(
-                select(AuthSession, Student)
-                .join(Student)
-                .join(Credential)
+        # 復旧と直列化し、古いパスワードで検証済みの要求からセッションを作らない。
+        current = (
+            self.db.connection()
+            .execute(
+                update(Credential)
                 .where(
-                    col(AuthSession.token_hash) == token_hash,
-                    col(AuthSession.revoked_at).is_(None),
-                    col(AuthSession.expires_at) > now,
+                    col(Credential.student_id) == account.id,
+                    col(Credential.password_hash) == password_hash,
                     col(Credential.is_active),
                 )
-            ).first()
-            if row is None:
-                return None
-            record, student = row
-            record.last_seen_at = now
-            self.db.add(record)
-            # CSRF原値は保存せず、ユースケースでセッション原値から再構成する。
-            return StoredSession(
-                account=Account(id=student.id, login_name=student.login_name),
-                csrf_token_hash=record.csrf_token_hash,
-                expires_at=utc(record.expires_at),
+                .values(password_hash=password_hash)
+                .returning(col(Credential.student_id))
             )
+            .scalar_one_or_none()
+        )
+        if current is None:
+            return False
+        self.db.add(
+            AuthSession(
+                student_id=account.id,
+                token_hash=token_hash,
+                csrf_token_hash=digest(csrf),
+                created_at=now,
+                last_seen_at=now,
+                expires_at=expires,
+            )
+        )
+        return True
+
+    def session(self, token_hash: str, now: datetime) -> StoredSession | None:
+        row = self.db.exec(
+            select(AuthSession, Student)
+            .join(Student)
+            .join(Credential)
+            .where(
+                col(AuthSession.token_hash) == token_hash,
+                col(AuthSession.revoked_at).is_(None),
+                col(AuthSession.expires_at) > now,
+                col(Credential.is_active),
+            )
+        ).first()
+        if row is None:
+            return None
+        record, student = row
+        record.last_seen_at = now
+        self.db.add(record)
+        # CSRF原値は保存せず、ユースケースでセッション原値から再構成する。
+        return StoredSession(
+            account=Account(id=student.id, login_name=student.login_name),
+            csrf_token_hash=record.csrf_token_hash,
+            expires_at=utc(record.expires_at),
+        )
 
     def revoke_session(self, token_hash: str, now: datetime) -> None:
-        with self.transaction():
-            self.db.connection().execute(
-                update(AuthSession)
-                .where(col(AuthSession.token_hash) == token_hash)
-                .values(revoked_at=now)
-            )
+        self.db.connection().execute(
+            update(AuthSession)
+            .where(col(AuthSession.token_hash) == token_hash)
+            .values(revoked_at=now)
+        )
+
+
+class SqliteAccountUnitOfWork(SqlUnitOfWork, AccountUnitOfWork):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(engine, auth_failure)
+
+    @property
+    def accounts(self) -> SqliteAccountRepository:
+        return SqliteAccountRepository(self.session)

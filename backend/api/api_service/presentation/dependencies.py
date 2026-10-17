@@ -1,10 +1,7 @@
 """ブリッジ呼出しごとのPythonリソース管理。"""
 
-from collections.abc import Iterator
-from typing import Annotated
-
-from fastapi import Depends, Request
-from sqlmodel import Session
+from fastapi import Request
+from sqlalchemy import Engine
 
 from modules.accounts.grad_checker_accounts.application.auth import (
     AuthPolicy,
@@ -12,23 +9,19 @@ from modules.accounts.grad_checker_accounts.application.auth import (
     SessionIdentity,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.repository import (
-    SqliteAccountRepository,
+    SqliteAccountUnitOfWork,
 )
 
 
-def get_session(request: Request) -> Iterator[Session]:
-    # commitはユースケース側で明示する。終了時に未commitの変更は破棄される。
-    with Session(request.app.state.database_engine) as session:
-        yield session
+def database_engine(request: Request) -> Engine:
+    """各モジュールのUnit of Workへ渡すDBエンジン。"""
+    return request.app.state.database_engine
 
 
-SessionDependency = Annotated[Session, Depends(get_session)]
-
-
-def auth_service(request: Request, session: Session) -> AuthService:
+def auth_service(request: Request) -> AuthService:
     settings = request.app.state.settings
     return AuthService(
-        SqliteAccountRepository(session),
+        SqliteAccountUnitOfWork(database_engine(request)),
         request.app.state.passwords,
         AuthPolicy(
             session_hours=settings.auth_session_hours,
@@ -41,10 +34,10 @@ def auth_service(request: Request, session: Session) -> AuthService:
 
 
 def current_identity(
-    request: Request, session: Session, token: str, csrf: str | None = None
+    request: Request, token: str, csrf: str | None = None
 ) -> SessionIdentity:
     """本人をセッションから決定する。変更操作はCSRFトークンを渡して照合する。"""
-    service = auth_service(request, session)
+    service = auth_service(request)
     if csrf is None:
         return service.session(token)
     return service.authorize(token, csrf)

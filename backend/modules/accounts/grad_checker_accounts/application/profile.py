@@ -1,12 +1,14 @@
 """本人の所属とカリキュラムの取得・保存契約。"""
 
-from typing import Literal, Protocol
+from abc import ABC, abstractmethod
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from modules.accounts.grad_checker_accounts.application.errors.profile import (
     ProfileError,
 )
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 type VerificationStatus = Literal["unverified", "verified"]
 
@@ -42,21 +44,34 @@ class ProgramSelection(BaseModel):
     expected_revision: int = Field(ge=0, le=9007199254740990)
 
 
-class ProfileRepository(Protocol):
+class ProfileRepository(ABC):
+    @abstractmethod
     def list_programs(self) -> list[ProgramOption]: ...
+
+    @abstractmethod
     def get_profile(self, student_id: str) -> Profile: ...
+
+    @abstractmethod
     def save_program(self, student_id: str, selection: ProgramSelection) -> Profile: ...
 
 
+class ProfileUnitOfWork(UnitOfWork):
+    @property
+    @abstractmethod
+    def profiles(self) -> ProfileRepository: ...
+
+
 class ProfileService:
-    def __init__(self, repository: ProfileRepository) -> None:
-        self.repository = repository
+    def __init__(self, uow: ProfileUnitOfWork) -> None:
+        self.uow = uow
 
     def list_programs(self) -> list[ProgramOption]:
-        return self.repository.list_programs()
+        with self.uow.read():
+            return self.uow.profiles.list_programs()
 
     def get_profile(self, student_id: str) -> Profile:
-        return self.repository.get_profile(student_id)
+        with self.uow.read():
+            return self.uow.profiles.get_profile(student_id)
 
     def selected_curriculum(self, student_id: str) -> str:
         """本人課程を前提とする処理のため、所属未設定を業務エラーにする。"""
@@ -66,4 +81,6 @@ class ProfileService:
         return curriculum_id
 
     def save_program(self, student_id: str, selection: ProgramSelection) -> Profile:
-        return self.repository.save_program(student_id, selection)
+        # 組合せの検証と版付き更新を、同じ書込みロックの下で行う。
+        with self.uow.write():
+            return self.uow.profiles.save_program(student_id, selection)

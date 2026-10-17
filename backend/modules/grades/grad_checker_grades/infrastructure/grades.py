@@ -1,7 +1,8 @@
-"""本人成績の取得と、全集合の原子的な置換。"""
+"""本人成績の取得と全集合の置換。トランザクションはUnit of Workが開始する。"""
 
 from datetime import UTC, datetime
 
+from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
@@ -9,15 +10,16 @@ from modules.accounts.grad_checker_accounts.infrastructure.models import Student
 from modules.grades.grad_checker_grades.application.errors.grades import GradeError
 from modules.grades.grad_checker_grades.application.grades import (
     GradeAttempt,
+    GradeRepository,
     GradeSet,
+    GradeUnitOfWork,
     StudentGrades,
 )
 from modules.grades.grad_checker_grades.infrastructure.models import (
     GradeAttemptRecord,
 )
-from modules.shared.grad_checker_shared.infrastructure.transactions import (
-    read_snapshot,
-    write_transaction,
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
+    SqlUnitOfWork,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     Subject,
@@ -44,7 +46,7 @@ def ordered(grades: list[GradeAttempt]) -> list[GradeAttempt]:
     return sorted(grades, key=lambda grade: (grade.course_id, grade.attempt_no))
 
 
-class SqliteGradeRepository:
+class SqliteGradeRepository(GradeRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -58,65 +60,70 @@ class SqliteGradeRepository:
         )
 
     def get_grades(self, student_id: str) -> StudentGrades:
-        # 成績とdata_revisionを同じ読取スナップショットから返す。
-        with read_snapshot(self.db, unavailable):
-            student = self.db.get(Student, student_id, populate_existing=True)
-            if student is None:
-                raise GradeError("student_not_found")
-            return StudentGrades(
-                grades=ordered([attempt_data(r) for r in self._records(student_id)]),
-                data_revision=student.data_revision,
-            )
+        student = self.db.get(Student, student_id, populate_existing=True)
+        if student is None:
+            raise GradeError("student_not_found")
+        return StudentGrades(
+            grades=ordered([attempt_data(r) for r in self._records(student_id)]),
+            data_revision=student.data_revision,
+        )
 
     def replace_grades(self, student_id: str, grade_set: GradeSet) -> StudentGrades:
-        # 書込みロックの下で、版の確認から置換・版の加算までを直列化する。
-        with write_transaction(self.db, unavailable):
-            student = self.db.get(Student, student_id, populate_existing=True)
-            if student is None:
-                raise GradeError("student_not_found")
-            if student.data_revision != grade_set.expected_revision:
-                raise GradeError("revision_conflict")
-            course_ids = {grade.course_id for grade in grade_set.grades}
-            if course_ids:
-                known = self.db.exec(
-                    select(Subject.id).where(col(Subject.id).in_(course_ids))
-                ).all()
-                if set(known) != course_ids:
-                    raise GradeError("unknown_course")
-            now = datetime.now(UTC)
-            existing = {
-                (record.course_id, record.attempt_no): record
-                for record in self._records(student_id)
-            }
-            wanted = {
-                (grade.course_id, grade.attempt_no): grade for grade in grade_set.grades
-            }
-            for key, record in existing.items():
-                if key not in wanted:
-                    self.db.delete(record)
-            for key, grade in wanted.items():
-                values = {field: getattr(grade, field) for field in VALUE_FIELDS}
-                record = existing.get(key)
-                if record is None:
-                    record = GradeAttemptRecord(
-                        student_id=student_id,
-                        course_id=grade.course_id,
-                        attempt_no=grade.attempt_no,
-                        updated_at=now,
-                        **values,
-                    )
-                elif any(getattr(record, k) != v for k, v in values.items()):
-                    # 変更した回次だけ更新日時を進め、変更のない回次は保持する。
-                    for field, value in values.items():
-                        setattr(record, field, value)
-                    record.updated_at = now
-                else:
-                    continue
-                self.db.add(record)
-            student.data_revision += 1
-            self.db.add(student)
-            self.db.flush()
-            return StudentGrades(
-                grades=ordered(list(grade_set.grades)),
-                data_revision=student.data_revision,
-            )
+        student = self.db.get(Student, student_id, populate_existing=True)
+        if student is None:
+            raise GradeError("student_not_found")
+        if student.data_revision != grade_set.expected_revision:
+            raise GradeError("revision_conflict")
+        course_ids = {grade.course_id for grade in grade_set.grades}
+        if course_ids:
+            known = self.db.exec(
+                select(Subject.id).where(col(Subject.id).in_(course_ids))
+            ).all()
+            if set(known) != course_ids:
+                raise GradeError("unknown_course")
+        now = datetime.now(UTC)
+        existing = {
+            (record.course_id, record.attempt_no): record
+            for record in self._records(student_id)
+        }
+        wanted = {
+            (grade.course_id, grade.attempt_no): grade for grade in grade_set.grades
+        }
+        for key, record in existing.items():
+            if key not in wanted:
+                self.db.delete(record)
+        for key, grade in wanted.items():
+            values = {field: getattr(grade, field) for field in VALUE_FIELDS}
+            record = existing.get(key)
+            if record is None:
+                record = GradeAttemptRecord(
+                    student_id=student_id,
+                    course_id=grade.course_id,
+                    attempt_no=grade.attempt_no,
+                    updated_at=now,
+                    **values,
+                )
+            elif any(getattr(record, k) != v for k, v in values.items()):
+                # 変更した回次だけ更新日時を進め、変更のない回次は保持する。
+                for field, value in values.items():
+                    setattr(record, field, value)
+                record.updated_at = now
+            else:
+                continue
+            self.db.add(record)
+        student.data_revision += 1
+        self.db.add(student)
+        self.db.flush()
+        return StudentGrades(
+            grades=ordered(list(grade_set.grades)),
+            data_revision=student.data_revision,
+        )
+
+
+class SqliteGradeUnitOfWork(SqlUnitOfWork, GradeUnitOfWork):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(engine, unavailable)
+
+    @property
+    def grades(self) -> SqliteGradeRepository:
+        return SqliteGradeRepository(self.session)

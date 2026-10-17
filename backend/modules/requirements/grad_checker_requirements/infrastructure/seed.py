@@ -1,9 +1,10 @@
-"""要件マスタの読込みと原子的な追加投入。既存行の変更・削除は拒否する。"""
+"""要件マスタのシード読込みと、投入済みデータの読取り・追加。"""
 
 from pathlib import Path
 
 from pydantic import ValidationError
 from sqlalchemy import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
 from modules.requirements.grad_checker_requirements.application.errors.seed import (
@@ -17,9 +18,9 @@ from modules.requirements.grad_checker_requirements.application.seed import (
     RequirementScopeData,
     RequirementSeed,
 )
-from modules.requirements.grad_checker_requirements.application.validation import (
-    unique,
-    validate_requirements,
+from modules.requirements.grad_checker_requirements.application.seed_import import (
+    RequirementDataStore,
+    RequirementUnitOfWork,
 )
 from modules.requirements.grad_checker_requirements.infrastructure.models import (
     CreditRule,
@@ -28,14 +29,14 @@ from modules.requirements.grad_checker_requirements.infrastructure.models import
     GraduationRequirement,
     RequirementScope,
 )
-from modules.shared.grad_checker_shared.infrastructure.transactions import (
-    write_transaction,
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
+    SqlUnitOfWork,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
     SubjectDataSeed,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    TABLE_MAPPING as SUBJECT_MAPPING,
+    SqliteSubjectDataStore,
 )
 
 TABLE_MAPPING = (
@@ -47,10 +48,10 @@ TABLE_MAPPING = (
 )
 
 
-def record_key(record) -> tuple:
-    if isinstance(record, CreditRuleCourseData):
-        return record.rule_id, record.course_id
-    return (record.id,)
+def unavailable(_error: SQLAlchemyError) -> RequirementSeedError:
+    return RequirementSeedError(
+        "要件マスタを保存できません。DB接続・制約・競合を確認してください。全件を取り消しました。"
+    )
 
 
 def load_requirement_seed(path: Path) -> RequirementSeed:
@@ -67,60 +68,36 @@ def load_requirement_seed(path: Path) -> RequirementSeed:
         ) from error
 
 
-def import_requirements(engine: Engine, seed: RequirementSeed) -> dict[str, int]:
-    # model_copy等から渡されても、入口で型・値の検証を省略しない。
-    seed = RequirementSeed.model_validate_json(seed.model_dump_json())
-    for name, _, _ in TABLE_MAPPING:
-        unique(getattr(seed, name), record_key, name)
-    inserted = {name: 0 for name, _, _ in TABLE_MAPPING}
-    with (
-        Session(engine) as session,
-        write_transaction(
-            session,
-            lambda _: RequirementSeedError(
-                "要件マスタを保存できません。DB接続・制約・競合を確認してください。全件を取り消しました。"
-            ),
-        ),
-    ):
-        subjects = SubjectDataSeed.model_validate(
+class SqliteRequirementDataStore(RequirementDataStore):
+    def __init__(self, session: Session) -> None:
+        self.db = session
+
+    def subjects(self) -> SubjectDataSeed:
+        return SqliteSubjectDataStore(self.db).load()
+
+    def load(self) -> RequirementSeed:
+        return RequirementSeed.model_validate(
             {
                 name: [
-                    schema.model_validate(
-                        row.model_dump(include=set(schema.model_fields))
-                    )
-                    for row in session.exec(select(model)).all()
+                    schema.model_validate(row.model_dump())
+                    for row in self.db.exec(select(model)).all()
                 ]
-                for name, model, schema in SUBJECT_MAPPING
+                for name, model, schema in TABLE_MAPPING
             }
         )
-        combined = {}
-        additions = {}
-        for name, model, schema in TABLE_MAPPING:
-            existing = [
-                schema.model_validate(row.model_dump())
-                for row in session.exec(select(model)).all()
-            ]
-            by_key = {record_key(record): record for record in existing}
-            new = []
-            for record in getattr(seed, name):
-                key = record_key(record)
-                if key in by_key:
-                    if by_key[key] != record:
-                        raise RequirementSeedError(
-                            f"{name}の既存データと内容が異なります。通常のシードでは更新できません。"
-                        )
-                else:
-                    new.append(record)
-            combined[name] = existing + new
-            additions[name] = new
-        ordered = validate_requirements(RequirementSeed(**combined), subjects)
-        new_ids = {record.id for record in additions["graduation_requirements"]}
-        additions["graduation_requirements"] = [
-            row for row in ordered if row.id in new_ids
-        ]
+
+    def insert(self, additions: RequirementSeed) -> None:
         for name, model, _ in TABLE_MAPPING:
-            for record in additions[name]:
-                session.add(model(**record.model_dump(mode="json")))
-                session.flush()
-                inserted[name] += 1
-    return inserted
+            for record in getattr(additions, name):
+                self.db.add(model(**record.model_dump(mode="json")))
+                # 親要件も同じテーブルなので、順序を明示してFKを満たす。
+                self.db.flush()
+
+
+class SqliteRequirementUnitOfWork(SqlUnitOfWork, RequirementUnitOfWork):
+    def __init__(self, engine: Engine) -> None:
+        super().__init__(engine, unavailable)
+
+    @property
+    def requirements(self) -> SqliteRequirementDataStore:
+        return SqliteRequirementDataStore(self.session)

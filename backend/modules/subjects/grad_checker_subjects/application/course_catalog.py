@@ -1,9 +1,11 @@
 """本人課程から見た既知科目と分類の読取契約。成績や所属は変更しない。"""
 
-from typing import Literal, Protocol
+from abc import ABC, abstractmethod
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 from modules.subjects.grad_checker_subjects.application.errors.course_catalog import (
     CourseCatalogError,
 )
@@ -95,7 +97,8 @@ class CourseFilters(BaseModel):
     q: str | None = Field(default=None, min_length=1, max_length=100)
 
 
-class CourseCatalogRepository(Protocol):
+class CourseCatalogRepository(ABC):
+    @abstractmethod
     def get_catalog(self, curriculum_id: str) -> CourseCatalog: ...
 
 
@@ -124,12 +127,23 @@ def matches(course: CatalogCourse, filters: CourseFilters) -> bool:
     return True
 
 
+class CourseCatalogUnitOfWork(UnitOfWork):
+    @property
+    @abstractmethod
+    def catalog(self) -> CourseCatalogRepository: ...
+
+
 class CourseCatalogService:
-    def __init__(self, repository: CourseCatalogRepository) -> None:
-        self.repository = repository
+    def __init__(self, uow: CourseCatalogUnitOfWork) -> None:
+        self.uow = uow
+
+    def _catalog(self, curriculum_id: str) -> CourseCatalog:
+        # 絞り込みはスナップショットの取得後に行い、読取りを短くする。
+        with self.uow.read():
+            return self.uow.catalog.get_catalog(curriculum_id)
 
     def list_courses(self, curriculum_id: str, filters: CourseFilters) -> CourseList:
-        catalog = self.repository.get_catalog(curriculum_id)
+        catalog = self._catalog(curriculum_id)
         if filters.category_id is not None and all(
             category.id != filters.category_id for category in catalog.categories
         ):
@@ -140,7 +154,7 @@ class CourseCatalogService:
         )
 
     def list_categories(self, curriculum_id: str) -> CategoryList:
-        catalog = self.repository.get_catalog(curriculum_id)
+        catalog = self._catalog(curriculum_id)
         return CategoryList(
             curriculum=catalog.curriculum, categories=catalog.categories
         )

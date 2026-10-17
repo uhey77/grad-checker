@@ -3,8 +3,10 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
+from modules.accounts.grad_checker_accounts.application.auth import Passwords
 
-class ArgonPasswords:
+
+class ArgonPasswords(Passwords):
     def __init__(self) -> None:
         self.hasher = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
         # 未登録アカウントでも同じハッシュ照合を行う。

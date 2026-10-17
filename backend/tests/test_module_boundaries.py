@@ -3,6 +3,8 @@
 import ast
 from pathlib import Path
 
+import pytest
+
 from config.settings import DEFAULT_DATABASE_PATH, Settings
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -88,6 +90,38 @@ def test_requirements_follow_layer_dependencies() -> None:
             ], source
         if layer == "domain":
             assert not [name for name in imports if ".application" in name], source
+
+
+@pytest.mark.parametrize("module", ["subjects", "accounts"])
+def test_application_does_not_depend_on_database(module: str) -> None:
+    package = f"modules/{module}/grad_checker_{module}"
+    for source, imports in imported_modules(package):
+        layer = source.relative_to(BACKEND / package).parts[0]
+        if layer in ("domain", "application"):
+            assert not [
+                name
+                for name in imports
+                if ".infrastructure" in name
+                or name.split(".")[0] in ("sqlalchemy", "sqlmodel")
+            ], source
+
+
+def test_only_unit_of_work_controls_transactions() -> None:
+    # リポジトリはトランザクションの開始・確定・取消をUnit of Workに任せる。
+    shared = BACKEND / "modules/shared/grad_checker_shared"
+    for source in (BACKEND / "modules").rglob("*.py"):
+        if source.is_relative_to(shared):
+            continue
+        code = source.read_text()
+        for statement in (".commit(", ".rollback(", 'exec_driver_sql("BEGIN'):
+            assert statement not in code, source
+
+
+def test_application_contracts_are_abstract_base_classes() -> None:
+    # 取得・保存の契約はABCで定義し、実装とFakeに継承で明示させる。
+    for source in (BACKEND / "modules").rglob("*.py"):
+        if "application" in source.parts:
+            assert "Protocol" not in source.read_text(), source
 
 
 def test_shared_settings_default_to_backend_data(monkeypatch) -> None:

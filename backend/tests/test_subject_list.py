@@ -7,8 +7,11 @@ from sqlalchemy import text
 
 from api.api_service.main import create_app
 from config.settings import Settings
-from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
     import_subject_data,
+)
+from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+    SqliteSubjectDataUnitOfWork,
     load_seed,
 )
 
@@ -24,7 +27,9 @@ def subject_list_client(tmp_path):
         )
     )
     with TestClient(app) as client:
-        import_subject_data(app.state.database_engine, load_seed(SEED_PATH))
+        import_subject_data(
+            SqliteSubjectDataUnitOfWork(app.state.database_engine), load_seed(SEED_PATH)
+        )
         yield client
 
 

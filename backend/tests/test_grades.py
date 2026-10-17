@@ -7,26 +7,35 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlmodel import Session
 from test_auth import login, register
 from test_profile import selection
 
 from api.api_service.main import create_app
 from config.settings import Settings
 from modules.grades.grad_checker_grades.application.errors.grades import GradeError
-from modules.grades.grad_checker_grades.application.grades import GradeSet
+from modules.grades.grad_checker_grades.application.grades import (
+    GradeRepository,
+    GradeService,
+    GradeSet,
+    GradeUnitOfWork,
+    StudentGrades,
+)
 from modules.grades.grad_checker_grades.domain.grade import (
     GradeCode,
     ResultStatus,
     is_valid_attempt_sequence,
 )
 from modules.grades.grad_checker_grades.infrastructure.grades import (
-    SqliteGradeRepository,
+    SqliteGradeUnitOfWork,
+)
+from modules.subjects.grad_checker_subjects.application.subject_data_import import (
+    import_subject_data,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    import_subject_data,
+    SqliteSubjectDataUnitOfWork,
     load_seed,
 )
+from tests.fakes import FakeUnitOfWork
 
 BACKEND = Path(__file__).resolve().parents[1]
 SEED = json.loads((BACKEND / "seeds/cs_2026.json").read_text())
@@ -38,7 +47,8 @@ def grades_app(tmp_path):
     app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'grades.db'}"))
     with TestClient(app) as client:
         import_subject_data(
-            app.state.database_engine, load_seed(BACKEND / "seeds/cs_2026.json")
+            SqliteSubjectDataUnitOfWork(app.state.database_engine),
+            load_seed(BACKEND / "seeds/cs_2026.json"),
         )
         register(client)
         yield app, client, login(client)
@@ -191,12 +201,12 @@ def test_concurrent_grade_saves_have_only_one_winner(grades_app):
     student_id = identity["student"]["id"]
 
     def replace(grade):
-        with Session(app.state.database_engine) as db:
-            try:
-                grade_set = GradeSet(expected_revision=0, grades=[attempt(0, 1, grade)])
-                return SqliteGradeRepository(db).replace_grades(student_id, grade_set)
-            except GradeError as error:
-                return error.code
+        service = GradeService(SqliteGradeUnitOfWork(app.state.database_engine))
+        try:
+            grade_set = GradeSet(expected_revision=0, grades=[attempt(0, 1, grade)])
+            return service.save_grades(student_id, grade_set)
+        except GradeError as error:
+            return error.code
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(replace, ["A", "B"]))
@@ -242,3 +252,57 @@ def test_database_rejects_inconsistent_grade_rows(grades_app):
                         "grade": grade,
                     },
                 )
+
+
+class FakeGradeRepository(GradeRepository):
+    def __init__(self, uow: FakeUnitOfWork) -> None:
+        self.uow = uow
+        self.replaced: list[GradeSet] = []
+
+    def get_grades(self, student_id: str) -> StudentGrades:
+        self.uow.require_block()
+        return StudentGrades(grades=[], data_revision=0)
+
+    def replace_grades(self, student_id: str, grade_set: GradeSet) -> StudentGrades:
+        self.uow.require_block()
+        if grade_set.expected_revision != 0:
+            raise GradeError("revision_conflict")
+        self.replaced.append(grade_set)
+        return StudentGrades(grades=grade_set.grades, data_revision=1)
+
+
+class FakeGradeUnitOfWork(FakeUnitOfWork, GradeUnitOfWork):
+    def __init__(self) -> None:
+        super().__init__()
+        self.repository = FakeGradeRepository(self)
+
+    @property
+    def grades(self) -> FakeGradeRepository:
+        return self.repository
+
+
+def test_invalid_attempt_sequence_is_rejected_before_the_transaction():
+    uow = FakeGradeUnitOfWork()
+    grades = [attempt(0, 1, "A"), attempt(0, 2, "B")]
+    with pytest.raises(GradeError, match="invalid_attempt_sequence"):
+        GradeService(uow).save_grades(
+            "student",
+            GradeSet.model_validate({"expected_revision": 0, "grades": grades}),
+        )
+    assert uow.events == []
+
+
+def test_grade_replacement_commits_or_rolls_back_as_one_write():
+    uow = FakeGradeUnitOfWork()
+    service = GradeService(uow)
+    grades = [attempt(0, 1, "A")]
+    saved = service.save_grades(
+        "student", GradeSet.model_validate({"expected_revision": 0, "grades": grades})
+    )
+    assert saved.data_revision == 1
+    with pytest.raises(GradeError, match="revision_conflict"):
+        service.save_grades(
+            "student",
+            GradeSet.model_validate({"expected_revision": 5, "grades": grades}),
+        )
+    assert uow.events == ["write", "commit", "write", "rollback"]

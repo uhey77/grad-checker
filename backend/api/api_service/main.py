@@ -10,6 +10,9 @@ from sqlalchemy import text
 
 from api.api_service.presentation.go_bridge_auth import router as bridge_auth_router
 from api.api_service.presentation.go_bridge_call import failure
+from api.api_service.presentation.go_bridge_checks import (
+    router as bridge_checks_router,
+)
 from api.api_service.presentation.go_bridge_courses import (
     router as bridge_courses_router,
 )
@@ -84,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(bridge_courses_router)
     application.include_router(bridge_grades_router)
     application.include_router(bridge_evaluation_router)
+    application.include_router(bridge_checks_router)
     return application
 
 
