@@ -19,6 +19,7 @@ from modules.subjects.grad_checker_subjects.application.subject_data_validation 
 )
 
 type Judgment = Literal["pass", "fail"]
+type EvaluationWarning = Literal["provisional_external_allocation"]
 
 
 class EvaluationSnapshot(BaseModel):
@@ -72,6 +73,15 @@ class OverflowAllocation(BaseModel):
     transferred_credits: int
 
 
+class ExternalAllocation(BaseModel):
+    rule_id: UUID
+    target_classification_id: UUID
+    target_name: str
+    earned_credits: int
+    credited_credits: int
+    free_credits: int
+
+
 class EvaluationResult(BaseModel):
     result: Judgment
     data_revision: int
@@ -83,3 +93,5 @@ class EvaluationResult(BaseModel):
     courses: list[CourseResult]
     missing_required_courses: list[CourseResult]
     allocations: list[OverflowAllocation]
+    external_allocations: list[ExternalAllocation]
+    warnings: list[EvaluationWarning]

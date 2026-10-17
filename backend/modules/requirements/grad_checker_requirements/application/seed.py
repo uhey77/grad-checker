@@ -1,6 +1,6 @@
 """要件・規則シードの入力契約。既存の科目マスタとは別に追加投入する。"""
 
-from typing import Self
+from typing import Literal, Self
 from uuid import UUID
 
 from pydantic import model_validator
@@ -59,9 +59,15 @@ class CreditRuleData(SeedRecord):
     source_note: NonemptyText
     unresolved_reason: NonemptyText | None = None
     revision: PositiveInteger
+    allocation_policy: Literal["chronological_best_fit_v1"] | None = None
 
     @model_validator(mode="after")
     def verification_matches_reason(self) -> Self:
+        if (
+            self.allocation_policy is not None
+            and self.kind != CreditRuleKind.OTHER_FACULTY
+        ):
+            raise ValueError("取得順の配分方針は他学部算入にだけ指定できます。")
         if (self.verification_status == VerificationStatus.UNVERIFIED) != (
             self.unresolved_reason is not None
         ):

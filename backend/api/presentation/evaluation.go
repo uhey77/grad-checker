@@ -40,16 +40,15 @@ func writeEvaluationError(w http.ResponseWriter, err error) {
 		return
 	}
 	details := map[string]string{
-		"program_not_selected":         "所属が未設定です。所属設定を保存してから判定してください。",
-		"unverified_curriculum":        "カリキュラムの適用入学年度が未確認のため、卒業要件を判定できません。",
-		"unverified_credit_rule":       "必要な単位換算・他学部算入の規則が未確認のため、卒業要件を判定できません。",
-		"unresolved_allocation":        "内訳条件が不足している選択必修群の超過換算方法が未確定のため、判定できません。",
-		"unsupported_external_credits": "所属課程外の修得科目が含まれています。他学部科目の算入にはまだ対応していません。",
-		"invalid_evaluation_master":    "卒業要件の科目・条件・算入規則の設定が不足しているか、不整合があります。",
-		"invalid_evaluation_input":     "保存済みの成績または判定マスタが不正なため、判定できません。",
-		"invalid_grades":               "保存済みの成績データが不正なため、判定できません。",
-		"invalid_attempt_sequence":     "保存済みの履修回次が不正なため、判定できません。",
-		"duplicate_attempt":            "保存済みの履修回次が重複しているため、判定できません。",
+		"program_not_selected":                 "所属が未設定です。所属設定を保存してから判定してください。",
+		"unverified_credit_rule":               "必要な単位換算・他学部算入の規則が未確認のため、卒業要件を判定できません。",
+		"external_acquisition_period_required": "他学部科目の算入先を決めるため、履修年度・学期が必要です。他学部科目の未入力の年度・学期を入力して保存し、再度判定してください。",
+		"unsupported_external_credits":         "所属課程外の修得科目に、算入先が未登録の科目があります。対象科目と算入先のマスタ整備が必要です。",
+		"invalid_evaluation_master":            "卒業要件の科目・条件・算入規則の設定が不足しているか、不整合があります。",
+		"invalid_evaluation_input":             "保存済みの成績または判定マスタが不正なため、判定できません。",
+		"invalid_grades":                       "保存済みの成績データが不正なため、判定できません。",
+		"invalid_attempt_sequence":             "保存済みの履修回次が不正なため、判定できません。",
+		"duplicate_attempt":                    "保存済みの履修回次が重複しているため、判定できません。",
 	}
 	if detail, ok := details[failure.Code]; ok {
 		writeError(w, 409, detail)

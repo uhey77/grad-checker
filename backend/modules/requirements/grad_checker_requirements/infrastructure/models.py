@@ -100,6 +100,10 @@ class CreditRule(SQLModel, table=True):
         text_check("source_pages"),
         text_check("source_note"),
         text_check("unresolved_reason", True),
+        CheckConstraint(
+            "allocation_policy IS NULL OR (kind = 'other_faculty' "
+            "AND allocation_policy = 'chronological_best_fit_v1')"
+        ),
     )
     id: str = Field(primary_key=True)
     curriculum_id: str = Field(foreign_key="curricula.id", ondelete="RESTRICT")
@@ -111,6 +115,7 @@ class CreditRule(SQLModel, table=True):
     source_note: str
     unresolved_reason: str | None = None
     revision: int
+    allocation_policy: str | None = None
 
 
 class CreditRuleCourse(SQLModel, table=True):

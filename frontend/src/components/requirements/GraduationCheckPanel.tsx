@@ -20,11 +20,9 @@ export function GraduationCheckPanel({
   return (
     <section className="panel graduation-check" aria-label="卒業要件チェック">
       <h2>卒業要件チェック</h2>
-      <p>
-        {dirty
-          ? "未保存の変更があります。成績を保存してから判定してください。"
-          : "保存済みの成績で卒業要件を判定します。"}
-      </p>
+      {dirty && (
+        <p>未保存の変更があります。成績を保存してから判定してください。</p>
+      )}
       <button
         type="button"
         className="primary-button"

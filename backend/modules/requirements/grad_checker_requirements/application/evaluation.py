@@ -24,8 +24,10 @@ from .evaluation_models import (
     CreditSummary,
     EvaluationResult,
     EvaluationSnapshot,
+    ExternalAllocation,
     OverflowAllocation,
 )
+from .external_allocation import allocate_external
 from .seed import (
     RequirementData,
 )
@@ -55,28 +57,15 @@ class _Evaluation:
         self.credited: dict[UUID, int] = defaultdict(int)
         self.group_credits: dict[UUID, int] = {}
         self.allocations: list[OverflowAllocation] = []
+        self.external_allocations: list[ExternalAllocation] = []
+        self.warnings = []
 
     def credits(self, ids: set[UUID]) -> int:
         return sum(self.context.courses[key].credits for key in ids & self.earned)
 
-    def reject_external_credits(self) -> None:
-        # 他学部の対象照合・上限配分は後続の実装。実単位を黙って除外しない。
-        if not self.earned - self.context.associations.keys():
-            return
-        for rule in self.context.rules.values():
-            if rule.kind == CreditRuleKind.OTHER_FACULTY and rule.unresolved_reason:
-                raise EvaluationError(
-                    "unverified_credit_rule", rule.unresolved_reason, rule_id=rule.id
-                )
-        raise EvaluationError(
-            "unsupported_external_credits",
-            "本人課程外の修得科目の算入には、対象照合と他学部算入処理が必要です。",
-        )
-
     def allocate(self) -> None:
         context = self.context
-        self.reject_external_credits()
-        for course_id in self.earned:
+        for course_id in self.earned & context.associations.keys():
             association = context.associations[course_id]
             root = context.root(association.classification_id)
             credit_value = context.courses[course_id].credits
@@ -100,6 +89,17 @@ class _Evaluation:
                 self.allocations.append(allocation)
                 self.elective[root] += allocation.transferred_credits
                 self.credited[root] += allocation.transferred_credits
+
+        self.external_allocations, self.warnings = allocate_external(
+            context, self.earned, self.credited, self.elective
+        )
+        for allocation in self.external_allocations:
+            self.credited[allocation.target_classification_id] += (
+                allocation.credited_credits
+            )
+            self.elective[allocation.target_classification_id] += (
+                allocation.credited_credits
+            )
 
     def overflow(
         self, condition: RequirementData, earned: int, group: int, root: UUID
@@ -126,17 +126,6 @@ class _Evaluation:
                 rule.unresolved_reason or "超過換算規則が未確認です。",
                 rule_id=rule.id,
             )
-        if any(
-            child.kind == RequirementKind.SUBMINIMUM
-            and child.parent_id == condition.id
-            and self.credits(context.targets[child.id]) < child.required_credits
-            for child in context.conditions
-        ):
-            raise EvaluationError(
-                "unresolved_allocation",
-                "内訳条件が不足する群の超過換算方法が未確定です。",
-                rule_id=rule.id,
-            )
         return OverflowAllocation(
             rule_id=rule.id,
             requirement_id=condition.id,
@@ -152,9 +141,15 @@ class _Evaluation:
         earned = self.credits(context.targets[condition.id])
         credited = earned
         if condition.kind == RequirementKind.TOTAL:
+            earned += sum(row.earned_credits for row in self.external_allocations)
             credited = sum(self.credited.values())
         elif condition.kind == RequirementKind.CLASSIFICATION_TOTAL:
             assert condition.classification_id is not None
+            earned += sum(
+                row.earned_credits
+                for row in self.external_allocations
+                if row.target_classification_id == condition.classification_id
+            )
             credited = self.credited[condition.classification_id]
         elif condition.kind == RequirementKind.ELECTIVE_TOTAL:
             assert condition.classification_id is not None
@@ -166,6 +161,11 @@ class _Evaluation:
                     for key in context.targets[condition.id]
                     if context.associations[key].course_type == "elective"
                 }
+            )
+            earned += sum(
+                row.earned_credits
+                for row in self.external_allocations
+                if row.target_classification_id == condition.classification_id
             )
         elif condition.kind == RequirementKind.SELECTIVE_GROUP:
             credited = self.group_credits[condition.id]
@@ -235,13 +235,15 @@ class _Evaluation:
             courses=courses,
             missing_required_courses=missing,
             allocations=self.allocations,
+            external_allocations=self.external_allocations,
+            warnings=self.warnings,
         )
 
 
 def evaluate_graduation(snapshot: EvaluationSnapshot) -> EvaluationResult:
     """検証済みの独立コピーで計算し、正常結果か理由付き業務エラーを返す。
 
-    入力を変更せず、履歴保存・時刻採番・DB読取・推薦・他学部算入は行わない。
+    入力を変更せず、履歴保存・時刻採番・DB読取・推薦は行わない。
     """
     try:
         validated = EvaluationSnapshot.model_validate(

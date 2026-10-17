@@ -41,10 +41,8 @@ class EvaluationContext:
         curriculum = curricula.get(snapshot.curriculum_id)
         if curriculum is None or curriculum.program_id != snapshot.program_id:
             raise invalid_master("所属と適用カリキュラムが一致しません。")
-        if curriculum.verification_status != "verified":
-            raise EvaluationError(
-                "unverified_curriculum", "カリキュラムの適用入学年度が未確認です。"
-            )
+        # 保存済みの便覧カリキュラムを基準に計算する。適用入学年度の確認状態は
+        # 根拠情報として保持するが、判定を止める条件にはしない。
         self.curriculum = curriculum
         self.courses = {row.id: row for row in snapshot.subjects.courses}
         self.classes = {row.id: row for row in snapshot.subjects.classifications}

@@ -38,4 +38,13 @@ export interface GraduationResult {
   requirements: RequirementResult[];
   missingRequiredCourses: { courseId: string; name: string; credits: number }[];
   allocations: { requirementId: string; transferredCredits: number }[];
+  externalAllocations: {
+    ruleId: string;
+    targetClassificationId: string;
+    targetName: string;
+    earnedCredits: number;
+    creditedCredits: number;
+    freeCredits: number;
+  }[];
+  warnings: "provisional_external_allocation"[];
 }

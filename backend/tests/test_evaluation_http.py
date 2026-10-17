@@ -2,19 +2,176 @@
 
 from sqlalchemy import text
 from test_auth_http import PASSWORD, auth_services  # noqa: F401
-from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
+from test_external_allocation import add_external, external_snapshot  # noqa: F401
+from test_requirement_evaluation import BACKEND, grade, snapshot, uid  # noqa: F401
 
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     import_requirements,
+    load_requirement_seed,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     import_subject_data,
+    load_seed,
 )
 
 ENDPOINT = "/api/me/graduation-requirements"
+
+
+def test_external_allocation_period_prompt_and_warning(
+    auth_services,  # noqa: F811
+    tmp_path,
+    external_snapshot,  # noqa: F811
+):
+    client = auth_services
+    engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
+    try:
+        import_subject_data(engine, external_snapshot.subjects)
+        import_requirements(engine, external_snapshot.requirements)
+        credentials = {"login_name": "external_check", "password": PASSWORD}
+        assert client.post("/api/auth/register", json=credentials).status_code == 201
+        auth = client.post("/api/auth/login", json=credentials).json()
+        headers = {"X-CSRF-Token": auth["csrf_token"]}
+        client.put(
+            "/api/me/program",
+            headers=headers,
+            json={
+                "program_id": str(external_snapshot.program_id),
+                "curriculum_id": str(external_snapshot.curriculum_id),
+                "expected_revision": 0,
+            },
+        ).raise_for_status()
+        add_external(external_snapshot, year=None, term=None)
+        saved = client.put(
+            "/api/me/grades",
+            headers=headers,
+            json={
+                "grades": [row.model_dump() for row in external_snapshot.grades],
+                "expected_revision": 1,
+            },
+        )
+        saved.raise_for_status()
+        before = client.get("/api/me/grades").json()
+        missing = client.get(ENDPOINT)
+        assert missing.status_code == 409
+        assert "履修年度・学期" in missing.json()["detail"]
+        assert client.get("/api/me/grades").json() == before
+        external_snapshot.grades = [
+            row.model_copy(update={"academic_year": 2026, "term_code": "first"})
+            for row in external_snapshot.grades
+        ]
+        client.put(
+            "/api/me/grades",
+            headers=headers,
+            json={
+                "grades": [row.model_dump() for row in external_snapshot.grades],
+                "expected_revision": 2,
+            },
+        ).raise_for_status()
+        result = client.get(ENDPOINT)
+        assert result.status_code == 200, result.text
+        assert result.json()["result"] == "pass"
+        assert result.json()["warnings"] == ["provisional_external_allocation"]
+        assert (
+            sum(row["free_credits"] for row in result.json()["external_allocations"])
+            == 2
+        )
+        external_snapshot.grades.pop(
+            5
+        )  # 第一算入先の他学部科目を1つ取り消し、合計6単位にする。
+        client.put(
+            "/api/me/grades",
+            headers=headers,
+            json={
+                "grades": [row.model_dump() for row in external_snapshot.grades],
+                "expected_revision": 3,
+            },
+        ).raise_for_status()
+        result = client.get(ENDPOINT).json()
+        assert result["warnings"] == []
+        assert result["result"] == "pass"
+    finally:
+        engine.dispose()
+
+
+def test_current_cs_seed_evaluates_all_curricula_without_verification_override(
+    auth_services,  # noqa: F811
+    tmp_path,
+):
+    client = auth_services
+    subjects = load_seed(BACKEND / "seeds/cs_2026.json")
+    requirements = load_requirement_seed(BACKEND / "seeds/cs_requirements_2026.json")
+    engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
+    try:
+        import_subject_data(engine, subjects)
+        import_requirements(engine, requirements)
+        credentials = {"login_name": "current_seed", "password": PASSWORD}
+        assert client.post("/api/auth/register", json=credentials).status_code == 201
+        auth = client.post("/api/auth/login", json=credentials).json()
+        headers = {"X-CSRF-Token": auth["csrf_token"]}
+        revision = 0
+        for curriculum in subjects.curricula:
+            saved = client.put(
+                "/api/me/program",
+                headers=headers,
+                json={
+                    "program_id": str(curriculum.program_id),
+                    "curriculum_id": str(curriculum.id),
+                    "expected_revision": revision,
+                },
+            )
+            assert saved.status_code == 200, saved.text
+            revision = saved.json()["data_revision"]
+            empty = client.get(ENDPOINT)
+            assert empty.status_code == 200, empty.text
+            data = empty.json()
+            assert data["result"] == "fail"
+            assert data["curriculum"]["verification_status"] == "unverified"
+            assert data["curriculum"]["admission_year_from"] is None
+            assert data["total"]["earned_credits"] == 0
+            assert data["total"]["shortage"] == 124
+            assert len(data["requirements"]) == 20
+            required = next(
+                row
+                for row in subjects.curriculum_courses
+                if row.curriculum_id == curriculum.id and row.course_type == "required"
+            )
+            course_credits = next(
+                course.credits
+                for course in subjects.courses
+                if course.id == required.course_id
+            )
+            saved_grade = client.put(
+                "/api/me/grades",
+                headers=headers,
+                json={
+                    "expected_revision": revision,
+                    "grades": [grade(required.course_id).model_dump()],
+                },
+            )
+            assert saved_grade.status_code == 200, saved_grade.text
+            revision = saved_grade.json()["data_revision"]
+            result = client.get(ENDPOINT)
+            assert result.status_code == 200, result.text
+            data = result.json()
+            assert data["data_revision"] == revision
+            assert (
+                data["total"]["earned_credits"]
+                == data["total"]["credited_credits"]
+                == course_credits
+            )
+            assert data["total"]["shortage"] == 124 - course_credits
+            cleared = client.put(
+                "/api/me/grades",
+                headers=headers,
+                json={"expected_revision": revision, "grades": []},
+            )
+            assert cleared.status_code == 200, cleared.text
+            revision = cleared.json()["data_revision"]
+    finally:
+        engine.dispose()
 
 
 def test_saved_grades_evaluation_and_owner_isolation(auth_services, tmp_path, snapshot):  # noqa: F811
@@ -111,17 +268,16 @@ def test_saved_grades_evaluation_and_owner_isolation(auth_services, tmp_path, sn
 
 
 def assert_configuration_errors(client, engine):
-    # テストDBだけで未確認・設定不足・DB障害を作り、failと区別する。
+    # 適用年度の未確認は判定を妨げない。設定不足・DB障害はfailと区別する。
     with engine.begin() as connection:
         connection.execute(
             text("UPDATE curricula SET verification_status='unverified'")
         )
     unverified = client.get(ENDPOINT)
-    assert unverified.status_code == 409
-    assert "適用入学年度が未確認" in unverified.json()["detail"]
-    assert "result" not in unverified.json()
+    assert unverified.status_code == 200
+    assert unverified.json()["result"] == "fail"
+    assert unverified.json()["curriculum"]["verification_status"] == "unverified"
     with engine.begin() as connection:
-        connection.execute(text("UPDATE curricula SET verification_status='verified'"))
         connection.execute(text("DELETE FROM requirement_scopes"))
     assert client.get(ENDPOINT).status_code == 409
     with engine.begin() as connection:

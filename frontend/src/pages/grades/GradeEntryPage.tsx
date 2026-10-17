@@ -89,7 +89,7 @@ export function GradeEntryPage({
           entry.programMissing ? (
             <ErrorState
               message={entry.loadError}
-              actionLabel="所属設定へ移動"
+              actionLabel="マイページで所属を設定"
               onAction={showProfile}
             />
           ) : (

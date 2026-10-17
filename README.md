@@ -35,8 +35,18 @@ make dev
 
 画面は `http://127.0.0.1:5173`。ユーザー名とアプリ専用パスワードで新規登録し、表示された復旧コードを保管してからログインします。メールアドレス・メール送信サービスは使用しません。`auth-dev` は `dev` と同じ起動構成です。
 
-ログイン後は所属設定から課程・カリキュラムを保存し、成績入力から本人の成績を入力・保存できます。選択肢が空の場合は `task backend-seed` または `make backend-seed` で科目マスタを投入してください。CS学部4課程の適用入学年度は未確認です。
+ログイン後は右上のユーザーメニューのマイページで課程・カリキュラムを保存し、成績入力から本人の成績を入力・保存して卒業要件を判定できます。現在は2026年度便覧を判定基準に使います。CS学部4課程の適用入学年度は未確認のまま保持します。
 
-CS学部4課程の卒業要件・算入規則マスタは、科目マスタ投入後に `task backend-requirements-seed` / `make backend-requirements-seed` で追加できます。再生成は `backend-requirements-build`。出典と未確認規則は[卒業要件マスタ](backend/seeds/requirements.md)を参照してください。判定処理・判定画面はまだ実装していません。
+初回の卒業判定には、科目マスタと卒業要件・算入規則マスタの両方が必要です。次の順で投入してください。
+
+```sh
+task backend-seed
+task backend-requirements-seed
+# Makeの場合
+make backend-seed
+make backend-requirements-seed
+```
+
+`dev` はマスタを自動投入しません。科目と成績を表示できても、卒業要件マスタが未投入なら判定は設定不足エラーになります。投入後は画面の「判定を再試行」で確認できます。同じマスタの再投入では既存行を追加せず、保存済みの所属・成績を変更しません。再生成は `backend-requirements-build`。出典と配分方針は[卒業要件マスタ](backend/seeds/requirements.md)を参照してください。
 
 設定・復旧・旧DBの扱いは[認証の開発手順](docs/auth_development.md)を参照してください。

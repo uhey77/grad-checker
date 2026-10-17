@@ -3,7 +3,7 @@
 `backend/api/`にHTTPの入口、`backend/modules/subjects/`に科目の業務処理を配置する。
 Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/config/`に置く。Goの`go.mod`も`backend/`直下の一つに統一する。
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
-現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。Pythonの卒業単位判定関数も実装したが、判定APIまで実装済み。判定画面も接続済み。他学部算入・推薦・履歴は未実装。
+現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。Pythonの卒業単位判定関数・判定API・結果画面まで実装済み。他学部の配分は明示的な科目対応表と合意した方針がある場合に対応する。対象他学部科目の転記・推薦・履歴は未完了。
 
 卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類、applicationはPydanticの投入契約と集合検証、infrastructureは5テーブルと追加投入を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIは以下の読取り専用経路を使用する。
 
@@ -158,9 +158,9 @@ Pythonを直接起動して確認する場合も、`backend/`で`uv run --locked
 Pythonサービスは127.0.0.1:8001で起動し、外部には公開しない。
 Pythonの`/api`・Swagger UIは削除しており、画面はGoを介して取得する。外部OpenAPI/Swagger UIの整備は今後実施する。
 
-起動時にデータは自動投入しない。必要な場合だけ`backend-seed`を実行する。
+起動時にデータは自動投入しない。初回の卒業判定前には`backend-seed`、続けて`backend-requirements-seed`の両方を実行する。科目マスタだけでは科目表示・成績保存はできても、卒業判定は設定不足エラーになる。
 
-卒業要件・算入規則は科目投入後に `task backend-requirements-seed` / `make backend-requirements-seed` で追加する。JSONの再生成は `backend-requirements-build`。起動時は `create_requirement_schema` でテーブルのみを生成する。[要件シード](../backend/seeds/requirements.md)も参照。
+卒業要件・算入規則は科目投入後に `task backend-requirements-seed` / `make backend-requirements-seed` で追加する。JSONの再生成は `backend-requirements-build`。起動時の `create_requirement_schema` はテーブル生成と既知の旧規則の改訂を行うが、空の要件テーブルへの投入はしない。[要件シード](../backend/seeds/requirements.md)も参照。
 結合テストは一時DBへ投入し、Go・Pythonを実プロセスで起動して検証する。GoがPATHにない場合はスキップされる。
 科目一覧URLと起動方法の変更に合わせ、フロントエンド・Task・Make・関連設計も更新する。
 

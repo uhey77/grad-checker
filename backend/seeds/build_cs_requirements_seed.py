@@ -192,16 +192,13 @@ def build_curriculum(
                 "curriculum_id": curriculum_id,
                 "code": root + ".overflow",
                 "kind": "selective_overflow",
-                "verification_status": "unverified"
-                if root == "general"
-                else "verified",
+                "verification_status": "verified",
                 "source_document": source["document"],
                 "source_pages": "冊子94注1・注2 / PDF96",
                 "source_note": source["notes"]["overflow"],
-                "unresolved_reason": source["unresolved_overflow"]
-                if root == "general"
-                else None,
-                "revision": 1,
+                "unresolved_reason": None,
+                "revision": 2 if root == "general" else 1,
+                "allocation_policy": None,
             }
         )
         seed["credit_rule_courses"].extend(
@@ -226,7 +223,8 @@ def build_curriculum(
             "source_pages": "冊子53(5) / PDF55",
             "source_note": other["summary"],
             "unresolved_reason": other["unresolved_reason"],
-            "revision": 1,
+            "revision": 2,
+            "allocation_policy": "chronological_best_fit_v1",
         }
     )
     seed["credit_rule_limits"].append(

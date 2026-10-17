@@ -4493,12 +4493,13 @@
       "curriculum_id": "597ff086-7eca-5bed-bf14-cccccf2fd9cd",
       "code": "general.overflow",
       "kind": "selective_overflow",
-      "verification_status": "unverified",
+      "verification_status": "verified",
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
-      "unresolved_reason": "Q02: 総合等10単位超過時に人文・社会の内訳が不足する場合の換算は未確認。",
-      "revision": 1
+      "unresolved_reason": null,
+      "revision": 2,
+      "allocation_policy": null
     },
     {
       "id": "b9689240-595b-50f5-b8a7-5badda90b59a",
@@ -4510,7 +4511,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "a0ebfc71-942b-5b12-ae21-b1f057eab25c",
@@ -4522,7 +4524,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "3d7327dd-d374-5699-9f71-3473cde4893d",
@@ -4533,20 +4536,22 @@
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子53(5) / PDF55",
       "source_note": "同じキャンパスの他学部他学科の専門基礎教育・専門教育に属する選択または選択必修の講義科目。専門基礎・専門教育それぞれの選択に算入し、合計6単位まで。超過分は自由科目。演習・実習・実験を除く。",
-      "unresolved_reason": "Q09: 複数算入先にまたがる上限超過時の配分順序、および対象他学部科目の照合・転記は未完了。",
-      "revision": 1
+      "unresolved_reason": "配分順序は大学規則として未確認。アプリでは取得順・同時期は卒業要件を満たしやすい配分を採用する。対象他学部科目の照合・転記は未完了。",
+      "revision": 2,
+      "allocation_policy": "chronological_best_fit_v1"
     },
     {
       "id": "807d9321-1177-5d0f-bc0f-a08d19d88638",
       "curriculum_id": "f1be3b63-dd45-5109-8cff-384a2199960e",
       "code": "general.overflow",
       "kind": "selective_overflow",
-      "verification_status": "unverified",
+      "verification_status": "verified",
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
-      "unresolved_reason": "Q02: 総合等10単位超過時に人文・社会の内訳が不足する場合の換算は未確認。",
-      "revision": 1
+      "unresolved_reason": null,
+      "revision": 2,
+      "allocation_policy": null
     },
     {
       "id": "db253c58-1614-550f-850d-bb885b2dd6b8",
@@ -4558,7 +4563,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "fb63d96e-1d29-58c9-af67-659b82b391a8",
@@ -4570,7 +4576,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "a5e3ecd2-c579-5bfd-b020-eb4b4269104c",
@@ -4581,20 +4588,22 @@
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子53(5) / PDF55",
       "source_note": "同じキャンパスの他学部他学科の専門基礎教育・専門教育に属する選択または選択必修の講義科目。専門基礎・専門教育それぞれの選択に算入し、合計6単位まで。超過分は自由科目。演習・実習・実験を除く。",
-      "unresolved_reason": "Q09: 複数算入先にまたがる上限超過時の配分順序、および対象他学部科目の照合・転記は未完了。",
-      "revision": 1
+      "unresolved_reason": "配分順序は大学規則として未確認。アプリでは取得順・同時期は卒業要件を満たしやすい配分を採用する。対象他学部科目の照合・転記は未完了。",
+      "revision": 2,
+      "allocation_policy": "chronological_best_fit_v1"
     },
     {
       "id": "286f33f5-e44b-551f-87d7-9516b9035a6d",
       "curriculum_id": "92e775e5-2873-5f6e-86d8-3e3a20124330",
       "code": "general.overflow",
       "kind": "selective_overflow",
-      "verification_status": "unverified",
+      "verification_status": "verified",
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
-      "unresolved_reason": "Q02: 総合等10単位超過時に人文・社会の内訳が不足する場合の換算は未確認。",
-      "revision": 1
+      "unresolved_reason": null,
+      "revision": 2,
+      "allocation_policy": null
     },
     {
       "id": "bfc51e53-874a-5227-be7c-004d75b0d697",
@@ -4606,7 +4615,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "bcb54b7c-53c2-5049-baa9-a25e84326727",
@@ -4618,7 +4628,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "15689ee5-885d-532a-8cca-797d6fb8dc1f",
@@ -4629,20 +4640,22 @@
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子53(5) / PDF55",
       "source_note": "同じキャンパスの他学部他学科の専門基礎教育・専門教育に属する選択または選択必修の講義科目。専門基礎・専門教育それぞれの選択に算入し、合計6単位まで。超過分は自由科目。演習・実習・実験を除く。",
-      "unresolved_reason": "Q09: 複数算入先にまたがる上限超過時の配分順序、および対象他学部科目の照合・転記は未完了。",
-      "revision": 1
+      "unresolved_reason": "配分順序は大学規則として未確認。アプリでは取得順・同時期は卒業要件を満たしやすい配分を採用する。対象他学部科目の照合・転記は未完了。",
+      "revision": 2,
+      "allocation_policy": "chronological_best_fit_v1"
     },
     {
       "id": "2c3ed3bf-6426-5cb6-8196-baa32cd33713",
       "curriculum_id": "b2e10541-6d9e-507d-95e0-17b77b9f0e84",
       "code": "general.overflow",
       "kind": "selective_overflow",
-      "verification_status": "unverified",
+      "verification_status": "verified",
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
-      "unresolved_reason": "Q02: 総合等10単位超過時に人文・社会の内訳が不足する場合の換算は未確認。",
-      "revision": 1
+      "unresolved_reason": null,
+      "revision": 2,
+      "allocation_policy": null
     },
     {
       "id": "815e71a5-8b80-5795-a806-6c67861094b5",
@@ -4654,7 +4667,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "94c078de-fc47-5916-8366-18d5b2676d39",
@@ -4666,7 +4680,8 @@
       "source_pages": "冊子94注1・注2 / PDF96",
       "source_note": "所定の単位数を超えて修得した選択必修科目の単位数は、科目区分ごとの選択科目の単位数に換算する。",
       "unresolved_reason": null,
-      "revision": 1
+      "revision": 1,
+      "allocation_policy": null
     },
     {
       "id": "d67aeb16-3dbb-55a4-8a34-7b0d48a87060",
@@ -4677,8 +4692,9 @@
       "source_document": "東京工科大学 2026年度学生便覧（八王子キャンパス）",
       "source_pages": "冊子53(5) / PDF55",
       "source_note": "同じキャンパスの他学部他学科の専門基礎教育・専門教育に属する選択または選択必修の講義科目。専門基礎・専門教育それぞれの選択に算入し、合計6単位まで。超過分は自由科目。演習・実習・実験を除く。",
-      "unresolved_reason": "Q09: 複数算入先にまたがる上限超過時の配分順序、および対象他学部科目の照合・転記は未完了。",
-      "revision": 1
+      "unresolved_reason": "配分順序は大学規則として未確認。アプリでは取得順・同時期は卒業要件を満たしやすい配分を採用する。対象他学部科目の照合・転記は未完了。",
+      "revision": 2,
+      "allocation_policy": "chronological_best_fit_v1"
     }
   ],
   "credit_rule_courses": [

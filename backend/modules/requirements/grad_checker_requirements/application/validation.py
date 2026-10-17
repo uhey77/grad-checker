@@ -233,6 +233,11 @@ def validate_rules(seed: RequirementSeed, subjects: SubjectDataSeed) -> None:
         (x.curriculum_id, x.course_id): x for x in subjects.curriculum_courses
     }
     rules = unique(seed.credit_rules, lambda x: x.id, "規則ID")
+    unique(
+        (row for row in seed.credit_rules if row.kind == CreditRuleKind.OTHER_FACULTY),
+        lambda row: row.curriculum_id,
+        "課程の他学部共通上限規則",
+    )
     unique(seed.credit_rules, lambda x: (x.curriculum_id, x.code), "規則コード")
     unique(
         seed.credit_rule_courses, lambda x: (x.rule_id, x.course_id), "規則の対象科目"
@@ -258,6 +263,18 @@ def validate_rules(seed: RequirementSeed, subjects: SubjectDataSeed) -> None:
             )
         if row.course_id not in courses:
             raise RequirementSeedError("算入規則の対象科目が存在しません。")
+        if rule.kind == CreditRuleKind.OTHER_FACULTY:
+            if (row.curriculum_id, row.course_id) in associations:
+                raise RequirementSeedError(
+                    "他学部算入の対象に本人課程の科目は指定できません。"
+                )
+            if (
+                next(x for x in subjects.courses if x.id == row.course_id).teaching_type
+                != "lecture"
+            ):
+                raise RequirementSeedError(
+                    "他学部算入の対象は照合済みの講義科目に限ります。"
+                )
         key = (row.curriculum_id, rule.kind, row.course_id)
         if key in allocations:
             raise RequirementSeedError(

@@ -306,13 +306,17 @@ def test_missing_overflow_mapping_is_not_silently_discarded(snapshot):
     assert_error(snapshot, "invalid_evaluation_master")
 
 
-def test_overflow_with_missing_subminimum_requires_allocation_rule(snapshot):
+def test_overflow_with_missing_subminimum_is_normal_failure(snapshot):
     snapshot.subjects.courses[2].credits = 4
     snapshot.grades = [grade(uid(12))]
-    assert_error(snapshot, "unresolved_allocation")
+    result = evaluate_graduation(snapshot)
+    assert result.result == "fail"
+    assert result.allocations[0].transferred_credits == 2
+    assert conditions(result)["r24"].shortage == 2
+    assert result.total.credited_credits == 4
 
 
-def test_external_unverified_rule_preserves_reason(snapshot):
+def test_external_rule_does_not_guess_unmapped_course(snapshot):
     external = snapshot.subjects.courses[0].model_copy(
         update={"id": uid(99), "code": "external"}
     )
@@ -342,8 +346,7 @@ def test_external_unverified_rule_preserves_reason(snapshot):
     )
     snapshot.requirements = RequirementSeed.model_validate(data)
     snapshot.grades = [grade(uid(99))]
-    error = assert_error(snapshot, "unverified_credit_rule")
-    assert error.rule_id == uid(31) and error.reason == "Q09確認中"
+    assert_error(snapshot, "unsupported_external_credits")
 
 
 def test_missing_selective_group_and_overlapping_groups_are_errors(snapshot):
@@ -427,7 +430,7 @@ def test_classification_cycle_and_profile_mismatch_are_errors(snapshot):
 
 
 @pytest.mark.parametrize("index", range(4))
-def test_cs_seed_requires_confirmation_and_calculates_all_four_curricula(index):
+def test_cs_seed_calculates_without_changing_admission_year_confirmation(index):
     subjects = SubjectDataSeed.model_validate_json(
         (BACKEND / "seeds/cs_2026.json").read_text()
     )
@@ -443,18 +446,33 @@ def test_cs_seed_requires_confirmation_and_calculates_all_four_curricula(index):
         requirements=requirements,
         grades=[],
     )
-    assert_error(snapshot, "unverified_curriculum")
-    # 確認済み状態はテストのメモリ上だけで構成する。実シードは更新しない。
-    curriculum.verification_status = VerificationStatus.VERIFIED
-    curriculum.admission_year_from = 2026
     result = evaluate_graduation(snapshot)
+    assert result.result == "fail"
+    assert result.curriculum.verification_status == VerificationStatus.UNVERIFIED
+    assert result.curriculum.admission_year_from is None
+    assert result.curriculum.admission_year_to is None
     assert len(result.requirements) == 20
     assert result.total.shortage == 124
     assert sorted(row.required_credits for row in result.categories) == [38, 42, 44]
-    for rule in requirements.credit_rules:
-        if rule.kind == "selective_overflow":
-            rule.verification_status = VerificationStatus.VERIFIED
-            rule.unresolved_reason = None
+    # 実シードのままで必修1科目の修得・算入・不足が反映される。
+    required = next(
+        row
+        for row in subjects.curriculum_courses
+        if row.curriculum_id == curriculum.id and row.course_type == "required"
+    )
+    course_credits = next(
+        c.credits for c in subjects.courses if c.id == required.course_id
+    )
+    snapshot.grades = [grade(required.course_id)]
+    result = evaluate_graduation(snapshot)
+    assert (
+        result.total.earned_credits == result.total.credited_credits == course_credits
+    )
+    assert result.total.shortage == 124 - course_credits
+    assert all(
+        c.course_id != required.course_id for c in result.missing_required_courses
+    )
+    # 原本を再確認した実シードのまま、全科目修得と超過換算を検証する。
     snapshot.grades = [
         grade(row.course_id)
         for row in subjects.curriculum_courses

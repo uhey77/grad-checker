@@ -57,7 +57,8 @@ export function toGraduationResult(data: unknown): GraduationResult {
   const curriculum = record(value.curriculum);
   const evaluatedAt = text(value.evaluated_at);
   if (
-    curriculum.verification_status !== "verified" ||
+    (curriculum.verification_status !== "verified" &&
+      curriculum.verification_status !== "unverified") ||
     !Number.isFinite(Date.parse(evaluatedAt))
   )
     return invalid();
@@ -79,6 +80,24 @@ export function toGraduationResult(data: unknown): GraduationResult {
       sourcePages: text(curriculum.source_pages),
     },
     total: summary(value.total),
+    warnings: list(value.warnings).map((warning) =>
+      warning === "provisional_external_allocation" ? warning : invalid(),
+    ),
+    externalAllocations: list(value.external_allocations).map((data) => {
+      const row = record(data);
+      const earnedCredits = integer(row.earned_credits);
+      const creditedCredits = integer(row.credited_credits);
+      const freeCredits = integer(row.free_credits);
+      if (creditedCredits + freeCredits !== earnedCredits) return invalid();
+      return {
+        ruleId: text(row.rule_id),
+        targetClassificationId: text(row.target_classification_id),
+        targetName: text(row.target_name),
+        earnedCredits,
+        creditedCredits,
+        freeCredits,
+      };
+    }),
     requirements,
     missingRequiredCourses: list(value.missing_required_courses).map((data) => {
       const course = record(data);
