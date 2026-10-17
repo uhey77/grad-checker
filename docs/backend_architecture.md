@@ -215,5 +215,25 @@ Goのpresentation/courses.goとgrades.goが外部入力（クエリ・重複キ�
 GoからPythonを呼ぶ5つのブリッジクライアントは `modules/shared/pythonbridge` を使い、包絡形式 `{"data": ...}` / `{"error": {"code": ...}}` の解析、応答本文の上限、タイムアウト・接続失敗・形式違反の区別を共通化した。業務エラー型への変換と `data` の業務上の検証は各モジュールのinfrastructureに残す。
 Goの外部ハンドラーは `api/presentation/http.go` の共通関数で、メソッド・セッションCookie・クエリ・Origin／CSRF・JSON本文を検証する。JSON更新のContent-Type不正は415、本文の上限超過は413で揃えた（所属保存は従来422だった）。成績・所属・科目で共通の業務エラーコード（未認証・CSRF不一致・更新版の競合・利用不可）は同じステータスと文言に変換する。
 
-Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` に業務エラーの基底 `BusinessError` と、リポジトリのトランザクション境界（`read_snapshot`・`write_transaction`・`database_errors`）を置く。各モジュールの業務エラーはこれを継承し、DB例外から業務エラーへの変換関数を自モジュールで渡す。共通パッケージは業務モジュール・API・設定を参照しない。
+Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` に業務エラーの基底 `BusinessError` と、Unit of Work（[後述](#unit-of-workによるトランザクション境界2026-10-18)）を置く。各モジュールの業務エラーはこれを継承し、DB例外から業務エラーへの変換関数を自モジュールで渡す。共通パッケージは業務モジュール・API・設定を参照しない。
 ブリッジアダプターは `go_bridge_call.py` の `respond` で `{"data": ...}` / `{"error": {"code": ...}}` を組み立て、予期しない例外は全操作で `internal_error` を返す（従来は開発用科目一覧のみで、他はFastAPIの500をGoが502として扱っていた。Goの外部ステータスは変わらない）。本人セッションの確認は `dependencies.py` の `current_identity` に集約し、変更操作のCSRF照合はaccountsの `AuthService.authorize` で行う。所属未設定（`program_not_selected`）の判定は `ProfileService.selected_curriculum` へ移した。科目分類の経路の辿り方は `grad_checker_subjects/infrastructure/classification_path.py` で開発用科目一覧と学生向け科目一覧が共有する。
+
+## Unit of Workによるトランザクション境界（2026-10-18）
+
+従来はリポジトリの各メソッドが`read_snapshot`・`write_transaction`でトランザクションを開いていた。Unit of Work（UoW）を導入し、トランザクション境界をapplicationのユースケースへ移した。単一のSQLiteを前提とする。
+
+| 場所 | 責務 |
+| --- | --- |
+| `grad_checker_shared/application/unit_of_work.py` | `UnitOfWork`契約。`read()`は一つの読取スナップショットで変更を残さず、`write()`は正常終了でcommit・例外でロールバックする |
+| `grad_checker_shared/infrastructure/unit_of_work.py` | `SqlUnitOfWork`。ブロックごとにSessionを開閉し、`read`は`BEGIN`、`write`は`BEGIN IMMEDIATE`で始める。DB例外は各モジュールが渡す関数で業務エラーへ変換する。ブロックの外でのリポジトリ利用と入れ子は`RuntimeError`にする |
+| 各モジュールの`application` | `UnitOfWork`を継承した契約で、使うリポジトリをプロパティとして宣言する。ユースケースが`with uow.read():`・`with uow.write():`で範囲を決める |
+| 各モジュールの`infrastructure` | `SqlUnitOfWork`を継承し、ブロック中のSessionからリポジトリを生成する。リポジトリはcommit・ロールバックを行わない |
+| ブリッジアダプター・CLI | DBエンジンからUoWを生成してユースケースへ渡す |
+
+範囲は、部分的な成功が業務上許されるかで決める。
+
+- **広げる**: 判定履歴の作成は、所属・成績・マスタの読取り、成績版の照合、判定、保存を一つの`write`で行う。復旧コードによる再設定は、認証情報の更新と全セッションの失効を一つの`write`で行う。
+- **狭める**: 成績回次の検証、パスワードのハッシュと照合、卒業判定の計算（判定履歴を除く）はブロックの外で行う。ログインは認証情報を`read`で読んでから照合し、セッション保存の`write`ではパスワードハッシュの一致を条件にして、間に行われた再設定を検出する。
+- **分ける**: 認証の試行回数は操作本体と別の`write`でcommitし、後続の検証や登録が失敗しても回数を残す。
+
+ユースケースの範囲は、メモリ上のリポジトリを持つFakeのUoWで、commitとロールバックの有無を検証する。ロック・制約・並行処理は一時SQLiteで検証する。
