@@ -12,7 +12,12 @@ from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
     SqlUnitOfWork,
 )
 
-from ..application.check_results import CheckInput, SavedCheck
+from ..application.check_results import (
+    CheckInput,
+    CheckRepository,
+    CheckUnitOfWork,
+    SavedCheck,
+)
 from ..application.errors.evaluation import EvaluationError
 from ..application.student_evaluation import StudentEvaluation
 from .check_models import CheckResultRecord
@@ -23,7 +28,7 @@ def unavailable(_error: SQLAlchemyError) -> EvaluationError:
     return EvaluationError("check_unavailable", "判定履歴を保存・取得できません。")
 
 
-class SqliteCheckRepository:
+class SqliteCheckRepository(CheckRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -65,7 +70,7 @@ class SqliteCheckRepository:
             ) from error
 
 
-class SqliteCheckUnitOfWork(SqlUnitOfWork):
+class SqliteCheckUnitOfWork(SqlUnitOfWork, CheckUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

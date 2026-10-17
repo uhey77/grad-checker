@@ -1,6 +1,6 @@
 """要件マスタの原子的な追加投入。既存行の変更・削除は拒否する。"""
 
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 from modules.requirements.grad_checker_requirements.application.errors.seed import (
     RequirementSeedError,
@@ -38,22 +38,23 @@ def record_key(
     return (record.id,)
 
 
-class RequirementDataStore(Protocol):
+class RequirementDataStore(ABC):
+    @abstractmethod
     def subjects(self) -> SubjectDataSeed:
         """要件が参照する、投入済みの課程・科目データを読む。"""
-        ...
 
+    @abstractmethod
     def load(self) -> RequirementSeed:
         """投入済みの要件マスタをすべて読む。"""
-        ...
 
+    @abstractmethod
     def insert(self, additions: RequirementSeed) -> None:
         """テーブルの順、各テーブル内では並びの順に追加する。"""
-        ...
 
 
-class RequirementUnitOfWork(UnitOfWork, Protocol):
+class RequirementUnitOfWork(UnitOfWork):
     @property
+    @abstractmethod
     def requirements(self) -> RequirementDataStore: ...
 
 

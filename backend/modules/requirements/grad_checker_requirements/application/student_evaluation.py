@@ -1,7 +1,7 @@
 """本人の保存済みデータを取得し、最新の卒業単位条件を計算する。"""
 
+from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Protocol
 
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
@@ -9,14 +9,15 @@ from .evaluation import evaluate_graduation
 from .evaluation_models import EvaluationResult, EvaluationSnapshot
 
 
-class EvaluationRepository(Protocol):
+class EvaluationRepository(ABC):
+    @abstractmethod
     def get_snapshot(self, student_id: str) -> EvaluationSnapshot:
         """所属・成績・マスタを、呼出し側が開始したトランザクション内で読む。"""
-        ...
 
 
-class EvaluationUnitOfWork(UnitOfWork, Protocol):
+class EvaluationUnitOfWork(UnitOfWork):
     @property
+    @abstractmethod
     def evaluation(self) -> EvaluationRepository: ...
 
 

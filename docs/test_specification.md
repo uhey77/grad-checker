@@ -25,7 +25,7 @@ Python・Goのテストは`backend/tests/`へ集約し、Goは対象パッケー
 |---|---|---|
 | 起動・DB | 起動時設定、SQLite接続ごとのFK | `test_app.py`、`test_database.py` |
 | 科目マスタ | CS4課程、課程別種別、複数開講期、未確認状態、再投入、入力・DB制約、失敗時の全体ロールバック、CLI | `test_subject_data.py` |
-| Unit of Work | commit・ロールバック・DB例外の変換、ブロック外の利用と入れ子の拒否、リポジトリがトランザクションを制御しないこと。ユースケースの範囲はFake（`fakes.py`）で検証 | `test_unit_of_work.py`、`test_module_boundaries.py` |
+| Unit of Work | commit・ロールバック・DB例外の変換、ブロック外の利用と入れ子の拒否、リポジトリがトランザクションを制御しないこと、applicationの契約がABCであること。ユースケースの範囲はFake（`fakes.py`）で検証 | `test_unit_of_work.py`、`test_module_boundaries.py` |
 | 取得契約・ブリッジ通信 | 取得先の契約、DBからの一覧、不正なブリッジ要求、業務エラーコード、Pythonの外部ルート削除 | `test_subject_list_repository.py`、`test_subject_list.py` |
 | モジュール境界 | 科目モジュールからAPI・設定・FastAPI・uvicornへの逆依存を検出 | `test_module_boundaries.py` |
 | Go外部API・ブリッジクライアント | 入力不正時にPythonを呼ばない、UUID正規化、日本語HTTPエラー、不正なブリッジ応答、接続失敗・タイムアウト・キャンセル | `subject_list_test.go`、`subject_list_client_test.go` |

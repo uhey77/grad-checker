@@ -9,8 +9,10 @@ from modules.requirements.grad_checker_requirements.application import (
     student_evaluation,
 )
 from modules.requirements.grad_checker_requirements.application.check_results import (
+    CheckRepository,
     CheckRequest,
     CheckService,
+    CheckUnitOfWork,
     SavedCheck,
 )
 from modules.requirements.grad_checker_requirements.application.errors import (
@@ -19,7 +21,7 @@ from modules.requirements.grad_checker_requirements.application.errors import (
 from tests.fakes import FakeUnitOfWork
 
 
-class FakeEvaluationRepository:
+class FakeEvaluationRepository(student_evaluation.EvaluationRepository):
     def __init__(self, uow: FakeUnitOfWork, data_revision: int) -> None:
         self.uow = uow
         self.snapshot = evaluation_models.EvaluationSnapshot.model_construct(
@@ -31,7 +33,7 @@ class FakeEvaluationRepository:
         return self.snapshot
 
 
-class FakeCheckRepository:
+class FakeCheckRepository(CheckRepository):
     def __init__(self, uow: FakeUnitOfWork) -> None:
         self.uow = uow
         self.added: list[SavedCheck] = []
@@ -45,7 +47,7 @@ class FakeCheckRepository:
         return None
 
 
-class FakeCheckUnitOfWork(FakeUnitOfWork):
+class FakeCheckUnitOfWork(FakeUnitOfWork, CheckUnitOfWork):
     def __init__(self, data_revision: int = 1) -> None:
         super().__init__()
         self.evaluations = FakeEvaluationRepository(self, data_revision)
@@ -58,6 +60,16 @@ class FakeCheckUnitOfWork(FakeUnitOfWork):
     @property
     def checks(self) -> FakeCheckRepository:
         return self.saved
+
+
+class FakeEvaluationUnitOfWork(FakeUnitOfWork, student_evaluation.EvaluationUnitOfWork):
+    def __init__(self) -> None:
+        super().__init__()
+        self.evaluations = FakeEvaluationRepository(self, data_revision=1)
+
+    @property
+    def evaluation(self) -> FakeEvaluationRepository:
+        return self.evaluations
 
 
 def test_stale_revision_rolls_back_without_saving_a_check():
@@ -78,7 +90,7 @@ def test_missing_check_is_read_without_writing():
 def test_evaluation_reads_a_snapshot_and_computes_outside_the_transaction(
     monkeypatch,
 ):
-    uow = FakeCheckUnitOfWork()
+    uow = FakeEvaluationUnitOfWork()
     computed = []
 
     def evaluate(snapshot, evaluated_at):

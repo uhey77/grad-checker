@@ -17,6 +17,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import i
 
 from ..application.errors.evaluation import EvaluationError
 from ..application.evaluation_models import EvaluationSnapshot
+from ..application.student_evaluation import EvaluationRepository, EvaluationUnitOfWork
 from .seed import TABLE_MAPPING
 
 
@@ -24,7 +25,7 @@ def unavailable(_error: SQLAlchemyError) -> EvaluationError:
     return EvaluationError("evaluation_unavailable", "判定用データを取得できません。")
 
 
-class SqliteEvaluationRepository:
+class SqliteEvaluationRepository(EvaluationRepository):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -67,7 +68,7 @@ class SqliteEvaluationRepository:
         }
 
 
-class SqliteEvaluationUnitOfWork(SqlUnitOfWork):
+class SqliteEvaluationUnitOfWork(SqlUnitOfWork, EvaluationUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

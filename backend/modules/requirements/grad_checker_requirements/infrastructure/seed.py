@@ -18,6 +18,10 @@ from modules.requirements.grad_checker_requirements.application.seed import (
     RequirementScopeData,
     RequirementSeed,
 )
+from modules.requirements.grad_checker_requirements.application.seed_import import (
+    RequirementDataStore,
+    RequirementUnitOfWork,
+)
 from modules.requirements.grad_checker_requirements.infrastructure.models import (
     CreditRule,
     CreditRuleCourse,
@@ -64,7 +68,7 @@ def load_requirement_seed(path: Path) -> RequirementSeed:
         ) from error
 
 
-class SqliteRequirementDataStore:
+class SqliteRequirementDataStore(RequirementDataStore):
     def __init__(self, session: Session) -> None:
         self.db = session
 
@@ -90,7 +94,7 @@ class SqliteRequirementDataStore:
                 self.db.flush()
 
 
-class SqliteRequirementUnitOfWork(SqlUnitOfWork):
+class SqliteRequirementUnitOfWork(SqlUnitOfWork, RequirementUnitOfWork):
     def __init__(self, engine: Engine) -> None:
         super().__init__(engine, unavailable)
 

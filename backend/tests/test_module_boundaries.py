@@ -117,6 +117,13 @@ def test_only_unit_of_work_controls_transactions() -> None:
             assert statement not in code, source
 
 
+def test_application_contracts_are_abstract_base_classes() -> None:
+    # 取得・保存の契約はABCで定義し、実装とFakeに継承で明示させる。
+    for source in (BACKEND / "modules").rglob("*.py"):
+        if "application" in source.parts:
+            assert "Protocol" not in source.read_text(), source
+
+
 def test_shared_settings_default_to_backend_data(monkeypatch) -> None:
     monkeypatch.delenv("DATABASE_URL", raising=False)
     assert DEFAULT_DATABASE_PATH == BACKEND / "data/grad_checker.db"

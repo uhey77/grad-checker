@@ -1,7 +1,7 @@
 """本人が実行した卒業要件チェックを、当時の入力・結果とともに履歴として保存する。"""
 
+from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Protocol
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,16 +42,21 @@ class SavedCheck(BaseModel):
     result: StudentEvaluation
 
 
-class CheckRepository(Protocol):
+class CheckRepository(ABC):
+    @abstractmethod
     def add(self, student_id: str, check: SavedCheck) -> None: ...
+
+    @abstractmethod
     def get(self, student_id: str, check_id: UUID) -> SavedCheck | None: ...
 
 
-class CheckUnitOfWork(UnitOfWork, Protocol):
+class CheckUnitOfWork(UnitOfWork):
     @property
+    @abstractmethod
     def evaluation(self) -> EvaluationRepository: ...
 
     @property
+    @abstractmethod
     def checks(self) -> CheckRepository: ...
 
 
