@@ -88,7 +88,7 @@ GET /programsは存在する所属階層と対象カリキュラム、整備状�
 
 ### 所属APIの実装契約
 
-`GET /api/programs` は `{"programs": [...]}` を返す。各要素はprogram_id、curriculum_id、faculty_name、department_name、specialization_name、course_name、curriculum_name、revision、verification_status、admission_year_from/to、source_document、source_pagesを持つ。存在しない階層・未確認の年度はnull。現在のCS4課程はunverifiedのまま選択・保存できるが、卒業判定へ対応済みという意味ではない。カリキュラム未登録の課程は選択肢に含めず、0件は空配列を返す。
+`GET /api/programs` は `{"programs": [...]}` を返す。各要素はprogram_id、curriculum_id、faculty_name、department_name、specialization_name、course_name、curriculum_name、revision、verification_status、admission_year_from/to、source_document、source_pagesを持つ。存在しない階層・未確認の年度はnull。現在のCS4課程は2026年度便覧を判定基準とし、unverifiedのまま選択・保存・卒業判定できる。適用入学年度の確認状態のみを理由に判定を拒否しない。カリキュラム未登録の課程は選択肢に含めず、0件は空配列を返す。
 
 `GET /api/me` と保存成功時は `{"student_id":"本人UUID","login_name":"student_01","program_id":null,"curriculum_id":null,"data_revision":0}` の形式。所属保存後は2つのIDが設定される。本人IDを入力で指定する経路はなく、セッションから決める。氏名・入学年度の入力は今回の対象外。
 
@@ -155,7 +155,7 @@ POST /checksは `{"expected_revision": 3}` を受け、画面が最後に保存�
 | cross_faculty_credits | 実単位・対象・共通上限・算入先・算入・非算入・理由 |
 | recommendations | 未修得科目・開講期・不足条件コード・推薦理由 |
 
-ダッシュボードは概要用にtotal・categories等を返し、詳細APIは上表全体を返す。保存するresult_jsonも上表の詳細を持ち、総修得と総算入を区別する。判定のpass/failはHTTPの成功・失敗ではない。未達成でもGET200／保存201。
+ダッシュボードは概要用にtotal・categories等を返し、詳細APIは上表全体を返す。保存するresult_jsonも上表の詳細を持ち、総修得と総算入を区別する。判定のpass/failはHTTPの成功・失敗ではない。未達成でもGET200／保存201。現在の判定GETはカリキュラムがunverifiedでも、必要なマスタと算入規則が揃えば200で結果を返す。確認状態は元の値を保持する。
 
 ## 8. 過去結果
 
@@ -190,13 +190,16 @@ Goの`-subject-list-preview`は既定falseで、無効時は404。ローカル�
 
 成功200は `EvaluationResult` にUTCの `evaluated_at` を付けたJSONを返す。
 `result`、`data_revision`、`curriculum`、`rule_revisions`、`total`、`categories`、
-`requirements`、`courses`、`missing_required_courses`、`allocations` を含む。
+`requirements`、`courses`、`missing_required_courses`、`allocations`、`external_allocations`、`warnings` を含む。
+`external_allocations` はrule_id/target_classification_id/target_name/earned_credits/credited_credits/free_creditsを持つ区分別配分。warningsは通常空配列、上限超過かつ複数算入先では `provisional_external_allocation` を含む。
 `curriculum.id` はカリキュラムIDで、名称・コード・revision・出典・確認状態も保持する。
 条件はid/code/name/kind/parent_id/classification_idと必要・修得・算入・不足・result、
 科目はcourse_id/name/classification_id/credits/status/latest_attemptを持つ。
-履歴API、おすすめ、他学部算入はこの段階では含まない。
+履歴API、おすすめは含まない。他学部算入は照合済みの対象対応表と配分方針がある規則に限る。実シードの対象他学部科目は未転記。
 
-所属未設定・適用年度未確認・マスタ不足・未確認算入規則・未対応の課程外修得科目は409、
+所属未設定・マスタ不足・未採用の算入規則・算入先未登録の課程外修得科目は409。
+配分に影響する取得年度・学期が欠けている場合は `external_acquisition_period_required` を409に変換し、入力・保存・再判定を案内する。適用年度の未確認だけでは停止しない。
+
 未認証は401、未知科目は400、DB障害は503、ブリッジ障害は502。
 Goが業務コードに対応した日本語detailを返し、未達成の200と区別する。
 内部の例外文字列・SQLは返さない。公開GETから呼ばれるPythonの入口は

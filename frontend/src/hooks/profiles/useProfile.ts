@@ -15,7 +15,6 @@ export function useProfile(
   expire: () => void,
   latestRevision = 0,
   reportRevision: (revision: number) => void = () => {},
-  reportProgram: (program: ProgramOption | null) => void = () => {},
 ) {
   const [state, setState] = useState<{
     profile: Profile;
@@ -24,6 +23,7 @@ export function useProfile(
   const [chosenId, setChosenId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [editing, setEditing] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [confirmReload, setConfirmReload] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -60,10 +60,6 @@ export function useProfile(
   const savedProgram = state?.programs.find(
     (p) => p.curriculumId === state.profile.curriculumId,
   );
-  // 他の画面が本人の所属を同じ表記で示せるよう、保存済みの所属を伝える。取得中は前回の値を保つ。
-  useEffect(() => {
-    if (state) reportProgram(savedProgram ?? null);
-  }, [state, savedProgram, reportProgram]);
   const dirty = !!state && chosenId !== (state.profile.curriculumId ?? "");
   useUnsavedChangesWarning(dirty);
   // 別画面で成績などが保存された場合、未保存の選択がなければ最新を取得し直す。
@@ -96,6 +92,7 @@ export function useProfile(
           setState({ ...state, profile });
           reportRevision(profile.dataRevision);
           setNotice("所属を保存しました。");
+          setEditing(false);
         },
         onError: (failure) => {
           if (failure instanceof ProfileError && failure.status === 401)
@@ -124,6 +121,11 @@ export function useProfile(
     busy,
     error,
     notice,
+    editing,
+    edit: () => {
+      setEditing(true);
+      setNotice("");
+    },
     conflict,
     confirmReload,
     confirmRetry: reload,

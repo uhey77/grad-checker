@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 
-export function AppLayout({ children }: { children: ReactNode }) {
+export function AppLayout({
+  children,
+  userMenu,
+}: {
+  children: ReactNode;
+  userMenu?: ReactNode;
+}) {
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -9,6 +15,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <header className="site-header">
         <div className="header-inner">
           <span className="brand">卒業要件チェッカー</span>
+          {userMenu}
         </div>
       </header>
       {children}

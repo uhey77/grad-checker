@@ -47,15 +47,6 @@
 .auth-switch {
   margin-top: 18px;
 }
-.auth-toolbar {
-  max-width: 1360px;
-  margin: 20px auto 0;
-  padding: 0 32px;
-  display: flex;
-  gap: 20px;
-  justify-content: flex-end;
-  align-items: center;
-}
 .auth-message {
   margin: 12px 32px;
 }
@@ -453,10 +444,6 @@ input[aria-invalid="true"] {
   font-size: 13px;
   margin-bottom: 12px !important;
 }
-.auth-toolbar {
-  flex-wrap: wrap;
-  font-size: 13px;
-}
 .skip-link {
   position: absolute;
   top: -100px;
@@ -472,9 +459,6 @@ input[aria-invalid="true"] {
 @media (max-width: 640px) {
   .auth-card {
     padding: 22px 18px;
-  }
-  .auth-toolbar {
-    padding: 0 16px;
   }
   .auth-card input,
   .auth-card select {
@@ -504,27 +488,7 @@ input[aria-invalid="true"] {
   }
 }
 
-/* 所属設定・成績入力の切替と、成績入力画面。修得状況は色と文字を併記する。 */
-.screen-nav {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 28px;
-  border-bottom: 1px solid #dde5e7;
-}
-.screen-nav button {
-  border: none;
-  border-bottom: 3px solid transparent;
-  border-radius: 0;
-  background: none;
-  padding: 10px 14px;
-  font-size: 14px;
-  color: #4d6168;
-}
-.screen-nav button[aria-current="page"] {
-  border-bottom-color: #2c6560;
-  color: #204e4a;
-  font-weight: 700;
-}
+/* 成績入力画面。修得状況は色と文字を併記する。 */
 .grade-context p {
   margin: 4px 0 0;
 }
@@ -638,6 +602,27 @@ tbody tr.earned-row:hover {
 .graduation-result {
   margin-top: 1.5rem;
 }
+.requirement-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+.requirement-filters button {
+  padding: 10px 18px;
+  border: 1px solid #cddcda;
+  border-radius: 999px;
+  background: #fff;
+  color: #365451;
+  font: inherit;
+  cursor: pointer;
+}
+.requirement-filters button[aria-pressed="true"] {
+  background: #205c55;
+  border-color: #205c55;
+  color: #fff;
+  font-weight: 700;
+}
 .judgment {
   font-size: 1.3rem;
   font-weight: 700;
@@ -668,8 +653,353 @@ tbody tr.earned-row:hover {
   font-size: 1.5rem;
   font-weight: 700;
 }
+.graduation-infographic {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
+  margin: 24px 0;
+  border: 1px solid #d6e6e4;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  animation: infographic-enter 420ms ease-out both;
+}
+.graduation-infographic h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+.credit-orbit-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 28px 20px;
+  background: radial-gradient(ellipse at top, #e0f1ed, #f5faf8 75%);
+  text-align: center;
+}
+.credit-orbit {
+  position: relative;
+  width: min(220px, 100%);
+  aspect-ratio: 1;
+  margin: 10px 0;
+}
+.credit-orbit svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  fill: none;
+  stroke-width: 12;
+}
+.credit-orbit-track {
+  stroke: #dbeae5;
+}
+.credit-orbit-fill {
+  stroke: #23796f;
+}
+.credit-orbit-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  color: #205e57;
+  font-variant-numeric: tabular-nums;
+}
+.credit-orbit-value > strong {
+  font-size: 2.65rem;
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+.credit-orbit-value small {
+  margin-left: 3px;
+  font-size: 1rem;
+}
+.credit-orbit-value > span {
+  color: #536c66;
+  font-size: 0.85rem;
+}
+.credit-orbit-value b {
+  color: #205e57;
+  font-size: 1.05rem;
+}
+.credit-orbit-caption {
+  margin: 0;
+  color: #3a5b53;
+  font-size: 0.85rem;
+}
+.category-progress-panel {
+  min-width: 0;
+  padding: 28px;
+}
+.category-progress-help,
+.category-progress-footnote {
+  color: #53676f;
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+.category-progress-help {
+  margin: 8px 0 24px;
+}
+.category-progress-list {
+  display: grid;
+  gap: 22px;
+}
+.category-progress-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+.category-progress-status {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.category-progress-status.pass {
+  background: #eaf5ed;
+  color: #21633f;
+}
+.category-progress-status.fail {
+  background: #fff4e5;
+  color: #8b521b;
+}
+.category-progress-track {
+  height: 10px;
+  margin: 10px 0 6px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #edf1f3;
+}
+.category-progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transform-origin: left;
+}
+.category-progress-fill.tone-0 {
+  background: #37867b;
+}
+.category-progress-fill.tone-1 {
+  background: #638aa8;
+}
+.category-progress-fill.tone-2 {
+  background: #8b80ad;
+}
+.category-progress-count {
+  margin: 0;
+  text-align: right;
+  color: #53676f;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.category-progress-count strong {
+  color: #213238;
+  font-size: 0.9rem;
+}
+.category-progress-footnote {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid #edf1f3;
+}
+@keyframes infographic-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 640px) {
+  .graduation-infographic {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .credit-orbit-panel,
+  .category-progress-panel {
+    padding: 24px 18px;
+  }
+  .credit-orbit {
+    width: 190px;
+  }
+}
 @media (max-width: 480px) {
   .credit-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 個人設定への入口をヘッダー右上にまとめる。 */
+.user-menu {
+  position: relative;
+  flex-shrink: 0;
+  max-width: 45%;
+}
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-height: 44px;
+  border-radius: 8px;
+}
+.user-menu-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-menu-chevron {
+  transition: transform 180ms ease;
+}
+.user-menu-trigger[aria-expanded="true"] .user-menu-chevron {
+  transform: rotate(180deg);
+}
+.user-menu-panel {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #dde5e7;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px #2132381a;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    visibility 0s linear 180ms;
+}
+.user-menu-panel[data-open="true"] {
+  transition-delay: 0s;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.user-menu-panel button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  text-align: left;
+  font-size: 14px;
+}
+.user-menu-panel button + button {
+  margin-top: 4px;
+  border-top: 1px solid #e6ebed;
+}
+.profile-page {
+  max-width: 800px;
+  margin-inline: auto;
+}
+.back-link {
+  margin-bottom: 24px;
+  padding-inline: 0;
+  background: none;
+  border: 0;
+  font-size: 14px;
+}
+.profile-page .profile-panel + .profile-panel {
+  margin-top: 20px;
+}
+.profile-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.profile-panel h2 {
+  font-size: 17px;
+}
+.account-details {
+  display: grid;
+  grid-template-columns: minmax(0, 140px) minmax(0, 1fr);
+  gap: 12px;
+  margin: 24px 0 0;
+  font-size: 14px;
+}
+.account-details dt,
+.profile-help {
+  color: #53676f;
+}
+.account-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.saved-program {
+  line-height: 1.8;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+  margin-bottom: 0;
+}
+.profile-editor {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 180ms ease,
+    opacity 180ms ease,
+    visibility 0s linear 180ms;
+}
+.profile-editor[data-open="true"] {
+  transition-delay: 0s;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+}
+.profile-editor-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.profile-editor-inner .profile-form {
+  padding: 6px;
+}
+.profile-help {
+  margin-top: 24px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.profile-saved {
+  color: #1f5d43;
+  font-size: 14px;
+}
+.profile-continue {
+  margin-top: 24px;
+  min-height: 44px;
+}
+@media (max-width: 640px) {
+  .profile-panel {
+    padding: 20px 16px;
+  }
+  .account-details {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .profile-form select {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .graduation-infographic {
+    animation: none;
+  }
+  .user-menu-panel,
+  .user-menu-chevron,
+  .profile-editor {
+    transition: none;
   }
 }

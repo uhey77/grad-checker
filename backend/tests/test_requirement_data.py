@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -12,6 +13,8 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy import event, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.schema import CreateTable
+from sqlmodel import Session, SQLModel, select
 
 from modules.requirements.grad_checker_requirements.application.errors.seed import (
     RequirementSeedError,
@@ -21,6 +24,12 @@ from modules.requirements.grad_checker_requirements.application.seed import (
 )
 from modules.requirements.grad_checker_requirements.application.validation import (
     validate_requirements,
+)
+from modules.requirements.grad_checker_requirements.infrastructure import (
+    cs_2026_revision,
+)
+from modules.requirements.grad_checker_requirements.infrastructure.models import (
+    CreditRule,
 )
 from modules.requirements.grad_checker_requirements.infrastructure.schema import (
     create_requirement_schema,
@@ -154,16 +163,18 @@ def test_source_subtotals_and_required_group_cells_match_subjects(subjects):
 def test_rules_preserve_unresolved_cases_and_single_shared_limit(seed):
     assert len(seed.credit_rules) == 16
     assert Counter(row.verification_status for row in seed.credit_rules) == {
-        "verified": 8,
-        "unverified": 8,
+        "verified": 12,
+        "unverified": 4,
     }
     for rule in seed.credit_rules:
         if rule.code == "general.overflow":
-            assert rule.verification_status == "unverified"
-            assert "Q02" in rule.unresolved_reason
+            assert rule.verification_status == "verified"
+            assert rule.unresolved_reason is None
+            assert rule.revision == 2
         if rule.kind == "other_faculty":
             assert rule.verification_status == "unverified"
-            assert "Q09" in rule.unresolved_reason
+            assert rule.allocation_policy == "chronological_best_fit_v1"
+            assert "大学規則として未確認" in rule.unresolved_reason
             assert not [x for x in seed.credit_rule_courses if x.rule_id == rule.id]
             limits = [x for x in seed.credit_rule_limits if x.rule_id == rule.id]
             assert len(limits) == 1 and limits[0].max_credits == 6
@@ -173,6 +184,73 @@ def test_generated_seed_is_reproducible():
     assert build_seed(
         json.loads(SOURCE.read_text()), json.loads(SUBJECTS.read_text())
     ) == json.loads(SEED.read_text())
+
+
+def test_revision_updates_only_exact_old_rules_and_preserves_other_data(engine, seed):
+    expected = {str(row.id): row.model_dump(mode="json") for row in seed.credit_rules}
+    for previous, current in cs_2026_revision.REVISIONS:
+        assert current == expected[str(current["id"])]
+        index = next(
+            i
+            for i, row in enumerate(seed.credit_rules)
+            if str(row.id) == previous["id"]
+        )
+        seed.credit_rules[index] = type(seed.credit_rules[index]).model_validate(
+            previous
+        )
+    import_requirements(engine, seed)
+    before = counts(engine)
+    # 独自編集した旧規則を勝手に置き換えない。
+    customized = cs_2026_revision.REVISIONS[0][0]["id"]
+    with engine.begin() as connection:
+        connection.execute(
+            text("UPDATE credit_rules SET source_note='独自の確認記録' WHERE id=:id"),
+            {"id": customized},
+        )
+    create_requirement_schema(engine)
+    create_requirement_schema(engine)
+    with Session(engine) as session:
+        for rule in session.exec(select(CreditRule)).all():
+            if rule.id == customized:
+                assert rule.revision == 1 and rule.source_note == "独自の確認記録"
+            else:
+                assert rule.model_dump() == expected[rule.id]
+    assert counts(engine) == before
+
+
+def test_legacy_schema_adds_policy_column_and_migrates_atomically(tmp_path, subjects):
+    engine = create_database_engine(f"sqlite:///{tmp_path / 'legacy.db'}")
+    try:
+        create_database_schema(engine)
+        import_subject_data(engine, subjects)
+        ddl = str(CreateTable(SQLModel.metadata.tables["credit_rules"]).compile(engine))
+        ddl = re.sub(r"\s*allocation_policy VARCHAR,?", "", ddl)
+        ddl = re.sub(r"\s*CHECK \(allocation_policy[^\n]+\n", "", ddl)
+        with engine.begin() as connection:
+            connection.execute(text(ddl))
+            old = {
+                key: value
+                for key, value in cs_2026_revision.REVISIONS[0][0].items()
+                if key != "allocation_policy"
+            }
+            connection.execute(
+                text(
+                    "INSERT INTO credit_rules ("
+                    + ",".join(old)
+                    + ") VALUES ("
+                    + ",".join(":" + key for key in old)
+                    + ")"
+                ),
+                old,
+            )
+        create_requirement_schema(engine)
+        with engine.connect() as connection:
+            row = (
+                connection.execute(text("SELECT * FROM credit_rules")).mappings().one()
+            )
+            assert dict(row) == cs_2026_revision.REVISIONS[0][1]
+    finally:
+        engine.dispose()
 
 
 def test_persistent_idempotent_and_parent_order_independent(engine, seed):
@@ -222,7 +300,9 @@ def test_exactly_one_scope_and_reason_required(seed):
     with pytest.raises(ValidationError):
         RequirementSeed.model_validate(data)
     data = seed.model_dump(mode="json")
-    data["credit_rules"][0]["unresolved_reason"] = None
+    next(row for row in data["credit_rules"] if row["kind"] == "other_faculty")[
+        "unresolved_reason"
+    ] = None
     with pytest.raises(ValidationError):
         RequirementSeed.model_validate(data)
 

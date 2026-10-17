@@ -45,14 +45,16 @@ func (c *PythonEvaluationClient) Call(ctx context.Context, call application.Eval
 			Shortage *int64 `json:"shortage"`
 			Result   string `json:"result"`
 		} `json:"total"`
-		Requirements  *[]json.RawMessage `json:"requirements"`
-		Categories    *[]json.RawMessage `json:"categories"`
-		Missing       *[]json.RawMessage `json:"missing_required_courses"`
-		Courses       *[]json.RawMessage `json:"courses"`
-		Allocations   *[]json.RawMessage `json:"allocations"`
-		RuleRevisions map[string]int64   `json:"rule_revisions"`
+		Requirements        *[]json.RawMessage `json:"requirements"`
+		Categories          *[]json.RawMessage `json:"categories"`
+		Missing             *[]json.RawMessage `json:"missing_required_courses"`
+		Courses             *[]json.RawMessage `json:"courses"`
+		Allocations         *[]json.RawMessage `json:"allocations"`
+		ExternalAllocations *[]json.RawMessage `json:"external_allocations"`
+		Warnings            *[]string          `json:"warnings"`
+		RuleRevisions       map[string]int64   `json:"rule_revisions"`
 	}
-	if json.Unmarshal(data, &shape) != nil || !judgment(shape.Result) || shape.DataRevision == nil || *shape.DataRevision < 0 || shape.Curriculum == nil || shape.Curriculum.ID == "" || shape.Curriculum.Revision == nil || *shape.Curriculum.Revision < 1 || shape.Total == nil || shape.Requirements == nil || len(*shape.Requirements) == 0 || shape.Categories == nil || shape.Missing == nil || shape.Courses == nil || shape.Allocations == nil || shape.RuleRevisions == nil {
+	if json.Unmarshal(data, &shape) != nil || !judgment(shape.Result) || shape.DataRevision == nil || *shape.DataRevision < 0 || shape.Curriculum == nil || shape.Curriculum.ID == "" || shape.Curriculum.Revision == nil || *shape.Curriculum.Revision < 1 || shape.Total == nil || shape.Requirements == nil || len(*shape.Requirements) == 0 || shape.Categories == nil || shape.Missing == nil || shape.Courses == nil || shape.Allocations == nil || shape.ExternalAllocations == nil || shape.Warnings == nil || shape.RuleRevisions == nil {
 		return nil, application.ErrBackend
 	}
 	if _, err := time.Parse(time.RFC3339Nano, shape.EvaluatedAt); err != nil {

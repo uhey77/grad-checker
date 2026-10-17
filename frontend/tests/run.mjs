@@ -38,6 +38,7 @@ try {
       "src/modules/grades/application/gradeDraft.ts",
       "src/modules/requirements/infrastructure/HttpGraduationRepository.ts",
       "src/modules/requirements/application/GraduationUseCases.ts",
+      "src/modules/requirements/application/filterRequirements.ts",
       "src/modules/subjects/infrastructure/course-catalog/HttpCourseCatalogRepository.ts",
       "src/modules/subjects/application/course-catalog/CourseCatalogUseCases.ts",
       "src/modules/subjects/application/course-catalog/filterCatalogCourses.ts",
