@@ -1,4 +1,8 @@
-import type { GraduationResult } from "../domain/models.ts";
+import type {
+  CheckPage,
+  GraduationResult,
+  SavedCheck,
+} from "../domain/models.ts";
 
 export class GraduationError extends Error {
   constructor(
@@ -10,13 +14,35 @@ export class GraduationError extends Error {
   }
 }
 
+export interface CheckPageRequest {
+  limit: number;
+  offset: number;
+}
+
 export interface GraduationRepository {
   evaluate(signal?: AbortSignal): Promise<GraduationResult>;
+  // 画面が最後に保存・取得した成績版で判定し、本人の履歴に保存する。
+  createCheck(
+    expectedRevision: number,
+    csrf: string,
+    signal?: AbortSignal,
+  ): Promise<SavedCheck>;
+  listChecks(page: CheckPageRequest, signal?: AbortSignal): Promise<CheckPage>;
+  getCheck(id: string, signal?: AbortSignal): Promise<SavedCheck>;
 }
 
 export class GraduationUseCases implements GraduationRepository {
   constructor(private readonly repository: GraduationRepository) {}
   evaluate(signal?: AbortSignal) {
     return this.repository.evaluate(signal);
+  }
+  createCheck(expectedRevision: number, csrf: string, signal?: AbortSignal) {
+    return this.repository.createCheck(expectedRevision, csrf, signal);
+  }
+  listChecks(page: CheckPageRequest, signal?: AbortSignal) {
+    return this.repository.listChecks(page, signal);
+  }
+  getCheck(id: string, signal?: AbortSignal) {
+    return this.repository.getCheck(id, signal);
   }
 }

@@ -14,6 +14,7 @@ import { SaveBar } from "../../components/SaveBar";
 import { ErrorState, LoadingState } from "../../components/StatusPanels";
 import { programLabel } from "../../components/subjects/labels";
 import type { GraduationUseCases } from "../../modules/requirements/public.ts";
+import { useCheckHistory } from "../../hooks/requirements/useCheckHistory";
 import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck";
 import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel";
 
@@ -57,14 +58,20 @@ export function GradeEntryPage({
     entry.busy ||
     entry.conflict ||
     latestRevision > data.saved.dataRevision;
+  const history = useCheckHistory(graduationUseCases, active && !!data, expire);
   const check = useGraduationCheck(
     graduationUseCases,
     data?.saved.dataRevision ?? 0,
     curriculum?.curriculumId ?? "",
+    csrf,
     active,
     checkBlocked,
     expire,
-    reportRevision,
+    () => {
+      // 保存した判定を最新として表示し、履歴の先頭ページを取り直す。
+      history.showLatest();
+      history.refresh();
+    },
   );
   const entered = new Set(entry.draft.map((g) => g.courseId)).size;
   const curriculumLabel =
@@ -80,8 +87,9 @@ export function GradeEntryPage({
           blocked={checkBlocked}
           dirty={entry.dirty}
           check={() => void check.check()}
-          result={check.result}
+          saved={check.saved}
           error={check.error}
+          history={history}
         />
       )}
       {!data ? (
