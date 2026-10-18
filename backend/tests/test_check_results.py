@@ -73,6 +73,36 @@ def get(client, identity, check_id):
     return bridge(client, "/bridge/checks", identity, "get", check_id=str(check_id))
 
 
+def list_checks(client, identity, limit=20, offset=0):
+    return bridge(
+        client,
+        "/bridge/checks",
+        identity,
+        "list",
+        page={"limit": limit, "offset": offset},
+    )
+
+
+def copy_check(app, source_id, check_id, created_at, result_json=None):
+    """同時刻の履歴を作るため、保存済みの行を指定のID・作成日時で複製する。"""
+    with app.state.database_engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO check_results (id, student_id, input_json, result_json, "
+                "curriculum_code, curriculum_revision, data_revision, created_at) "
+                "SELECT :id, student_id, input_json, coalesce(:result, result_json), "
+                "curriculum_code, curriculum_revision, data_revision, :created_at "
+                "FROM check_results WHERE id = :source"
+            ),
+            {
+                "id": check_id,
+                "source": source_id,
+                "created_at": created_at,
+                "result": result_json,
+            },
+        )
+
+
 def save_grades(client, identity, grades, revision):
     result = bridge(
         client,
@@ -137,6 +167,65 @@ def test_past_check_is_unchanged_after_grade_and_master_updates(checks_app):
     with pytest.raises(IntegrityError), engine.begin() as connection:
         connection.execute(text("UPDATE check_results SET result_json = '{}'"))
     assert get(client, identity, created["id"])["data"] == created
+
+
+def test_owner_lists_checks_newest_first_with_paging(checks_app):
+    app, client, identity = checks_app
+    first = create(client, identity, 1)["data"]
+    second = create(client, identity, 1)["data"]
+    # 同時刻の履歴はID順に並べる。
+    tied = [
+        "00000000-0000-4000-8000-00000000000b",
+        "00000000-0000-4000-8000-00000000000a",
+    ]
+    for check_id in tied:
+        copy_check(app, first["id"], check_id, "2999-01-01 00:00:00.000000")
+    assert check_count(app) == 4
+
+    page = list_checks(client, identity, limit=2)["data"]
+    assert [row["id"] for row in page["checks"]] == sorted(tied)
+    assert (page["limit"], page["offset"], page["total_count"]) == (2, 0, 4)
+    summary = page["checks"][0]
+    assert summary["created_at"].startswith("2999-01-01T00:00:00")
+    assert summary["result"] == first["result"]["result"]
+    assert summary["total"] == first["result"]["total"]
+    assert summary["data_revision"] == 1
+    assert summary["curriculum"] == {
+        key: first["result"]["curriculum"][key]
+        for key in ("id", "code", "name", "revision")
+    }
+    rest = list_checks(client, identity, limit=2, offset=2)["data"]
+    assert [row["id"] for row in rest["checks"]] == [second["id"], first["id"]]
+    assert (
+        list_checks(client, identity, limit=100, offset=3)["data"]["checks"][0]["id"]
+        == first["id"]
+    )
+    beyond = list_checks(client, identity, offset=4)["data"]
+    assert (beyond["checks"], beyond["total_count"]) == ([], 4)
+    # 一覧の取得では履歴を作らない。
+    assert check_count(app) == 4
+
+    register(client, "other_student")
+    other = login(client, "other_student")
+    assert list_checks(client, other)["data"] == {
+        "checks": [],
+        "limit": 20,
+        "offset": 0,
+        "total_count": 0,
+    }
+
+
+def test_list_keeps_saved_summary_and_rejects_broken_records(checks_app):
+    app, client, identity = checks_app
+    created = create(client, identity, 1)["data"]
+    before = list_checks(client, identity)["data"]
+    with app.state.database_engine.begin() as connection:
+        connection.execute(text("UPDATE courses SET name = '改名後'"))
+        connection.execute(text("UPDATE curricula SET name = '改名後', revision = 9"))
+    assert list_checks(client, identity)["data"] == before
+    assert before["checks"][0]["curriculum"]["revision"] == 3
+    copy_check(app, created["id"], str(uuid4()), "2999-01-01 00:00:00", "{}")
+    assert list_checks(client, identity)["error"]["code"] == "invalid_check_result"
 
 
 @pytest.mark.parametrize(
@@ -212,6 +301,23 @@ def test_invalid_bridge_calls_are_rejected(checks_app):
             "check_id": str(uuid4()),
         },
         {"operation": "create", "csrf": "x" * 64, "request": {"expected_revision": -1}},
+        {"operation": "list"},
+        {"operation": "list", "page": {"limit": 0, "offset": 0}},
+        {"operation": "list", "page": {"limit": 101, "offset": 0}},
+        {"operation": "list", "page": {"limit": 20, "offset": -1}},
+        {"operation": "list", "page": {"limit": "20", "offset": 0}},
+        {"operation": "list", "page": {"limit": 20}},
+        {
+            "operation": "list",
+            "page": {"limit": 20, "offset": 0},
+            "check_id": str(uuid4()),
+        },
+        {"operation": "list", "page": {"limit": 20, "offset": 0}, "csrf": "x" * 64},
+        {
+            "operation": "get",
+            "check_id": str(uuid4()),
+            "page": {"limit": 1, "offset": 0},
+        },
     ):
         response = client.post(
             "/bridge/checks", json={"token": identity["session_token"], **fields}

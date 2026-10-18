@@ -125,3 +125,58 @@ def test_check_snapshot_is_saved_and_read_only_by_owner(
         assert "result" not in hidden.json()
     finally:
         engine.dispose()
+
+
+def test_owner_lists_check_summaries_with_paging(
+    auth_services,  # noqa: F811
+    tmp_path,
+    snapshot,  # noqa: F811
+):
+    client = auth_services
+    engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
+    try:
+        import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
+        import_requirements(SqliteRequirementUnitOfWork(engine), snapshot.requirements)
+        assert client.get("/api/checks").status_code == 401
+        headers = sign_in(client, "list_owner", snapshot)
+        created = [
+            client.post(
+                "/api/checks", headers=headers, json={"expected_revision": 1}
+            ).json()
+            for _ in range(3)
+        ]
+        listed = client.get("/api/checks")
+        assert listed.status_code == 200
+        assert listed.headers["cache-control"] == "no-store"
+        page = listed.json()
+        assert [row["id"] for row in page["checks"]] == [
+            row["id"] for row in reversed(created)
+        ]
+        assert (page["limit"], page["offset"], page["total_count"]) == (20, 0, 3)
+        oldest = page["checks"][2]
+        assert oldest["total"] == created[0]["result"]["total"]
+        assert (
+            oldest["curriculum"]["name"] == created[0]["result"]["curriculum"]["name"]
+        )
+        middle = client.get("/api/checks", params={"limit": 1, "offset": 1}).json()
+        assert [row["id"] for row in middle["checks"]] == [created[1]["id"]]
+        assert client.get("/api/checks?offset=3").json()["checks"] == []
+        assert client.get("/api/checks?limit=101").status_code == 422
+        assert client.get("/api/checks?student_id=x").status_code == 422
+        # 一覧の取得では履歴を作らない。
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT count(*) FROM check_results")).scalar()
+                == 3
+            )
+
+        client.post("/api/auth/logout", json={}, headers=headers).raise_for_status()
+        sign_in(client, "list_other", snapshot)
+        assert client.get("/api/checks").json() == {
+            "checks": [],
+            "limit": 20,
+            "offset": 0,
+            "total_count": 0,
+        }
+    finally:
+        engine.dispose()

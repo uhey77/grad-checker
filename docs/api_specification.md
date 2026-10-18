@@ -5,7 +5,7 @@
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）、判定履歴の保存（POST /checks）と本人の過去結果取得（GET /checks/{id}）も実装済み。ダッシュボード・履歴一覧（GET /checks）・おすすめは未実装。
+Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）、判定履歴の保存（POST /checks）、本人の履歴一覧（GET /checks）と過去結果取得（GET /checks/{id}）も実装済み。ダッシュボード・おすすめは未実装。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -212,6 +212,20 @@ Goが業務コードに対応した日本語detailを返し、未達成の200と
 PythonはBEGIN IMMEDIATEの書込みトランザクション内で所属・成績・マスタを読み、成績版の照合・判定・`check_results` への保存を行う。
 commit成功後に201を返す。成績版不一致は409（`revision_conflict`）、判定できない設定・規則は最新判定GETと同じ409・400、保存失敗は503で、いずれも履歴を残さない。
 
+`GET /api/checks` は本人の履歴の要約を作成日時の降順、同時刻はIDの昇順で200で返す。
+クエリは `limit`（1〜100、既定20）と `offset`（0〜9007199254740990、既定0）だけで、各1回・符号や小数のない10進数とする。
+未知のクエリ・範囲外・重複は422、未認証は401。件数と一覧は同じ読取りトランザクションで数え、取得で履歴・成績版を作らない。
+要約は保存済みの結果JSONから読み、現在の成績・マスタで再計算しない。
+
+```json
+{"checks": [{"id": "UUID", "created_at": "2026-10-17T00:00:00Z", "data_revision": 3, "result": "fail",
+  "curriculum": {"id": "UUID", "code": "cs", "name": "課程名", "revision": 1},
+  "total": {"required_credits": 124, "earned_credits": 10, "credited_credits": 10, "shortage": 114, "result": "fail"}}],
+ "limit": 20, "offset": 0, "total_count": 1}
+```
+
+`offset` が `total_count` 以上なら `checks` は空配列。保存済みJSONが要約の形を満たさない場合は502。
+
 `GET /api/checks/{id}` は本人の履歴だけを200で返す。他人・存在しない・形式不正のIDは同じ404（「判定履歴が見つかりません。」）。
 保存済みJSONだけから復元し、現在の成績・マスタが変わっても、判定できない状態になっても当時の内容を返す。
 
@@ -224,4 +238,4 @@ commit成功後に201を返す。成績版不一致は409（`revision_conflict`�
 | input | program_id・curriculum_id・data_revision・判定に使った全成績（course_id・attempt_no順） |
 | result | 判定結果全体（課程名・規則版・条件・科目名・算入・不足を含む） |
 
-おすすめは判定結果に未実装のため保存内容にも含まれない。追加時は判定結果と同じ契約で保存する。履歴一覧と画面は未実装。
+おすすめは判定結果に未実装のため保存内容にも含まれない。追加時は判定結果と同じ契約で保存する。

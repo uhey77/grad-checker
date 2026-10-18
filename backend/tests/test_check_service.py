@@ -9,6 +9,7 @@ from modules.requirements.grad_checker_requirements.application import (
     student_evaluation,
 )
 from modules.requirements.grad_checker_requirements.application.check_results import (
+    CheckPage,
     CheckRepository,
     CheckRequest,
     CheckService,
@@ -45,6 +46,14 @@ class FakeCheckRepository(CheckRepository):
     def get(self, student_id: str, check_id: UUID) -> SavedCheck | None:
         self.uow.require_block()
         return None
+
+    def count(self, student_id: str) -> int:
+        self.uow.require_block()
+        return 0
+
+    def list_page(self, student_id: str, page: CheckPage) -> list:
+        self.uow.require_block()
+        return []
 
 
 class FakeCheckUnitOfWork(FakeUnitOfWork, CheckUnitOfWork):
@@ -84,6 +93,13 @@ def test_missing_check_is_read_without_writing():
     uow = FakeCheckUnitOfWork()
     with pytest.raises(evaluation_errors.EvaluationError, match="check_not_found"):
         CheckService(uow).get_check("student", uuid4())
+    assert uow.events == ["read"]
+
+
+def test_check_list_counts_and_reads_in_one_read_block():
+    uow = FakeCheckUnitOfWork()
+    page = CheckService(uow).list_checks("student", CheckPage(limit=5, offset=10))
+    assert (page.checks, page.limit, page.offset, page.total_count) == ([], 5, 10, 0)
     assert uow.events == ["read"]
 
 

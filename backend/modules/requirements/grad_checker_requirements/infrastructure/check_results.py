@@ -3,8 +3,8 @@
 from datetime import UTC
 from uuid import UUID
 
-from pydantic import ValidationError
-from sqlalchemy import Engine
+from pydantic import TypeAdapter, ValidationError
+from sqlalchemy import Engine, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
@@ -13,12 +13,16 @@ from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
 )
 
 from ..application.check_results import (
+    CheckCurriculum,
     CheckInput,
+    CheckPage,
     CheckRepository,
+    CheckSummary,
     CheckUnitOfWork,
     SavedCheck,
 )
 from ..application.errors.evaluation import EvaluationError
+from ..application.evaluation_models import CreditSummary, Judgment
 from ..application.student_evaluation import StudentEvaluation
 from .check_models import CheckResultRecord
 from .evaluation import SqliteEvaluationRepository
@@ -26,6 +30,14 @@ from .evaluation import SqliteEvaluationRepository
 
 def unavailable(_error: SQLAlchemyError) -> EvaluationError:
     return EvaluationError("check_unavailable", "判定履歴を保存・取得できません。")
+
+
+# 一覧の要約に使う結果JSONの項目。複数パスのjson_extractは配列で返る。
+SUMMARY_FIELDS = TypeAdapter(tuple[Judgment, CheckCurriculum, CreditSummary])
+
+
+def invalid_record(error: ValidationError) -> EvaluationError:
+    return EvaluationError("invalid_check_result", "保存済みの判定履歴が不正です。")
 
 
 class SqliteCheckRepository(CheckRepository):
@@ -65,9 +77,49 @@ class SqliteCheckRepository(CheckRepository):
                 result=StudentEvaluation.model_validate_json(record.result_json),
             )
         except ValidationError as error:
-            raise EvaluationError(
-                "invalid_check_result", "保存済みの判定履歴が不正です。"
-            ) from error
+            raise invalid_record(error) from error
+
+    def count(self, student_id: str) -> int:
+        return self.db.exec(
+            select(func.count()).where(col(CheckResultRecord.student_id) == student_id)
+        ).one()
+
+    def list_page(self, student_id: str, page: CheckPage) -> list[CheckSummary]:
+        # 一覧では結果JSONのうち要約に使う項目だけを読み出す。
+        rows = self.db.exec(
+            select(
+                CheckResultRecord.id,
+                CheckResultRecord.created_at,
+                CheckResultRecord.data_revision,
+                func.json_extract(
+                    CheckResultRecord.result_json, "$.result", "$.curriculum", "$.total"
+                ),
+            )
+            .where(col(CheckResultRecord.student_id) == student_id)
+            .order_by(
+                col(CheckResultRecord.created_at).desc(),
+                col(CheckResultRecord.id).asc(),
+            )
+            .limit(page.limit)
+            .offset(page.offset)
+        ).all()
+        try:
+            summaries = []
+            for check_id, created, revision, fields in rows:
+                result, curriculum, total = SUMMARY_FIELDS.validate_json(fields)
+                summaries.append(
+                    CheckSummary(
+                        id=UUID(check_id),
+                        created_at=created.replace(tzinfo=UTC),
+                        data_revision=revision,
+                        result=result,
+                        curriculum=curriculum,
+                        total=total,
+                    )
+                )
+            return summaries
+        except ValidationError as error:
+            raise invalid_record(error) from error
 
 
 class SqliteCheckUnitOfWork(SqlUnitOfWork, CheckUnitOfWork):

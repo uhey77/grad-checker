@@ -30,7 +30,7 @@ Python・Goのテストは`backend/tests/`へ集約し、Goは対象パッケー
 | モジュール境界 | 科目モジュールからAPI・設定・FastAPI・uvicornへの逆依存を検出 | `test_module_boundaries.py` |
 | Go外部API・ブリッジクライアント | 入力不正時にPythonを呼ばない、UUID正規化、日本語HTTPエラー、不正なブリッジ応答、接続失敗・タイムアウト・キャンセル | `subject_list_test.go`、`subject_list_client_test.go` |
 | 実プロセス結合 | 4課程の取得結果一致、422・404・405、開発用表示無効時の404、分類不整合409・DB障害503 | `test_subject_list_http.py` |
-| 判定履歴（I06・I10〜I13・I15・I18） | 保存・本人限定の再取得、他人のID・不正IDの404、旧版・CSRF／Origin不正・設定不足・保存中のDB障害で履歴なし、成績・マスタ更新後とマスタ破損時も過去結果不変、UPDATE拒否、成績保存との同時実行、GET判定で履歴を作らない。Fakeで旧版のロールバック、判定計算がトランザクション外であること | `test_check_results.py`、`test_check_service.py`、`checks_test.go`、`test_check_results_http.py` |
+| 判定履歴（I06・I10〜I13・I15・I16・I18） | 保存・本人限定の再取得、本人の一覧の降順・同時刻のID順・limit/offsetの境界・他人の0件・クエリ検証、マスタ更新後も一覧の要約が不変、壊れた要約の拒否、他人のID・不正IDの404、旧版・CSRF／Origin不正・設定不足・保存中のDB障害で履歴なし、成績・マスタ更新後とマスタ破損時も過去結果不変、UPDATE拒否、成績保存との同時実行、GET判定で履歴を作らない。Fakeで旧版のロールバック、判定計算がトランザクション外であること、一覧の件数とページが一つの読取りであること | `test_check_results.py`、`test_check_service.py`、`checks_test.go`、`test_check_results_http.py` |
 | フロントエンド | DTO変換で未確認状態・注記を保持、AND検索、取得先の差し替え・失敗伝播、依存方向、並べ替え、学期表示 | `frontend/tests/subject-list.test.mjs` |
 
 ローカル確認画面では、適用入学年度の未確認表示・出典・便覧注記の展開を表示しない。元データをAPI・モデルに保持することと、画面へ表示することを分けて確認する。表示項目は[画面設計](screen_design/student_screen_design.md)に従う。ブラウザーでのロード・失敗・再試行・課程切替時のキャンセル確認は、上記の自動テストだけで代替しない。
