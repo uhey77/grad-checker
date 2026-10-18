@@ -29,6 +29,7 @@ export function GradeEntryPage({
   reportRevision,
   savedProgram,
   showProfile,
+  showDashboard,
 }: {
   catalogUseCases: CourseCatalogUseCases;
   gradeUseCases: GradeUseCases;
@@ -41,6 +42,7 @@ export function GradeEntryPage({
   // 所属設定で保存済みの所属。科目一覧と同じ課程の場合だけ見出しに使う。
   savedProgram: ProgramOption | null;
   showProfile: () => void;
+  showDashboard: () => void;
 }) {
   const entry = useGradeEntry(
     catalogUseCases,
@@ -80,6 +82,9 @@ export function GradeEntryPage({
       : curriculum?.name;
   return (
     <div className="grade-page">
+      <button type="button" className="back-link" onClick={showDashboard}>
+        ← ダッシュボードへ戻る
+      </button>
       <PageHeading title="成績入力" />
       {data && (
         <GraduationCheckPanel

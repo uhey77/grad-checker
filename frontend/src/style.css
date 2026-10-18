@@ -8,6 +8,19 @@
 .auth-page {
   max-width: 560px;
 }
+.dashboard-context {
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.dashboard-actions h2 {
+  flex: 1 1 auto;
+}
 .auth-card {
   background: white;
   padding: 28px;

@@ -9,6 +9,7 @@ export type {
 export { filterRequirements } from "./application/filterRequirements.ts";
 export type {
   GraduationResult,
+  DashboardResult,
   CreditSummary,
   RequirementResult,
   Judgment,

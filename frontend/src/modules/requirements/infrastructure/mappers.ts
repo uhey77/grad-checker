@@ -5,6 +5,7 @@ import type {
   CheckSummary,
   CheckedGrade,
   CreditSummary,
+  DashboardResult,
   GraduationResult,
   Judgment,
   RequirementResult,
@@ -56,7 +57,7 @@ function condition(data: unknown): RequirementResult {
   };
 }
 
-export function toGraduationResult(data: unknown): GraduationResult {
+function evaluationSummary(data: unknown) {
   const value = record(data);
   const curriculum = record(value.curriculum);
   const evaluatedAt = text(value.evaluated_at);
@@ -66,15 +67,15 @@ export function toGraduationResult(data: unknown): GraduationResult {
     !Number.isFinite(Date.parse(evaluatedAt))
   )
     return invalid();
-  const requirements = list(value.requirements).map(condition);
-  if (
-    !requirements.length ||
-    new Set(requirements.map((r) => r.id)).size !== requirements.length
-  )
-    return invalid();
   return {
     result: judgment(value.result),
     dataRevision: integer(value.data_revision),
+    ruleRevisions: Object.fromEntries(
+      Object.entries(record(value.rule_revisions)).map(([id, revision]) => [
+        id,
+        integer(revision, 1),
+      ]),
+    ),
     evaluatedAt,
     curriculum: {
       id: text(curriculum.id),
@@ -84,9 +85,42 @@ export function toGraduationResult(data: unknown): GraduationResult {
       sourcePages: text(curriculum.source_pages),
     },
     total: summary(value.total),
-    warnings: list(value.warnings).map((warning) =>
-      warning === "provisional_external_allocation" ? warning : invalid(),
+    warnings: list(value.warnings).map<GraduationResult["warnings"][number]>(
+      (warning) =>
+        warning === "provisional_external_allocation" ? warning : invalid(),
     ),
+  };
+}
+
+export function toDashboardResult(data: unknown): DashboardResult {
+  const value = record(data);
+  const common = evaluationSummary(value);
+  const curriculumRevision = integer(value.curriculum_revision, 1);
+  const categories = list(value.categories).map(condition);
+  if (
+    curriculumRevision !== common.curriculum.revision ||
+    categories.some((row) => row.kind !== "classification_total") ||
+    new Set(categories.map((row) => row.id)).size !== categories.length
+  )
+    return invalid();
+  return {
+    ...common,
+    curriculumRevision,
+    gradeCount: integer(value.grade_count),
+    categories,
+  };
+}
+
+export function toGraduationResult(data: unknown): GraduationResult {
+  const value = record(data);
+  const requirements = list(value.requirements).map(condition);
+  if (
+    !requirements.length ||
+    new Set(requirements.map((r) => r.id)).size !== requirements.length
+  )
+    return invalid();
+  return {
+    ...evaluationSummary(value),
     externalAllocations: list(value.external_allocations).map((data) => {
       const row = record(data);
       const earnedCredits = integer(row.earned_credits);

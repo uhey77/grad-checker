@@ -17,6 +17,18 @@ from modules.requirements.grad_checker_requirements.infrastructure.evaluation im
 router = APIRouter(prefix="/bridge")
 
 
+@router.post("/dashboard")
+def dashboard(call: SessionCall, request: Request) -> dict[str, object]:
+    def run() -> object:
+        identity = current_identity(request, call.token)
+        service = student_evaluation.EvaluationService(
+            SqliteEvaluationUnitOfWork(database_engine(request))
+        )
+        return service.dashboard(identity.account.id)
+
+    return respond(run)
+
+
 @router.post("/graduation-requirements")
 def graduation_requirements(call: SessionCall, request: Request) -> dict[str, object]:
     def run() -> object:

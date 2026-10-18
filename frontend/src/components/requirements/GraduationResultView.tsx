@@ -5,7 +5,7 @@ import {
 } from "../../modules/requirements/public.ts";
 import { ScrollTable } from "../ScrollTable";
 import { CreditsCell } from "../subjects/SubjectCells";
-import { GraduationInfographic } from "./GraduationInfographic";
+import { GraduationOverview } from "./GraduationOverview";
 import { judgmentLabels } from "./labels";
 const categoryLabels: Record<string, string> = {
   実学基礎科目合計: "実学基礎",
@@ -13,7 +13,13 @@ const categoryLabels: Record<string, string> = {
   専門教育科目合計: "専門教育",
 };
 
-export function GraduationResultView({ result }: { result: GraduationResult }) {
+export function GraduationResultView({
+  result,
+  showOverview = true,
+}: {
+  result: GraduationResult;
+  showOverview?: boolean;
+}) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const conditionsId = useId();
   const categories = result.requirements.filter(
@@ -26,36 +32,12 @@ export function GraduationResultView({ result }: { result: GraduationResult }) {
 
   return (
     <div className="graduation-result">
-      <p className={`judgment ${result.result}`} role="status">
-        卒業要件：{judgmentLabels[result.result]}
-      </p>
-      <GraduationInfographic
-        key={`${result.curriculum.id}:${result.dataRevision}:${result.evaluatedAt}`}
-        result={result}
-      />
-      <dl className="credit-summary">
-        <div>
-          <dt>必要単位</dt>
-          <dd>{result.total.requiredCredits}</dd>
-        </div>
-        <div>
-          <dt>修得単位</dt>
-          <dd>{result.total.earnedCredits}</dd>
-        </div>
-        <div>
-          <dt>算入単位</dt>
-          <dd>{result.total.creditedCredits}</dd>
-        </div>
-        <div>
-          <dt>不足単位</dt>
-          <dd>{result.total.shortage}</dd>
-        </div>
-      </dl>
-      {result.warnings.includes("provisional_external_allocation") && (
-        <p className="source-note" role="note">
-          他学部科目は取得順に算入し、同時期の科目は卒業要件を満たしやすい配分で計算しています。
-          配分方法は本アプリの仮定のため、大学の扱いと異なる場合があります。
-        </p>
+      {showOverview && (
+        <GraduationOverview
+          key={`${result.curriculum.id}:${result.dataRevision}:${result.evaluatedAt}`}
+          result={result}
+          categories={categories}
+        />
       )}
       {result.externalAllocations.length > 0 && (
         <details>

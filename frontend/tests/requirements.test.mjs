@@ -60,6 +60,7 @@ function fixture() {
   return {
     result: "fail",
     data_revision: 2,
+    rule_revisions: {},
     evaluated_at: "2026-10-16T00:00:00Z",
     curriculum: {
       id: "curriculum",
@@ -407,4 +408,91 @@ test("不正・矛盾した履歴を画面へ渡さない", () => {
     toCheckPage({ checks: [], limit: 20, offset: 40, total_count: 3 }).checks,
     [],
   );
+});
+
+function dashboardFixture() {
+  const result = fixture();
+  return {
+    result: result.result,
+    data_revision: result.data_revision,
+    rule_revisions: result.rule_revisions,
+    evaluated_at: result.evaluated_at,
+    curriculum: result.curriculum,
+    curriculum_revision: result.curriculum.revision,
+    grade_count: 3,
+    total: result.total,
+    categories: [{ ...result.requirements[0], kind: "classification_total" }],
+    warnings: result.warnings,
+  };
+}
+
+test("ダッシュボードはGETで保存済みの概要を取得し、履歴保存を呼ばない", async (context) => {
+  const calls = [];
+  context.mock.method(globalThis, "fetch", async (url, options) => {
+    calls.push({ url, options });
+    return Response.json(dashboardFixture());
+  });
+  const service = new GraduationUseCases(new HttpGraduationRepository("/api"));
+  const controller = new AbortController();
+  const result = await service.dashboard(controller.signal);
+  assert.equal(result.dataRevision, 2);
+  assert.equal(result.curriculumRevision, 1);
+  assert.equal(result.gradeCount, 3);
+  assert.equal(result.total.earnedCredits, 8);
+  assert.equal(result.categories[0].kind, "classification_total");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "/api/me/dashboard");
+  assert.equal(calls[0].options.method, "GET");
+  assert.equal(calls[0].options.body, undefined);
+  assert.equal(calls[0].options.cache, "no-store");
+  assert.equal(calls[0].options.signal, controller.signal);
+});
+
+test("概要の0件と不正応答・設定不足・通信失敗・中断を区別する", async (context) => {
+  const repo = new HttpGraduationRepository("/api");
+  const fetch = context.mock.method(globalThis, "fetch", async () =>
+    Response.json(dashboardFixture()),
+  );
+  const empty = dashboardFixture();
+  empty.grade_count = 0;
+  empty.total.earned_credits = empty.total.credited_credits = 0;
+  fetch.mock.mockImplementation(async () => Response.json(empty));
+  assert.equal((await repo.dashboard()).gradeCount, 0);
+  for (const change of [
+    (data) => (data.curriculum_revision = 5),
+    (data) => (data.grade_count = -1),
+    (data) => (data.grade_count = null),
+    (data) => (data.data_revision = null),
+    (data) => (data.evaluated_at = "invalid"),
+    (data) => (data.result = "unknown"),
+    (data) => (data.total.shortage = -1),
+    (data) => (data.categories = null),
+    (data) => data.categories.push(data.categories[0]),
+    (data) => (data.categories[0].kind = "total"),
+    (data) => (data.warnings = ["unknown"]),
+  ]) {
+    const data = dashboardFixture();
+    change(data);
+    fetch.mock.mockImplementation(async () => Response.json(data));
+    await assert.rejects(repo.dashboard(), (error) => error.status === 502);
+  }
+  for (const status of [401, 409, 503]) {
+    fetch.mock.mockImplementation(async () =>
+      Response.json({ detail: "概要を取得できません" }, { status }),
+    );
+    await assert.rejects(
+      repo.dashboard(),
+      (error) =>
+        error.status === status && error.message === "概要を取得できません",
+    );
+  }
+  fetch.mock.mockImplementation(async () => {
+    throw new TypeError("offline");
+  });
+  await assert.rejects(repo.dashboard(), (error) => error.status === 0);
+  const abort = new DOMException("Aborted", "AbortError");
+  fetch.mock.mockImplementation(async () => {
+    throw abort;
+  });
+  await assert.rejects(repo.dashboard(), (error) => error === abort);
 });

@@ -8,8 +8,16 @@ import (
 )
 
 func NewEvaluationHandler(gateway application.EvaluationGateway, fallback http.Handler) http.Handler {
+	return newEvaluationHandler("/api/me/graduation-requirements", gateway, fallback)
+}
+
+func NewDashboardHandler(gateway application.EvaluationGateway, fallback http.Handler) http.Handler {
+	return newEvaluationHandler("/api/me/dashboard", gateway, fallback)
+}
+
+func newEvaluationHandler(path string, gateway application.EvaluationGateway, fallback http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/me/graduation-requirements" {
+		if r.URL.Path != path {
 			fallback.ServeHTTP(w, r)
 			return
 		}
