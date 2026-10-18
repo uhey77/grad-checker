@@ -1,4 +1,4 @@
-"""本人の判定履歴を保存・取得するブリッジアダプター。本人IDはセッションからのみ決定する。"""
+"""本人の判定履歴を保存・一覧・取得するブリッジアダプター。本人IDはセッションからのみ決定する。"""
 
 from typing import Literal, Self
 from uuid import UUID
@@ -20,16 +20,18 @@ router = APIRouter(prefix="/bridge")
 
 
 class CheckCall(WritableSessionCall):
-    operation: Literal["create", "get"]
+    operation: Literal["create", "list", "get"]
     request: check_results.CheckRequest | None = None
+    page: check_results.CheckPage | None = None
     check_id: UUID | None = Field(default=None, strict=False)
 
     @model_validator(mode="after")
     def arguments_match(self) -> Self:
-        creates = self.operation == "create"
-        if creates != (self.check_id is None):
+        if (self.operation == "get") != (self.check_id is not None):
             raise ValueError("check_id is required only for get")
-        return self.check_write(creates, self.request)
+        if (self.operation == "list") != (self.page is not None):
+            raise ValueError("page is required only for list")
+        return self.check_write(self.operation == "create", self.request)
 
 
 @router.post("/checks")
@@ -43,6 +45,9 @@ def checks(call: CheckCall, request: Request) -> dict[str, object]:
             assert call.request is not None
             return service.create_check(identity.account.id, call.request)
         identity = current_identity(request, call.token)
+        if call.operation == "list":
+            assert call.page is not None
+            return service.list_checks(identity.account.id, call.page)
         assert call.check_id is not None
         return service.get_check(identity.account.id, call.check_id)
 

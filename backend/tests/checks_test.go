@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -52,7 +53,9 @@ func TestCheckHandlerValidationAuthorizationAndErrors(t *testing.T) {
 	}{
 		{"未認証の保存", "POST", "/api/checks", valid, false, true, "", 401, 0},
 		{"未認証の取得", "GET", detail, "", false, false, "", 401, 0},
-		{"一覧は未実装", "GET", "/api/checks", "", true, false, "", 405, 0},
+		{"未認証の一覧", "GET", "/api/checks", "", false, false, "", 401, 0},
+		{"一覧の削除", "DELETE", "/api/checks", "", true, true, "", 405, 0},
+		{"詳細のクエリ", "GET", detail + "?limit=1", "", true, false, "", 422, 0},
 		{"詳細の更新", "PUT", detail, "", true, true, "", 405, 0},
 		{"Origin・CSRFなし", "POST", "/api/checks", valid, true, false, "", 403, 0},
 		{"本人IDの指定", "POST", "/api/checks?student_id=x", valid, true, true, "", 422, 0},
@@ -64,6 +67,9 @@ func TestCheckHandlerValidationAuthorizationAndErrors(t *testing.T) {
 		{"保存", "POST", "/api/checks", valid, true, true, "", 201, 1},
 		{"取得", "GET", detail, "", true, false, "", 200, 1},
 		{"他人・存在しない履歴", "GET", detail, "", true, false, "check_not_found", 404, 1},
+		{"一覧", "GET", "/api/checks", "", true, false, "", 200, 1},
+		{"一覧の保存失敗", "GET", "/api/checks", "", true, false, "check_unavailable", 503, 1},
+		{"一覧の不正な保存データ", "GET", "/api/checks", "", true, false, "invalid_check_result", 502, 1},
 		{"版の競合", "POST", "/api/checks", valid, true, true, "revision_conflict", 409, 1},
 		{"CSRF不一致", "POST", "/api/checks", valid, true, true, "invalid_csrf", 403, 1},
 		{"所属未設定", "POST", "/api/checks", valid, true, true, "program_not_selected", 409, 1},
@@ -97,17 +103,67 @@ func TestCheckHandlerValidationAuthorizationAndErrors(t *testing.T) {
 		if tc.method == "POST" && (call.Operation != "create" || call.CSRF != strings.Repeat("c", 64) || call.Request == nil || call.Request.ExpectedRevision != 3 || call.CheckID != "") {
 			t.Fatalf("%s: %+v", tc.name, call)
 		}
-		if tc.method == "GET" && (call.Operation != "get" || call.CheckID != checkID || call.Request != nil || call.CSRF != "") {
+		if tc.path == detail && (call.Operation != "get" || call.CheckID != checkID || call.Request != nil || call.Page != nil || call.CSRF != "") {
 			t.Fatalf("%s: %+v", tc.name, call)
+		}
+		if tc.method == "GET" && tc.path == "/api/checks" && (call.Operation != "list" || call.Page == nil || call.CheckID != "" || call.Request != nil || call.CSRF != "") {
+			t.Fatalf("%s: %+v", tc.name, call)
+		}
+	}
+}
+
+func TestCheckHandlerListPaging(t *testing.T) {
+	for _, tc := range []struct {
+		query         string
+		status        int
+		limit, offset int64
+	}{
+		{"", 200, 20, 0},
+		{"limit=1", 200, 1, 0},
+		{"limit=100&offset=40", 200, 100, 40},
+		{"offset=9007199254740990", 200, 20, 9007199254740990},
+		{"limit=0", 422, 0, 0},
+		{"limit=101", 422, 0, 0},
+		{"offset=-1", 422, 0, 0},
+		{"limit=%2B5", 422, 0, 0},
+		{"limit=1.5", 422, 0, 0},
+		{"limit=", 422, 0, 0},
+		{"limit=1&limit=2", 422, 0, 0},
+		{"offset=9007199254740991", 422, 0, 0},
+		{"student_id=x", 422, 0, 0},
+		{"limit=%zz", 422, 0, 0},
+	} {
+		fake := &fakeChecks{}
+		recorder := httptest.NewRecorder()
+		presentation.NewCheckHandler(fake, checkOrigin, http.NotFoundHandler()).ServeHTTP(recorder, checkRequest("GET", "/api/checks?"+tc.query, "", true, false))
+		if recorder.Code != tc.status {
+			t.Fatalf("%s: %d %s", tc.query, recorder.Code, recorder.Body.String())
+		}
+		if tc.status != 200 {
+			if len(fake.calls) != 0 || !strings.Contains(recorder.Body.String(), "limitは1〜100") {
+				t.Fatalf("%s: %s", tc.query, recorder.Body.String())
+			}
+			continue
+		}
+		page := fake.calls[0].Page
+		if fake.calls[0].Operation != "list" || page == nil || page.Limit != tc.limit || page.Offset != tc.offset {
+			t.Fatalf("%s: %+v", tc.query, fake.calls[0])
 		}
 	}
 }
 
 const checkData = `{"id":"` + checkID + `","created_at":"2026-10-16T00:00:00Z","input":{"program_id":"p","curriculum_id":"c1","data_revision":1,"grades":[]},"result":` + evaluationData + `}`
 
+const checkSummary = `{"id":"` + checkID + `","created_at":"2026-10-16T00:00:00Z","data_revision":1,"result":"fail","curriculum":{"id":"c1","code":"cs","name":"課程","revision":3},"total":{"required_credits":124,"earned_credits":10,"credited_credits":10,"shortage":114,"result":"fail"}}`
+
+func checkList(items string, limit, offset, total int) string {
+	return fmt.Sprintf(`{"checks":[%s],"limit":%d,"offset":%d,"total_count":%d}`, items, limit, offset, total)
+}
+
 func TestCheckClientEnvelopeAndInvalidResponses(t *testing.T) {
 	create := application.CheckCall{Operation: "create", Token: "token", CSRF: strings.Repeat("c", 64), Request: &application.CheckRequest{ExpectedRevision: 1}}
 	get := application.CheckCall{Operation: "get", Token: "token", CheckID: checkID}
+	list := application.CheckCall{Operation: "list", Token: "token", Page: &application.CheckPage{Limit: 1, Offset: 2}}
 	for _, tc := range []struct {
 		name     string
 		call     application.CheckCall
@@ -121,6 +177,16 @@ func TestCheckClientEnvelopeAndInvalidResponses(t *testing.T) {
 		{"入力と結果の版の不一致", get, `{"data":` + strings.Replace(checkData, `"data_revision":1,"grades"`, `"data_revision":2,"grades"`, 1) + `}`, false},
 		{"結果の欠落", get, `{"data":` + strings.Replace(checkData, `"result":`+evaluationData, `"result":{}`, 1) + `}`, false},
 		{"作成日時の不正", get, `{"data":` + strings.Replace(checkData, `2026-10-16T00:00:00Z","input"`, `yesterday","input"`, 1) + `}`, false},
+		{"一覧", list, `{"data":` + checkList(checkSummary, 1, 2, 3) + `}`, true},
+		{"範囲外の空の一覧", list, `{"data":` + checkList("", 1, 2, 0) + `}`, true},
+		{"件数の上限超過", list, `{"data":` + checkList(checkSummary+","+checkSummary, 1, 2, 4) + `}`, false},
+		{"要求と異なる範囲", list, `{"data":` + checkList(checkSummary, 1, 0, 3) + `}`, false},
+		{"総件数との矛盾", list, `{"data":` + checkList(checkSummary, 1, 2, 2) + `}`, false},
+		{"一覧の欠落", list, `{"data":{"limit":1,"offset":2,"total_count":0}}`, false},
+		{"要約の判定の不正", list, `{"data":` + checkList(strings.Replace(checkSummary, `"result":"fail","curriculum"`, `"result":"ok","curriculum"`, 1), 1, 2, 3) + `}`, false},
+		{"要約の単位の欠落", list, `{"data":` + checkList(strings.Replace(checkSummary, `"shortage":114,`, ``, 1), 1, 2, 3) + `}`, false},
+		{"要約の課程名の欠落", list, `{"data":` + checkList(strings.Replace(checkSummary, `"name":"課程",`, ``, 1), 1, 2, 3) + `}`, false},
+		{"要約の作成日時の不正", list, `{"data":` + checkList(strings.Replace(checkSummary, `2026-10-16T00:00:00Z`, `yesterday`, 1), 1, 2, 3) + `}`, false},
 		{"業務エラー", create, `{"error":{"code":"revision_conflict","detail":"private SQL"}}`, false},
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -143,7 +209,7 @@ func TestCheckClientEnvelopeAndInvalidResponses(t *testing.T) {
 		if (err == nil) != tc.good {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
-		if tc.good && string(data) != checkData {
+		if tc.good && tc.call.Operation != "list" && string(data) != checkData {
 			t.Fatalf("%s: %s", tc.name, data)
 		}
 		if err != nil && strings.Contains(err.Error(), "SQL") {

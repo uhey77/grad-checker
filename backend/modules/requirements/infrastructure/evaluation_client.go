@@ -46,13 +46,7 @@ func validEvaluation(data json.RawMessage) bool {
 			ID       string `json:"id"`
 			Revision *int64 `json:"revision"`
 		} `json:"curriculum"`
-		Total *struct {
-			Required *int64 `json:"required_credits"`
-			Earned   *int64 `json:"earned_credits"`
-			Credited *int64 `json:"credited_credits"`
-			Shortage *int64 `json:"shortage"`
-			Result   string `json:"result"`
-		} `json:"total"`
+		Total               *creditTotal       `json:"total"`
 		Requirements        *[]json.RawMessage `json:"requirements"`
 		Categories          *[]json.RawMessage `json:"categories"`
 		Missing             *[]json.RawMessage `json:"missing_required_courses"`
@@ -68,12 +62,28 @@ func validEvaluation(data json.RawMessage) bool {
 	if _, err := time.Parse(time.RFC3339Nano, shape.EvaluatedAt); err != nil {
 		return false
 	}
-	for _, value := range []*int64{shape.Total.Required, shape.Total.Earned, shape.Total.Credited, shape.Total.Shortage} {
+	return shape.Total.valid()
+}
+
+// creditTotalは総単位の必要・修得・算入・不足と判定。
+type creditTotal struct {
+	Required *int64 `json:"required_credits"`
+	Earned   *int64 `json:"earned_credits"`
+	Credited *int64 `json:"credited_credits"`
+	Shortage *int64 `json:"shortage"`
+	Result   string `json:"result"`
+}
+
+func (t *creditTotal) valid() bool {
+	if t == nil {
+		return false
+	}
+	for _, value := range []*int64{t.Required, t.Earned, t.Credited, t.Shortage} {
 		if value == nil || *value < 0 {
 			return false
 		}
 	}
-	return judgment(shape.Total.Result)
+	return judgment(t.Result)
 }
 
 func judgment(value string) bool { return value == "pass" || value == "fail" }

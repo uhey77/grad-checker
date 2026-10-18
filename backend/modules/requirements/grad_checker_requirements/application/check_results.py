@@ -10,6 +10,7 @@ from modules.grades.grad_checker_grades.application.grades import GradeAttempt
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 from .errors.evaluation import EvaluationError
+from .evaluation_models import CreditSummary, Judgment
 from .student_evaluation import (
     EvaluationRepository,
     StudentEvaluation,
@@ -17,6 +18,7 @@ from .student_evaluation import (
 )
 
 MAX_REVISION = 9007199254740990
+MAX_CHECK_PAGE_SIZE = 100
 
 
 class CheckRequest(BaseModel):
@@ -42,12 +44,54 @@ class SavedCheck(BaseModel):
     result: StudentEvaluation
 
 
+class CheckPage(BaseModel):
+    """履歴一覧の取得範囲。作成日時の降順・同時刻はID順に数える。"""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    limit: int = Field(ge=1, le=MAX_CHECK_PAGE_SIZE)
+    offset: int = Field(ge=0, le=MAX_REVISION)
+
+
+class CheckCurriculum(BaseModel):
+    """判定当時の課程名と規則版。保存済みの結果から読む。"""
+
+    id: UUID
+    code: str
+    name: str
+    revision: int
+
+
+class CheckSummary(BaseModel):
+    """一覧に表示する保存済み判定の要約。現在のマスタで再計算しない。"""
+
+    id: UUID
+    created_at: datetime
+    data_revision: int
+    result: Judgment
+    curriculum: CheckCurriculum
+    total: CreditSummary
+
+
+class CheckList(BaseModel):
+    checks: list[CheckSummary]
+    limit: int
+    offset: int
+    total_count: int
+
+
 class CheckRepository(ABC):
     @abstractmethod
     def add(self, student_id: str, check: SavedCheck) -> None: ...
 
     @abstractmethod
     def get(self, student_id: str, check_id: UUID) -> SavedCheck | None: ...
+
+    @abstractmethod
+    def count(self, student_id: str) -> int: ...
+
+    @abstractmethod
+    def list_page(self, student_id: str, page: CheckPage) -> list[CheckSummary]:
+        """本人の履歴を作成日時の降順・同時刻はID順で返す。"""
 
 
 class CheckUnitOfWork(UnitOfWork):
@@ -100,3 +144,15 @@ class CheckService:
         if check is None:
             raise EvaluationError("check_not_found", "判定履歴が見つかりません。")
         return check
+
+    def list_checks(self, student_id: str, page: CheckPage) -> CheckList:
+        # 件数と一覧を同じ読取りスナップショットで数え、ページ境界をずらさない。
+        with self.uow.read():
+            total_count = self.uow.checks.count(student_id)
+            checks = self.uow.checks.list_page(student_id, page)
+        return CheckList(
+            checks=checks,
+            limit=page.limit,
+            offset=page.offset,
+            total_count=total_count,
+        )
