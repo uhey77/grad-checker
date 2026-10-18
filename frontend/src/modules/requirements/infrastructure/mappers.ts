@@ -1,10 +1,14 @@
 import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
 import { GraduationError } from "../application/GraduationUseCases.ts";
 import type {
+  CheckPage,
+  CheckSummary,
+  CheckedGrade,
   CreditSummary,
   GraduationResult,
   Judgment,
   RequirementResult,
+  SavedCheck,
 } from "../domain/models.ts";
 
 const { invalid, record, list, text, integer, nullableText } = createDtoReader(
@@ -114,5 +118,96 @@ export function toGraduationResult(data: unknown): GraduationResult {
         transferredCredits: integer(allocation.transferred_credits),
       };
     }),
+  };
+}
+
+function timestamp(value: unknown): string {
+  const created = text(value);
+  return Number.isFinite(Date.parse(created)) ? created : invalid();
+}
+
+function checkSummary(data: unknown): CheckSummary {
+  const value = record(data);
+  const curriculum = record(value.curriculum);
+  return {
+    id: text(value.id),
+    createdAt: timestamp(value.created_at),
+    dataRevision: integer(value.data_revision),
+    result: judgment(value.result),
+    curriculum: {
+      id: text(curriculum.id),
+      code: text(curriculum.code),
+      name: text(curriculum.name),
+      revision: integer(curriculum.revision, 1),
+    },
+    total: summary(value.total),
+  };
+}
+
+export function toCheckPage(data: unknown): CheckPage {
+  const value = record(data);
+  const checks = list(value.checks).map(checkSummary);
+  const limit = integer(value.limit, 1);
+  const offset = integer(value.offset);
+  const totalCount = integer(value.total_count);
+  if (
+    checks.length > limit ||
+    (checks.length > 0 && offset + checks.length > totalCount)
+  )
+    return invalid();
+  return { checks, limit, offset, totalCount };
+}
+
+const gradeCodes = ["S", "A", "B", "C", "D", "X"] as const;
+
+export function toSavedCheck(data: unknown): SavedCheck {
+  const value = record(data);
+  const input = record(value.input);
+  const resultData = record(value.result);
+  const result = toGraduationResult(resultData);
+  const createdAt = timestamp(value.created_at);
+  // 科目名は保存済みの判定結果から引き、現在の科目マスタを参照しない。
+  const names = new Map(
+    list(resultData.courses).map((data) => {
+      const course = record(data);
+      return [text(course.course_id), text(course.name)] as const;
+    }),
+  );
+  const grades = list(input.grades).map((data): CheckedGrade => {
+    const grade = record(data);
+    const courseId = text(grade.course_id);
+    const resultStatus = grade.result_status;
+    const gradeCode = grade.grade_code as CheckedGrade["gradeCode"];
+    if (
+      (resultStatus === "finalized" && !gradeCodes.includes(gradeCode!)) ||
+      (resultStatus === "pending" && gradeCode !== null) ||
+      (resultStatus !== "finalized" && resultStatus !== "pending")
+    )
+      return invalid();
+    return {
+      courseId,
+      courseName: names.get(courseId) ?? null,
+      attemptNo: integer(grade.attempt_no, 1),
+      resultStatus,
+      gradeCode,
+    };
+  });
+  const dataRevision = integer(input.data_revision);
+  // 入力と結果は同じ時刻・同じ成績版のスナップショットから作られている。
+  if (
+    result.dataRevision !== dataRevision ||
+    Date.parse(result.evaluatedAt) !== Date.parse(createdAt)
+  )
+    return invalid();
+  return {
+    id: text(value.id),
+    createdAt,
+    input: {
+      programId: text(input.program_id),
+      curriculumId: text(input.curriculum_id),
+      dataRevision,
+      grades,
+    },
+    result,
   };
 }

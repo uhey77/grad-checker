@@ -1,24 +1,26 @@
 import { useEffect, useState } from "react";
 import {
   GraduationError,
-  type GraduationResult,
   type GraduationUseCases,
+  type SavedCheck,
 } from "../../modules/requirements/public.ts";
 import { errorMessage } from "../errorMessage";
 import { useExclusiveAction } from "../useExclusiveAction";
 
+// 保存済みの成績版で卒業要件を判定し、結果を本人の判定履歴に保存する。
 export function useGraduationCheck(
   useCases: GraduationUseCases,
   revision: number,
   curriculumId: string,
+  csrf: string,
   active: boolean,
   blocked: boolean,
   expire: () => void,
-  reportRevision: (revision: number) => void,
+  saved: (check: SavedCheck) => void,
 ) {
   const [state, setState] = useState<{
     key: string;
-    result?: GraduationResult;
+    check?: SavedCheck;
     error?: string;
   } | null>(null);
   const { busy, run, abort, running } = useExclusiveAction();
@@ -29,21 +31,19 @@ export function useGraduationCheck(
   async function check() {
     if (!active || blocked || running()) return;
     setState(null);
-    await run((signal) => useCases.evaluate(signal), {
-      onSuccess: (result) => {
-        if (
-          result.dataRevision !== revision ||
-          result.curriculum.id !== curriculumId
-        ) {
-          reportRevision(result.dataRevision);
+    await run((signal) => useCases.createCheck(revision, csrf, signal), {
+      onSuccess: (check) => {
+        // 履歴には保存されているため、表示中の課程と異なっても一覧は更新する。
+        saved(check);
+        if (check.result.curriculum.id !== curriculumId) {
           setState({
             key,
             error:
-              "成績または所属が更新されています。保存済みの成績を再取得してから判定してください。",
+              "所属が更新されています。保存済みの成績を再取得してから判定してください。",
           });
           return;
         }
-        setState({ key, result });
+        setState({ key, check });
       },
       onError: (error) => {
         if (error instanceof GraduationError && error.status === 401) expire();
@@ -55,5 +55,5 @@ export function useGraduationCheck(
     });
   }
   const visible = active && !blocked && state?.key === key ? state : null;
-  return { busy, check, result: visible?.result, error: visible?.error };
+  return { busy, check, saved: visible?.check, error: visible?.error };
 }

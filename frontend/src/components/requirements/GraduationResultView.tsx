@@ -6,8 +6,7 @@ import {
 import { ScrollTable } from "../ScrollTable";
 import { CreditsCell } from "../subjects/SubjectCells";
 import { GraduationInfographic } from "./GraduationInfographic";
-
-const label = { pass: "達成", fail: "未達成" };
+import { judgmentLabels } from "./labels";
 const categoryLabels: Record<string, string> = {
   実学基礎科目合計: "実学基礎",
   専門基礎教育科目合計: "専門基礎",
@@ -28,7 +27,7 @@ export function GraduationResultView({ result }: { result: GraduationResult }) {
   return (
     <div className="graduation-result">
       <p className={`judgment ${result.result}`} role="status">
-        卒業要件：{label[result.result]}
+        卒業要件：{judgmentLabels[result.result]}
       </p>
       <GraduationInfographic
         key={`${result.curriculum.id}:${result.dataRevision}:${result.evaluatedAt}`}
@@ -115,7 +114,7 @@ export function GraduationResultView({ result }: { result: GraduationResult }) {
                 <CreditsCell credits={row.shortage} />
                 <td>
                   <span className={`judgment-label ${row.result}`}>
-                    {label[row.result]}
+                    {judgmentLabels[row.result]}
                   </span>
                 </td>
               </tr>
