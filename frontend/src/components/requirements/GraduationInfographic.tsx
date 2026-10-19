@@ -1,5 +1,8 @@
 import { useEntranceProgress } from "../../hooks/useEntranceProgress";
-import type { GraduationResult } from "../../modules/requirements/public.ts";
+import type {
+  GraduationResult,
+  RequirementResult,
+} from "../../modules/requirements/public.ts";
 
 const percent = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 });
 
@@ -9,15 +12,14 @@ function fraction(credited: number, required: number) {
 
 export function GraduationInfographic({
   result,
+  categories,
 }: {
-  result: GraduationResult;
+  result: Pick<GraduationResult, "total" | "result">;
+  categories: RequirementResult[];
 }) {
   const progress = useEntranceProgress();
   const total = result.total;
   const ratio = fraction(total.creditedCredits, total.requiredCredits);
-  const categories = result.requirements.filter(
-    (row) => row.kind === "classification_total",
-  );
 
   return (
     <section className="graduation-infographic" aria-label="単位の進捗グラフ">

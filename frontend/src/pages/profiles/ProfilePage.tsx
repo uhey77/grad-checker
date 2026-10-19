@@ -10,11 +10,13 @@ export function ProfilePage({
   loginName,
   active,
   showGrades,
+  showDashboard,
 }: {
   profile: ReturnType<typeof useProfile>;
   loginName: string;
   active: boolean;
   showGrades: () => void;
+  showDashboard: () => void;
 }) {
   const editor = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
@@ -28,8 +30,8 @@ export function ProfilePage({
   }, [active, profile.notice]);
   return (
     <div className="profile-page">
-      <button className="back-link" type="button" onClick={showGrades}>
-        ← 成績入力へ戻る
+      <button className="back-link" type="button" onClick={showDashboard}>
+        ← ダッシュボードへ戻る
       </button>
       <PageHeading title="マイページ" />
       <section

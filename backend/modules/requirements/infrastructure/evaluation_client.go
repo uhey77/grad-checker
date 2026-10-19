@@ -10,14 +10,25 @@ import (
 	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
-type PythonEvaluationClient struct{ client *pythonbridge.Client }
+type PythonEvaluationClient struct {
+	client *pythonbridge.Client
+	valid  func(json.RawMessage) bool
+}
 
 func NewPythonEvaluationClient(origin string) (*PythonEvaluationClient, error) {
 	client, err := pythonbridge.New(origin, "/bridge/graduation-requirements", 10*time.Second, 8<<20)
 	if err != nil {
 		return nil, err
 	}
-	return &PythonEvaluationClient{client}, nil
+	return &PythonEvaluationClient{client: client, valid: validEvaluation}, nil
+}
+
+func NewPythonDashboardClient(origin string) (*PythonEvaluationClient, error) {
+	client, err := pythonbridge.New(origin, "/bridge/dashboard", 10*time.Second, 8<<20)
+	if err != nil {
+		return nil, err
+	}
+	return &PythonEvaluationClient{client: client, valid: validDashboard}, nil
 }
 
 // 単位計算はPythonに限定し、Goは応答契約の形だけを検証する。
@@ -30,10 +41,35 @@ func (c *PythonEvaluationClient) Call(ctx context.Context, call application.Eval
 		}
 		return nil, application.ErrBackend
 	}
-	if !validEvaluation(data) {
+	if !c.valid(data) {
 		return nil, application.ErrBackend
 	}
 	return data, nil
+}
+
+func validDashboard(data json.RawMessage) bool {
+	var shape struct {
+		Result             string `json:"result"`
+		DataRevision       *int64 `json:"data_revision"`
+		CurriculumRevision *int64 `json:"curriculum_revision"`
+		GradeCount         *int64 `json:"grade_count"`
+		EvaluatedAt        string `json:"evaluated_at"`
+		Curriculum         *struct {
+			ID       string `json:"id"`
+			Revision *int64 `json:"revision"`
+		} `json:"curriculum"`
+		Total         *creditTotal       `json:"total"`
+		Categories    *[]json.RawMessage `json:"categories"`
+		Warnings      *[]string          `json:"warnings"`
+		RuleRevisions map[string]int64   `json:"rule_revisions"`
+	}
+	if json.Unmarshal(data, &shape) != nil || !judgment(shape.Result) || shape.DataRevision == nil || *shape.DataRevision < 0 || shape.CurriculumRevision == nil || *shape.CurriculumRevision < 1 || shape.GradeCount == nil || *shape.GradeCount < 0 || shape.Curriculum == nil || shape.Curriculum.ID == "" || shape.Curriculum.Revision == nil || *shape.Curriculum.Revision != *shape.CurriculumRevision || shape.Categories == nil || shape.Warnings == nil || shape.RuleRevisions == nil {
+		return false
+	}
+	if _, err := time.Parse(time.RFC3339Nano, shape.EvaluatedAt); err != nil {
+		return false
+	}
+	return shape.Total.valid()
 }
 
 // validEvaluationは判定結果の必須フィールドと値域を検証する。単位の再計算は行わない。

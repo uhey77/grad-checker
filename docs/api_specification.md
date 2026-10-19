@@ -5,7 +5,7 @@
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）、判定履歴の保存（POST /checks）、本人の履歴一覧（GET /checks）と過去結果取得（GET /checks/{id}）も実装済み。ダッシュボード・おすすめは未実装。
+Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）、判定履歴の保存（POST /checks）、本人の履歴一覧（GET /checks）と過去結果取得（GET /checks/{id}）も実装済み。最新概要（GET /me/dashboard）も実装済み。おすすめは未実装。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -156,6 +156,14 @@ POST /checksは `{"expected_revision": 3}` を受け、画面が最後に保存�
 | recommendations | 未修得科目・開講期・不足条件コード・推薦理由 |
 
 ダッシュボードは概要用にtotal・categories等を返し、詳細APIは上表全体を返す。保存するresult_jsonも上表の詳細を持ち、総修得と総算入を区別する。判定のpass/failはHTTPの成功・失敗ではない。未達成でもGET200／保存201。現在の判定GETはカリキュラムがunverifiedでも、必要なマスタと算入規則が揃えば200で結果を返す。確認状態は元の値を保持する。
+
+### ダッシュボードの実装契約（2026-10-18）
+
+`GET /api/me/dashboard` は認証必須・クエリなし・読取り専用。本人はセッションから決め、`Cache-Control: no-store` を返す。`EvaluationService.dashboard` は詳細と同じ判定関数に、一つのUnit of Workの `read` から得た所属・成績・科目・規則のスナップショットを渡す。計算はトランザクションを閉じてから行い、履歴を作らず、所属・成績版を更新しない。
+
+成功200は `result`、`evaluated_at`、`data_revision`、`curriculum_revision`、`curriculum`、`rule_revisions`、`grade_count`、`total`、`categories`、`warnings` を返す。`curriculum` は詳細と同じ出典・確認状態を含み、`curriculum_revision` はその `revision` と一致する。`grade_count` は保存済みの成績回次の件数。`total` と区分合計の `categories` は詳細と同じ必要・修得・算入・不足・判定を持つ。条件詳細・科目一覧・推薦は概要に含めない。
+
+所属未設定・マスタ不足・未確認の必要規則は409、DB利用不能は503、ブリッジの接続・形式異常は502。成績0件は200・修得0・未達成で、エラーを0単位に変換しない。適用入学年度の確認状態だけでは判定を止めない。
 
 ## 8. 過去結果
 

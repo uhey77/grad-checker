@@ -7,10 +7,28 @@ import {
   type CheckPageRequest,
   type GraduationRepository,
 } from "../application/GraduationUseCases.ts";
-import { toCheckPage, toGraduationResult, toSavedCheck } from "./mappers.ts";
+import {
+  toCheckPage,
+  toDashboardResult,
+  toGraduationResult,
+  toSavedCheck,
+} from "./mappers.ts";
 
 export class HttpGraduationRepository implements GraduationRepository {
   constructor(private readonly base: string) {}
+  async dashboard(signal?: AbortSignal) {
+    return toDashboardResult(
+      await requestJson(
+        this.base + "/me/dashboard",
+        { signal },
+        (status, message) => new GraduationError(status, message),
+        {
+          unreadable: "卒業要件の概要を読み込めません。",
+          failed: "卒業要件の概要を取得できませんでした。",
+        },
+      ),
+    );
+  }
   async evaluate(signal?: AbortSignal) {
     const data = await requestJson(
       this.base + "/me/graduation-requirements",

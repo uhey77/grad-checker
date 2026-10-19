@@ -4,11 +4,15 @@ export function UserMenu({
   loginName,
   busy,
   showProfile,
+  showDashboard,
+  showGrades,
   logout,
 }: {
   loginName: string;
   busy: boolean;
   showProfile: () => void;
+  showDashboard: () => void;
+  showGrades: () => void;
   logout: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -65,6 +69,24 @@ export function UserMenu({
         inert={!open}
         data-open={open}
       >
+        <button
+          type="button"
+          onClick={() => {
+            close();
+            showDashboard();
+          }}
+        >
+          ダッシュボード
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            close();
+            showGrades();
+          }}
+        >
+          成績入力
+        </button>
         <button
           type="button"
           onClick={() => {

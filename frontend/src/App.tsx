@@ -6,10 +6,11 @@ import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate";
 import { ProfilePage } from "./pages/profiles/ProfilePage";
 import { GradeEntryPage } from "./pages/grades/GradeEntryPage";
 import { UserMenu } from "./components/accounts/UserMenu";
-import { FormError, LoadingState } from "./components/StatusPanels";
+import { ErrorState, FormError, LoadingState } from "./components/StatusPanels";
 import { useProfile } from "./hooks/profiles/useProfile";
+import { DashboardPage } from "./pages/requirements/DashboardPage";
 
-type Screen = "profile" | "grades";
+type Screen = "profile" | "grades" | "dashboard";
 
 // 画面を切り替えても未保存の入力を失わないよう、各画面は表示を切り替えるだけにする。
 function StudentScreens({
@@ -43,7 +44,7 @@ function StudentScreens({
   );
   // 最初の取得成功時だけ初期画面を決める。保存・再取得では画面を移動しない。
   if (screen === null && profile.state) {
-    setScreen(profile.state.profile.curriculumId ? "grades" : "profile");
+    setScreen("dashboard");
   }
   useEffect(() => {
     if (screen) main.current?.focus();
@@ -54,6 +55,8 @@ function StudentScreens({
         <UserMenu
           loginName={loginName}
           busy={auth.busy}
+          showDashboard={() => setScreen("dashboard")}
+          showGrades={() => setScreen("grades")}
           showProfile={() => setScreen("profile")}
           logout={auth.logout}
         />
@@ -68,6 +71,32 @@ function StudentScreens({
         {screen === null && !profile.error ? (
           <LoadingState>所属情報を読み込んでいます…</LoadingState>
         ) : null}
+        {screen === "dashboard" && (
+          <div>
+            {!profile.state ? (
+              profile.error ? (
+                <ErrorState
+                  message={profile.error}
+                  actionLabel="再試行"
+                  onAction={profile.retry}
+                />
+              ) : (
+                <LoadingState>所属情報を読み込んでいます…</LoadingState>
+              )
+            ) : (
+              <DashboardPage
+                useCases={application.requirements}
+                active={screen === "dashboard" && !!profile.state}
+                revision={latestRevision}
+                curriculumId={profile.state?.profile.curriculumId ?? null}
+                savedProgram={profile.savedProgram ?? null}
+                expire={expire}
+                showProfile={() => setScreen("profile")}
+                showGrades={() => setScreen("grades")}
+              />
+            )}
+          </div>
+        )}
         <div
           hidden={screen !== "profile" && !(screen === null && profile.error)}
         >
@@ -76,6 +105,7 @@ function StudentScreens({
             loginName={loginName}
             active={screen === "profile"}
             showGrades={() => setScreen("grades")}
+            showDashboard={() => setScreen("dashboard")}
           />
         </div>
         <div hidden={screen !== "grades"}>
@@ -91,6 +121,7 @@ function StudentScreens({
               reportRevision={reportRevision}
               savedProgram={profile.savedProgram ?? null}
               showProfile={() => setScreen("profile")}
+              showDashboard={() => setScreen("dashboard")}
             />
           ) : null}
         </div>

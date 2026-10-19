@@ -26,6 +26,7 @@ export interface RequirementResult extends CreditSummary {
 export interface GraduationResult {
   result: Judgment;
   dataRevision: number;
+  ruleRevisions: Record<string, number>;
   evaluatedAt: string;
   curriculum: {
     id: string;
@@ -47,6 +48,19 @@ export interface GraduationResult {
     freeCredits: number;
   }[];
   warnings: "provisional_external_allocation"[];
+}
+
+export interface DashboardResult {
+  result: Judgment;
+  dataRevision: number;
+  ruleRevisions: Record<string, number>;
+  curriculumRevision: number;
+  evaluatedAt: string;
+  curriculum: GraduationResult["curriculum"];
+  gradeCount: number;
+  total: CreditSummary;
+  categories: RequirementResult[];
+  warnings: GraduationResult["warnings"];
 }
 
 // 保存済み判定の要約。当時の課程・規則版・総単位を保存内容から表示する。

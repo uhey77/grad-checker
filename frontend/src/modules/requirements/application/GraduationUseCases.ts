@@ -1,5 +1,6 @@
 import type {
   CheckPage,
+  DashboardResult,
   GraduationResult,
   SavedCheck,
 } from "../domain/models.ts";
@@ -20,6 +21,7 @@ export interface CheckPageRequest {
 }
 
 export interface GraduationRepository {
+  dashboard(signal?: AbortSignal): Promise<DashboardResult>;
   evaluate(signal?: AbortSignal): Promise<GraduationResult>;
   // 画面が最後に保存・取得した成績版で判定し、本人の履歴に保存する。
   createCheck(
@@ -33,6 +35,9 @@ export interface GraduationRepository {
 
 export class GraduationUseCases implements GraduationRepository {
   constructor(private readonly repository: GraduationRepository) {}
+  dashboard(signal?: AbortSignal) {
+    return this.repository.dashboard(signal);
+  }
   evaluate(signal?: AbortSignal) {
     return this.repository.evaluate(signal);
   }
