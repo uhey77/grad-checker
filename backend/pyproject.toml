@@ -24,6 +24,7 @@ module-root = ""
 [dependency-groups]
 dev = [
     "httpx>=0.28.1,<1.0",
+    "openapi-spec-validator>=0.7,<0.9",
     "pre-commit>=4.6.2,<5",
     "pytest>=9.0.2,<10.0",
     "ruff>=0.17.0,<0.18",

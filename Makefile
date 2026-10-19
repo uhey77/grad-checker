@@ -1,4 +1,5 @@
 .DEFAULT_GOAL := help
+.PHONY: api-docs api-docs-build api-docs-check
 .PHONY: auth-dev
 .PHONY: backend-requirements-seed backend-requirements-build
 
@@ -7,6 +8,9 @@
 .PHONY: help check test frontend-test format backend-check frontend-check setup frontend-install backend-install backend-dev backend-subject-list backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
 
 help:
+	@echo "api-docs          Go公開APIのSwagger UIを画面と同じOriginで起動"
+	@echo "api-docs-build    Go公開APIのOpenAPIを再生成"
+	@echo "api-docs-check    OpenAPIの生成差分・構文・公開契約を検証"
 	@echo "backend-requirements-seed CS4課程の卒業要件・算入規則を追加投入（科目投入後）"
 	@echo "backend-requirements-build 卒業要件シードを再生成"
 	@echo "auth-dev          ユーザー名認証の画面・バックエンドを起動"
@@ -60,6 +64,7 @@ format:
 	$(MAKE) frontend-format
 
 backend-check:
+	$(MAKE) api-docs-check
 	$(MAKE) backend-lint
 	$(MAKE) backend-format-check
 	$(MAKE) backend-typecheck
@@ -168,3 +173,13 @@ build:
 
 preview:
 	cd frontend && npm run preview
+
+api-docs:
+	node scripts/dev.mjs --api-docs
+
+api-docs-build:
+	cd backend && uv run --locked python -m scripts.build_openapi
+
+api-docs-check:
+	cd backend && uv run --locked python -m scripts.build_openapi --check
+	cd backend && uv run --locked pytest tests/test_openapi.py

@@ -15,7 +15,7 @@ PASSWORD = "app-only-password-123"
 
 
 @pytest.fixture
-def auth_services(tmp_path):
+def auth_services(tmp_path, request):
     go = shutil.which("go")
     if go is None:
         pytest.skip("Goが必要です。PATHに追加して検証してください。")
@@ -39,6 +39,7 @@ def auth_services(tmp_path):
             f"127.0.0.1:{go_port}",
             "-python-url",
             f"http://127.0.0.1:{python_port}",
+            *getattr(request, "param", []),
         ],
     ]
     processes = []

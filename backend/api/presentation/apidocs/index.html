@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>grad-checker 公開API</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.29.0/swagger-ui.css" />
+  </head>
+  <body>
+    <p>ローカルでは <a href="http://127.0.0.1:5173/docs">127.0.0.1:5173/docs</a> から操作してください。
+      ログイン後、応答の csrf_token を Authorize の csrfToken に入力します。
+      Cookie はブラウザーが送信します。ログアウト・復旧後は Authorize を解除してください。</p>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5.29.0/swagger-ui-bundle.js" crossorigin="anonymous"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: "/openapi.json",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        validatorUrl: null,
+        persistAuthorization: false,
+        withCredentials: true,
+        supportedSubmitMethods: ["get", "post", "put"],
+      });
+    </script>
+  </body>
+</html>
