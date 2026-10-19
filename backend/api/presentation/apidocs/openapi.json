@@ -5066,7 +5066,8 @@
         "in": "header",
         "required": true,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "default": "http://127.0.0.1:5173"
         },
         "description": "ブラウザーが現在のOriginを送信。Go/PythonのPUBLIC_ORIGINと一致させる。既定http://127.0.0.1:5173。"
       }

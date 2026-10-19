@@ -65,7 +65,7 @@ make api-docs
 
 Swagger UIでの確認手順：
 
-1. `GET /api/auth/config` でパスワード方針を確認し、`POST /api/auth/register` で登録します。復旧コードを保管します。
+1. `GET /api/auth/config` でパスワード方針を確認し、`POST /api/auth/register` で登録します。Origin欄は初期値 `http://127.0.0.1:5173` のまま実行します（許可Originを変更した場合は現在の画面Originに合わせます）。復旧コードを保管します。
 2. `POST /api/auth/login` を実行します。HttpOnly Cookieはブラウザーが保持・送信するため手入力しません。
 3. 応答の `csrf_token` をページ上部の **Authorize → csrfToken** へ入力します。`sessionCookie` は空欄のままにします。
 4. `GET /api/programs` の選択肢と `GET /api/me` の `data_revision` を使って `PUT /api/me/program` を実行します。所属・成績の保存ごとに更新後の版を使用します。

@@ -734,7 +734,7 @@ def build_document() -> dict:  # noqa: PLR0915
                     "name": "Origin",
                     "in": "header",
                     "required": True,
-                    "schema": text_schema(),
+                    "schema": text_schema(default="http://127.0.0.1:5173"),
                     "description": (
                         "ブラウザーが現在のOriginを送信。Go/PythonのPUBLIC_OR"
                         "IGINと一致させる。既定http://127.0.0.1:5173。"
