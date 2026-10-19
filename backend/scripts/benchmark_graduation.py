@@ -6,6 +6,7 @@
 
 import argparse
 import json
+import sqlite3
 import os
 import platform
 import shutil
@@ -17,31 +18,22 @@ import tempfile
 import time
 from contextlib import ExitStack
 from datetime import UTC, datetime
-
-from sqlalchemy import text
-
-from modules.accounts.grad_checker_accounts.infrastructure.schema import create_account_schema
-from modules.grades.grad_checker_grades.infrastructure.schema import create_grade_schema
-from modules.requirements.grad_checker_requirements.infrastructure.schema import (
-    create_requirement_schema,
-)
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
 import httpx
+from sqlalchemy import text
 
-from modules.requirements.grad_checker_requirements.application.check_results import (
-    CheckRequest,
-    CheckService,
-)
+from modules.accounts.grad_checker_accounts.infrastructure.schema import create_account_schema
+from modules.grades.grad_checker_grades.infrastructure.schema import create_grade_schema
 from modules.requirements.grad_checker_requirements.application.student_evaluation import (
     evaluate_student,
 )
-from modules.requirements.grad_checker_requirements.infrastructure.check_results import (
-    SqliteCheckUnitOfWork,
-)
 from modules.requirements.grad_checker_requirements.infrastructure.evaluation import (
     SqliteEvaluationUnitOfWork,
+)
+from modules.requirements.grad_checker_requirements.infrastructure.schema import (
+    create_requirement_schema,
 )
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,
@@ -159,7 +151,7 @@ def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
         engine = create_database_engine(f"sqlite:///{temp / 'benchmark.db'}")
         try:
             # 実サーバー起動前にマスタを既存の正式シード手順で投入する。
-            # スキーマ作成はPythonサーバーの起動時に行う。
+            # 一時DBを初期化した後、サーバー起動時にも既存スキーマを確認する。
             create_database_schema(engine)
             create_account_schema(engine)
             create_grade_schema(engine)
@@ -235,7 +227,6 @@ def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
                         "db_snapshot", "python_evaluation",
                     )}
                     db_uow = SqliteEvaluationUnitOfWork(engine)
-                    check_uow = SqliteCheckUnitOfWork(engine)
                     # 初回計測はウォームアップと分離してコールドリクエストとして記録。
                     cold, first = timed(lambda: request(
                         client, "GET", "/api/me/graduation-requirements"))
@@ -276,7 +267,7 @@ def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
                             "python": platform.python_version(),
                             "go": subprocess.check_output(
                                 [go, "version"], text=True).strip(),
-                            "sqlite": __import__("sqlite3").sqlite_version,
+                            "sqlite": sqlite3.sqlite_version,
                             "cpu": platform.processor() or "unknown",
                         },
                         "dataset": {
