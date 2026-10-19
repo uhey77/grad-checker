@@ -16,6 +16,15 @@ import sys
 import tempfile
 import time
 from contextlib import ExitStack
+from datetime import UTC, datetime
+
+from sqlalchemy import text
+
+from modules.accounts.grad_checker_accounts.infrastructure.schema import create_account_schema
+from modules.grades.grad_checker_grades.infrastructure.schema import create_grade_schema
+from modules.requirements.grad_checker_requirements.infrastructure.schema import (
+    create_requirement_schema,
+)
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
@@ -46,6 +55,7 @@ from modules.subjects.grad_checker_subjects.application.subject_data_import impo
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
+    create_database_schema,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     SqliteSubjectDataUnitOfWork,
@@ -136,7 +146,7 @@ def wait_ready(client, url, process, log):
     raise RuntimeError(f"起動タイムアウト: {log.read_text(encoding='utf-8')}")
 
 
-def run(iterations: int) -> dict:
+def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
     if iterations < 2:
         raise ValueError("反復は2回以上指定してください。")
     go = shutil.which("go")
@@ -150,19 +160,6 @@ def run(iterations: int) -> dict:
         try:
             # 実サーバー起動前にマスタを既存の正式シード手順で投入する。
             # スキーマ作成はPythonサーバーの起動時に行う。
-            from modules.accounts.grad_checker_accounts.infrastructure.schema import (
-                create_account_schema,
-            )
-            from modules.grades.grad_checker_grades.infrastructure.schema import (
-                create_grade_schema,
-            )
-            from modules.requirements.grad_checker_requirements.infrastructure.schema import (
-                create_requirement_schema,
-            )
-            from modules.subjects.grad_checker_subjects.infrastructure.database import (
-                create_database_schema,
-            )
-
             create_database_schema(engine)
             create_account_schema(engine)
             create_grade_schema(engine)
@@ -259,18 +256,16 @@ def run(iterations: int) -> dict:
                             json=bridge_payload))
                         assert data["data"]["data_revision"] == revision
                         times["bridge_get"].append(value)
-                        def snapshot():
+                        def read_snapshot():
                             with db_uow.read():
                                 return db_uow.evaluation.get_snapshot(
                                     auth["student"]["id"])
-                        value, data = timed(snapshot)
+                        value, data = timed(read_snapshot)
                         times["db_snapshot"].append(value)
                         value, data = timed(lambda: evaluate_student(
-                            data, __import__("datetime").datetime.now(
-                                __import__("datetime").UTC)))
+                            data, datetime.now(UTC)))
                         assert data.data_revision == revision
                         times["python_evaluation"].append(value)
-                    from sqlalchemy import text
                     with engine.connect() as conn:
                         history = conn.execute(text(
                             "SELECT count(*) FROM check_results")).scalar_one()
