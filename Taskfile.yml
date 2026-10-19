@@ -242,3 +242,9 @@ tasks:
     cmds:
       - uv run --locked python -m scripts.build_openapi --check
       - uv run --locked pytest tests/test_openapi.py
+
+  benchmark-graduation:
+    desc: 200科目の卒業判定Go API性能計測
+    dir: backend
+    cmds:
+      - uv run --locked python -m scripts.benchmark_graduation --iterations 10

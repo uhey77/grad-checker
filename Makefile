@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: api-docs api-docs-build api-docs-check
+.PHONY: api-docs api-docs-build api-docs-check benchmark-graduation
 .PHONY: auth-dev
 .PHONY: backend-requirements-seed backend-requirements-build
 
@@ -8,6 +8,7 @@
 .PHONY: help check test frontend-test format backend-check frontend-check setup frontend-install backend-install backend-dev backend-subject-list backend-test backend-lint backend-format-check backend-format backend-typecheck pre-commit-install pre-commit backend-seed dev frontend-dev frontend-lint frontend-format-check frontend-format frontend-typecheck build preview
 
 help:
+	@echo "benchmark-graduation 200科目の卒業判定Go API性能計測"
 	@echo "api-docs          Go公開APIのSwagger UIを画面と同じOriginで起動"
 	@echo "api-docs-build    Go公開APIのOpenAPIを再生成"
 	@echo "api-docs-check    OpenAPIの生成差分・構文・公開契約を検証"
@@ -183,3 +184,6 @@ api-docs-build:
 api-docs-check:
 	cd backend && uv run --locked python -m scripts.build_openapi --check
 	cd backend && uv run --locked pytest tests/test_openapi.py
+
+benchmark-graduation:
+	cd backend && uv run --locked python -m scripts.benchmark_graduation --iterations 10

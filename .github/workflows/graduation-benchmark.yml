@@ -1,0 +1,43 @@
+name: Graduation benchmark
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  graduation-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          working-directory: backend
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
+      - name: Install Python and locked dependencies
+        run: |
+          cd backend
+          uv python install
+          uv sync --locked
+      - name: Measure 200-course end-to-end performance
+        run: |
+          cd backend
+          uv run --locked python -m scripts.benchmark_graduation --iterations 10 --output ../graduation-benchmark.json
+      - name: Preserve measured timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graduation-benchmark
+          path: graduation-benchmark.json
+          if-no-files-found: warn

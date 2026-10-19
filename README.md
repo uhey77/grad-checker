@@ -89,3 +89,7 @@ task build
 Makeでも同名の `make api-docs-build`・`make api-docs-check`・`make check`・`make test`・`make build` を使えます。結合テストは一時SQLiteと空きローカルポートを使い、通常の開発DBを変更しません。Goがない場合にスキップされた結果を、結合テスト成功とは扱わないでください。
 
 仕様は [生成済みOpenAPI](backend/api/presentation/apidocs/openapi.json)。パス・入力・日本語エラー等の編集元は [生成処理](backend/scripts/build_openapi.py)、レスポンス型はPythonのapplication契約です。Goの入力検証・日本語エラー・Cookieの公開形を生成処理で記述し、ブリッジの包絡形式・内部ルートは含めません。`api-docs-check` は `backend-check` とPRのCIにも含まれます。確認対象は [テスト仕様](docs/test_specification.md#5-性能起動ドキュメント)を参照してください。
+
+## 200科目の性能計測
+
+実際のGo外部APIからPython判定・SQLite読取り・判定履歴保存までを、独立した一時DBで計測する場合は `make benchmark-graduation` または `task benchmark-graduation` を使用します。再現手順・反復回数・コールド／ウォームの定義・測定値の読み方は[性能計測手順](docs/performance_200_courses.md)を参照してください。
