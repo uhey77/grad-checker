@@ -1,4 +1,5 @@
 import type { ProgramOption } from "../../modules/profiles/public.ts";
+import { ProgramCoverage } from "./ProgramCoverage";
 import { ConfirmPanel } from "../ConfirmPanel";
 import { SaveBar } from "../SaveBar";
 import { programLabel } from "../subjects/labels";
@@ -43,7 +44,7 @@ export function ProgramForm({
       }}
     >
       <div>
-        <label htmlFor="profile-program">学部・学科・専攻</label>
+        <label htmlFor="profile-program">学部・研究科・学科・専攻</label>
         <select
           id="profile-program"
           value={chosenId}
@@ -61,10 +62,14 @@ export function ProgramForm({
           {programs.map((p) => (
             <option key={p.curriculumId} value={p.curriculumId}>
               {programLabel(p)}
+              {p.completionPolicy?.unresolvedReasons.length
+                ? "（判定準備中）"
+                : ""}
             </option>
           ))}
         </select>
       </div>
+      <ProgramCoverage program={selected} />
       <SaveBar
         error={error}
         busy={busy}

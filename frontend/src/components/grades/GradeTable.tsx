@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CatalogCourse } from "../../modules/subjects/public.ts";
 import {
   attemptsOf,
@@ -150,6 +151,16 @@ export function GradeTable({
   disabled: boolean;
   resetFilters: () => void;
 }) {
+  const [page, setPage] = useState(0);
+  const pageSize = 100;
+  const currentPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(courses.length / pageSize) - 1),
+  );
+  const visibleCourses = courses.slice(
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize,
+  );
   if (courses.length === 0)
     return (
       <NoMatchingSubjects
@@ -158,109 +169,137 @@ export function GradeTable({
       />
     );
   return (
-    <ScrollTable
-      label="成績入力の科目一覧"
-      caption="本人の成績入力"
-      className="grade-table"
-    >
-      <thead>
-        <tr>
-          <th scope="col">科目名</th>
-          <th scope="col">本人課程の区分・種別</th>
-          <th scope="col">単位</th>
-          <th scope="col">開講学期</th>
-          <th scope="col">開講元・授業形態</th>
-          <th scope="col">成績（回次・成績・履修年度・学期）</th>
-          <th scope="col">修得状況</th>
-        </tr>
-      </thead>
-      <tbody>
-        {courses.map((course) => {
-          const attempts = attemptsOf(draft, course.courseId);
-          const status = courseStatus(attempts);
-          const changed = !sameGrades(
-            attempts,
-            attemptsOf(saved, course.courseId),
-          );
-          const placement = course.placement;
-          return (
-            <tr
-              key={course.courseId}
-              className={status === "earned" ? "earned-row" : undefined}
-            >
-              <SubjectNameCell name={course.name} code={course.code} />
-              <ClassificationCell
-                path={placement?.classificationPath ?? []}
-                emptyLabel="本人課程の科目表になし"
+    <>
+      {courses.length > pageSize && (
+        <nav aria-label="成績一覧のページ">
+          <button
+            type="button"
+            disabled={disabled || currentPage === 0}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            前の100件
+          </button>
+          <span role="status">
+            {" "}
+            {currentPage * pageSize + 1}〜
+            {Math.min((currentPage + 1) * pageSize, courses.length)}件／
+            {courses.length}件{" "}
+          </span>
+          <button
+            type="button"
+            disabled={
+              disabled || (currentPage + 1) * pageSize >= courses.length
+            }
+            onClick={() => setPage(currentPage + 1)}
+          >
+            次の100件
+          </button>
+        </nav>
+      )}
+      <ScrollTable
+        label="成績入力の科目一覧"
+        caption="本人の成績入力"
+        className="grade-table"
+      >
+        <thead>
+          <tr>
+            <th scope="col">科目名</th>
+            <th scope="col">本人課程の区分・種別</th>
+            <th scope="col">単位</th>
+            <th scope="col">開講学期</th>
+            <th scope="col">開講元・授業形態</th>
+            <th scope="col">成績（回次・成績・履修年度・学期）</th>
+            <th scope="col">修得状況</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibleCourses.map((course) => {
+            const attempts = attemptsOf(draft, course.courseId);
+            const status = courseStatus(attempts);
+            const changed = !sameGrades(
+              attempts,
+              attemptsOf(saved, course.courseId),
+            );
+            const placement = course.placement;
+            return (
+              <tr
+                key={course.courseId}
+                className={status === "earned" ? "earned-row" : undefined}
               >
-                {placement ? (
-                  <SubjectTypeBadge type={placement.courseType} />
-                ) : null}
-              </ClassificationCell>
-              <CreditsCell credits={course.credits} />
-              <OfferingsCell offerings={course.offerings} />
-              <ProviderCell
-                facultyName={course.offeringFacultyName}
-                departmentName={course.offeringDepartmentName}
-                specializationName={course.offeringSpecializationName}
-                teachingTypeLabel={course.teachingTypeLabel}
-              />
-              <td className="grade-cell">
-                {attempts.length === 0 ? (
-                  <div className="attempt">
-                    <select
-                      aria-label={`${course.name}の成績`}
-                      value=""
+                <SubjectNameCell name={course.name} code={course.code} />
+                <ClassificationCell
+                  path={placement?.classificationPath ?? []}
+                  emptyLabel="本人課程の科目表になし"
+                >
+                  {placement ? (
+                    <SubjectTypeBadge type={placement.courseType} />
+                  ) : null}
+                </ClassificationCell>
+                <CreditsCell credits={course.credits} />
+                <OfferingsCell offerings={course.offerings} />
+                <ProviderCell
+                  facultyName={course.offeringFacultyName}
+                  departmentName={course.offeringDepartmentName}
+                  specializationName={course.offeringSpecializationName}
+                  teachingTypeLabel={course.teachingTypeLabel}
+                />
+                <td className="grade-cell">
+                  {attempts.length === 0 ? (
+                    <div className="attempt">
+                      <select
+                        aria-label={`${course.name}の成績`}
+                        value=""
+                        disabled={disabled}
+                        onChange={(event) =>
+                          actions.choose(
+                            course.courseId,
+                            1,
+                            event.target.value as GradeChoice,
+                          )
+                        }
+                      >
+                        <option value="">未履修</option>
+                        {[...gradeCodes, "pending" as const].map((choice) => (
+                          <option key={choice} value={choice}>
+                            {gradeChoiceLabels[choice]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    attempts.map((attempt, index) => (
+                      <AttemptEditor
+                        key={attempt.attemptNo}
+                        course={course}
+                        attempt={attempt}
+                        latest={index === attempts.length - 1}
+                        only={attempts.length === 1}
+                        disabled={disabled}
+                        actions={actions}
+                      />
+                    ))
+                  )}
+                  {canAddRetake(attempts) ? (
+                    <button
+                      type="button"
                       disabled={disabled}
-                      onChange={(event) =>
-                        actions.choose(
-                          course.courseId,
-                          1,
-                          event.target.value as GradeChoice,
-                        )
-                      }
+                      onClick={() => actions.addRetake(course.courseId)}
                     >
-                      <option value="">未履修</option>
-                      {[...gradeCodes, "pending" as const].map((choice) => (
-                        <option key={choice} value={choice}>
-                          {gradeChoiceLabels[choice]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  attempts.map((attempt, index) => (
-                    <AttemptEditor
-                      key={attempt.attemptNo}
-                      course={course}
-                      attempt={attempt}
-                      latest={index === attempts.length - 1}
-                      only={attempts.length === 1}
-                      disabled={disabled}
-                      actions={actions}
-                    />
-                  ))
-                )}
-                {canAddRetake(attempts) ? (
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => actions.addRetake(course.courseId)}
-                  >
-                    再履修を追加
-                  </button>
-                ) : null}
-              </td>
-              <td>
-                <span className={`badge status-${status}`}>
-                  {courseStatusLabels[status]}
-                </span>
-                {changed ? <small>未保存の変更あり</small> : null}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </ScrollTable>
+                      再履修を追加
+                    </button>
+                  ) : null}
+                </td>
+                <td>
+                  <span className={`badge status-${status}`}>
+                    {courseStatusLabels[status]}
+                  </span>
+                  {changed ? <small>未保存の変更あり</small> : null}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </ScrollTable>
+    </>
   );
 }

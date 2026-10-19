@@ -247,3 +247,7 @@ Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` 
 - **分ける**: 認証の試行回数は操作本体と別の`write`でcommitし、後続の検証や登録が失敗しても回数を残す。
 
 ユースケースの範囲は、メモリ上のリポジトリを持つFakeのUoWで、commitとロールバックの有無を検証する。ロック・制約・並行処理は一時SQLiteで検証する。
+
+## 2026年10月19日の全課程・修了判定拡張
+
+2026年度全課程の修了規則はrequirementsモジュールのapplication/completion_policy.py、大学院判定はapplication/graduate_evaluation.pyで定義する。DBモデルとJSON列はinfrastructure/models.py、本人課程へ絞るSQL読取はinfrastructure/evaluation.pyに置く。Goは回答形式・応答形・エラー変換を担当し、単位・本人申告の業務判定はPythonに保持する。出典・整備状況は[2026年度対応表](curriculum_coverage_2026.md)。

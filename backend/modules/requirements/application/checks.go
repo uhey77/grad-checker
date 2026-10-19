@@ -5,9 +5,15 @@ import (
 	"encoding/json"
 )
 
+type CompletionAnswer struct {
+	Code   string `json:"code"`
+	Status string `json:"status"`
+}
+
 // CheckRequestは判定対象とする本人の成績版。
 type CheckRequest struct {
-	ExpectedRevision int64 `json:"expected_revision"`
+	ExpectedRevision  int64              `json:"expected_revision"`
+	CompletionAnswers []CompletionAnswer `json:"completion_answers,omitempty"`
 }
 
 // CheckPageは本人の履歴一覧の取得範囲。作成日時の降順・同時刻はID順に数える。

@@ -3,6 +3,7 @@ import {
   GraduationError,
   type GraduationUseCases,
   type SavedCheck,
+  type CompletionAnswer,
 } from "../../modules/requirements/public.ts";
 import { errorMessage } from "../errorMessage";
 import { useExclusiveAction } from "../useExclusiveAction";
@@ -28,31 +29,35 @@ export function useGraduationCheck(
   // 所属・成績の変更、未保存の編集、画面離脱は進行中の判定を中断する。
   useEffect(() => () => abort(), [key, active, blocked, abort]);
 
-  async function check() {
+  async function check(answers?: CompletionAnswer[]) {
     if (!active || blocked || running()) return;
     setState(null);
-    await run((signal) => useCases.createCheck(revision, csrf, signal), {
-      onSuccess: (check) => {
-        // 履歴には保存されているため、表示中の課程と異なっても一覧は更新する。
-        saved(check);
-        if (check.result.curriculum.id !== curriculumId) {
+    await run(
+      (signal) => useCases.createCheck(revision, csrf, signal, answers),
+      {
+        onSuccess: (check) => {
+          // 履歴には保存されているため、表示中の課程と異なっても一覧は更新する。
+          saved(check);
+          if (check.result.curriculum.id !== curriculumId) {
+            setState({
+              key,
+              error:
+                "所属が更新されています。保存済みの成績を再取得してから判定してください。",
+            });
+            return;
+          }
+          setState({ key, check });
+        },
+        onError: (error) => {
+          if (error instanceof GraduationError && error.status === 401)
+            expire();
           setState({
             key,
-            error:
-              "所属が更新されています。保存済みの成績を再取得してから判定してください。",
+            error: errorMessage(error, "卒業要件を判定できませんでした。"),
           });
-          return;
-        }
-        setState({ key, check });
+        },
       },
-      onError: (error) => {
-        if (error instanceof GraduationError && error.status === 401) expire();
-        setState({
-          key,
-          error: errorMessage(error, "卒業要件を判定できませんでした。"),
-        });
-      },
-    });
+    );
   }
   const visible = active && !blocked && state?.key === key ? state : null;
   return { busy, check, saved: visible?.check, error: visible?.error };

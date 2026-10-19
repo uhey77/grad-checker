@@ -2,6 +2,7 @@ import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
 import { GraduationError } from "../application/GraduationUseCases.ts";
 import type {
   CheckPage,
+  CompletionCondition,
   CheckSummary,
   CheckedGrade,
   CreditSummary,
@@ -20,17 +21,21 @@ const { invalid, record, list, text, integer, nullableText } = createDtoReader(
 );
 
 function judgment(value: unknown): Judgment {
-  return value === "pass" || value === "fail" ? value : invalid();
+  return value === "pass" || value === "fail" || value === "pending"
+    ? value
+    : invalid();
 }
 
 function summary(data: unknown): CreditSummary {
   const value = record(data);
+  const result = judgment(value.result);
+  if (result === "pending") return invalid();
   return {
     requiredCredits: integer(value.required_credits),
     earnedCredits: integer(value.earned_credits),
     creditedCredits: integer(value.credited_credits),
     shortage: integer(value.shortage),
-    result: judgment(value.result),
+    result,
   };
 }
 
@@ -69,6 +74,7 @@ function evaluationSummary(data: unknown) {
   )
     return invalid();
   return {
+    ...completion(value),
     result: judgment(value.result),
     dataRevision: integer(value.data_revision),
     ruleRevisions: Object.fromEntries(
@@ -306,4 +312,37 @@ export function toSavedCheck(data: unknown): SavedCheck {
     },
     result,
   };
+}
+
+function completion(value: Record<string, unknown>): {
+  degreeLevel: GraduationResult["degreeLevel"];
+  completionConditions: CompletionCondition[];
+} {
+  const level = value.degree_level;
+  if (
+    level !== undefined &&
+    level !== "bachelor" &&
+    level !== "master" &&
+    level !== "doctoral"
+  )
+    return invalid();
+  const conditions: CompletionCondition[] =
+    value.completion_conditions === undefined
+      ? []
+      : list(value.completion_conditions).map((data) => {
+          const c = record(data),
+            status = c.status;
+          if (status !== "met" && status !== "not_met" && status !== "unknown")
+            return invalid();
+          return {
+            code: text(c.code),
+            name: text(c.name),
+            status,
+            sourceDocument: text(c.source_document),
+            sourcePages: text(c.source_pages),
+          };
+        });
+  if (new Set(conditions.map((c) => c.code)).size !== conditions.length)
+    return invalid();
+  return { degreeLevel: level, completionConditions: conditions };
 }

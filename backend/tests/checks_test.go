@@ -62,7 +62,7 @@ func TestCheckHandlerValidationAuthorizationAndErrors(t *testing.T) {
 		{"未知フィールド", "POST", "/api/checks", `{"expected_revision":3,"student_id":"x"}`, true, true, "", 422, 0},
 		{"負の版", "POST", "/api/checks", `{"expected_revision":-1}`, true, true, "", 422, 0},
 		{"版の不足", "POST", "/api/checks", `{}`, true, true, "", 422, 0},
-		{"本文が大きすぎる", "POST", "/api/checks", `{"expected_revision":3` + strings.Repeat(" ", 2048) + `}`, true, true, "", 413, 0},
+		{"本文が大きすぎる", "POST", "/api/checks", `{"expected_revision":3` + strings.Repeat(" ", 32<<10) + `}`, true, true, "", 413, 0},
 		{"不正なID", "GET", "/api/checks/not-a-uuid", "", true, false, "", 404, 0},
 		{"保存", "POST", "/api/checks", valid, true, true, "", 201, 1},
 		{"取得", "GET", detail, "", true, false, "", 200, 1},
@@ -215,6 +215,35 @@ func TestCheckClientEnvelopeAndInvalidResponses(t *testing.T) {
 		}
 		if err != nil && strings.Contains(err.Error(), "SQL") {
 			t.Fatalf("%s: leaked error", tc.name)
+		}
+	}
+}
+
+func TestCompletionAnswerInputValidation(t *testing.T) {
+	for _, tc := range []struct {
+		body   string
+		status int
+	}{
+		{`{"expected_revision":1,"completion_answers":[{"code":"thesis","status":"met"}]}`, 201},
+		{`{"expected_revision":1,"completion_answers":[]}`, 201},
+		{`{"expected_revision":1,"completion_answers":null}`, 422},
+		{`{"expected_revision":1,"completion_answers":[{"code":"thesis","status":true}]}`, 422},
+		{`{"expected_revision":1,"completion_answers":[{"code":"thesis","status":"met"},{"code":"thesis","status":"unknown"}]}`, 422},
+		{`{"expected_revision":1,"completion_answers":[{"code":"thesis","status":"met","student_id":"other"}]}`, 422},
+		{`{"expected_revision":1,"completion_answers":[{"code":"thesis","status":"yes"}]}`, 422},
+		{`{"expected_revision":1,"completion_answers":[],"completion_answers":[]}`, 422},
+	} {
+		gateway := &fakeChecks{}
+		handler := presentation.NewCheckHandler(gateway, checkOrigin, http.NotFoundHandler())
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, checkRequest("POST", "/api/checks", tc.body, true, true))
+		if response.Code != tc.status {
+			t.Fatalf("%s: %d %s", tc.body, response.Code, response.Body.String())
+		}
+		if tc.status == 201 && strings.Contains(tc.body, `"thesis"`) {
+			if len(gateway.calls) != 1 || len(gateway.calls[0].Request.CompletionAnswers) != 1 || gateway.calls[0].Request.CompletionAnswers[0].Status != "met" {
+				t.Fatal("修了条件がブリッジへ渡されていない")
+			}
 		}
 	}
 }

@@ -4,12 +4,13 @@ from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 from .evaluation import evaluate_graduation
 from .evaluation_models import (
+    CompletionConditionResult,
     ConditionResult,
     CreditSummary,
     CurriculumData,
@@ -37,6 +38,8 @@ class StudentEvaluation(EvaluationResult):
 
 
 class StudentDashboard(BaseModel):
+    degree_level: str = "bachelor"
+    completion_conditions: list[CompletionConditionResult] = Field(default_factory=list)
     result: Judgment
     evaluated_at: datetime
     data_revision: int
@@ -69,6 +72,8 @@ class EvaluationService:
         return StudentDashboard(
             **result.model_dump(
                 include={
+                    "degree_level",
+                    "completion_conditions",
                     "result",
                     "evaluated_at",
                     "data_revision",

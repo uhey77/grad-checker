@@ -53,6 +53,8 @@ func writeEvaluationError(w http.ResponseWriter, err error) {
 		"external_acquisition_period_required": "他学部科目の算入先を決めるため、履修年度・学期が必要です。他学部科目の未入力の年度・学期を入力して保存し、再度判定してください。",
 		"unsupported_external_credits":         "所属課程外の修得科目に、算入先が未登録の科目があります。対象科目と算入先のマスタ整備が必要です。",
 		"invalid_evaluation_master":            "卒業要件の科目・条件・算入規則の設定が不足しているか、不整合があります。",
+		"unverified_completion_policy":         "課程の科目・修了条件・算入規則に未確認事項があります。所属一覧の確認状況と根拠を確認してください。",
+		"invalid_completion_answers":           "修了条件の回答が重複しているか、選択した課程の条件ではありません。",
 		"invalid_evaluation_input":             "保存済みの成績または判定マスタが不正なため、判定できません。",
 		"invalid_grades":                       "保存済みの成績データが不正なため、判定できません。",
 		"invalid_attempt_sequence":             "保存済みの履修回次が不正なため、判定できません。",

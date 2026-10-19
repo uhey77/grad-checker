@@ -1,6 +1,6 @@
 # grad-checker
 
-東京工科大学の学生が、所属課程の卒業単位要件と不足条件を確認するためのWebアプリケーションを開発するリポジトリです。
+東京工科大学の学生が、所属課程の卒業・修了要件と不足条件を確認するためのWebアプリケーションを開発するリポジトリです。
 
 VS Codeでは [grad-checker.code-workspace](grad-checker.code-workspace) を開くと、ルート・バックエンド・フロントエンドをまとめて扱えます。
 
@@ -93,3 +93,13 @@ Makeでも同名の `make api-docs-build`・`make api-docs-check`・`make check`
 ## 200科目の性能計測
 
 実際のGo外部APIからPython判定・SQLite読取り・判定履歴保存までを、独立した一時DBで計測する場合は `make benchmark-graduation` または `task benchmark-graduation` を使用します。再現手順・反復回数・コールド／ウォームの定義・測定値の読み方は[性能計測手順](docs/performance_200_courses.md)を参照してください。
+
+## 2026年度の全学部・大学院
+
+両キャンパスの38課程を登録し、照合済み28課程を参照判定する。資料不一致などの10課程は理由付きで判定を停止する。範囲・出典・残件は[対応表](docs/curriculum_coverage_2026.md)を参照。大学院の非単位条件は本人申告で、未入力は判定保留となる。
+
+```sh
+task backend-all-seed-build
+task backend-all-seed
+# Makeも同名のターゲットに対応
+```

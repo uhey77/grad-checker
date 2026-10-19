@@ -64,7 +64,7 @@ export function DashboardPage({
       </section>
       {!curriculumId ? (
         <p role="status">
-          マイページで所属を保存すると、卒業要件の概要を確認できます。
+          マイページで所属を保存すると、卒業・修了要件の概要を確認できます。
         </p>
       ) : summary.status === "error" ? (
         <ErrorState
@@ -74,20 +74,20 @@ export function DashboardPage({
           onAction={dashboard.retry}
         />
       ) : !result ? (
-        <LoadingState>卒業要件の概要を読み込んでいます…</LoadingState>
+        <LoadingState>卒業・修了要件の概要を読み込んでいます…</LoadingState>
       ) : (
         <section
           className="panel graduation-check"
-          aria-label="最新の卒業要件概要"
+          aria-label="最新の卒業・修了要件概要"
         >
           <div className="dashboard-actions">
-            <h2>最新の卒業要件</h2>
+            <h2>最新の卒業・修了要件</h2>
             <button type="button" onClick={dashboard.retry}>
               概要を再取得
             </button>
           </div>
           <p>
-            保存済みの成績に基づく単位要件の確認です。正式な卒業認定ではありません。
+            保存済みの成績に基づく単位要件の確認です。大学による正式な卒業・修了認定ではありません。
           </p>
           <p>
             未保存の入力は反映されません。

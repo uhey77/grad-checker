@@ -1,6 +1,12 @@
-"""卒業要件・算入規則の5テーブル。課程をまたぐ参照はDBでも拒否する。"""
+"""卒業要件・算入規則・課程別修了条件のテーブル。課程をまたぐ参照はDBでも拒否する。"""
 
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    Column,
+    ForeignKeyConstraint,
+    UniqueConstraint,
+)
 from sqlmodel import Field, SQLModel
 
 from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
@@ -153,6 +159,26 @@ class CreditRuleLimit(SQLModel, table=True):
     max_credits: int
 
 
+class CompletionPolicy(SQLModel, table=True):
+    __tablename__ = "completion_policies"
+    __table_args__ = (UniqueConstraint("curriculum_id"),)
+    id: str = Field(primary_key=True)
+    curriculum_id: str = Field(foreign_key="curricula.id", ondelete="RESTRICT")
+    degree_level: str
+    campus: str
+    catalog_status: str
+    requirements_status: str
+    rules_status: str
+    unresolved_reasons: list[str] = Field(sa_column=Column(JSON, nullable=False))
+    source_document: str
+    source_pages: str
+    credit_groups: list[dict] = Field(sa_column=Column(JSON, nullable=False))
+    non_credit_conditions: list[dict] = Field(sa_column=Column(JSON, nullable=False))
+    credit_minimums: list[dict] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
+
+
 REQUIREMENT_TABLES = [
     SQLModel.metadata.tables[model.__tablename__]
     for model in (
@@ -161,5 +187,6 @@ REQUIREMENT_TABLES = [
         CreditRule,
         CreditRuleCourse,
         CreditRuleLimit,
+        CompletionPolicy,
     )
 ]

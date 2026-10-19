@@ -1102,3 +1102,15 @@ tbody tr.earned-row:hover {
     transition: none;
   }
 }
+
+.completion-answer {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.75rem 0;
+  flex-wrap: wrap;
+}
+.judgment.pending {
+  color: #8a5b12;
+}

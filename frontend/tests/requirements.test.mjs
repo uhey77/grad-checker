@@ -581,3 +581,52 @@ test("概要の0件と不正応答・設定不足・通信失敗・中断を区�
   });
   await assert.rejects(repo.dashboard(), (error) => error === abort);
 });
+
+test("修了判定の保留・本人申告・根拠を保持し、単位だけの保留応答は拒否する", () => {
+  const data = fixture();
+  data.result = "pending";
+  data.degree_level = "master";
+  data.completion_conditions = [
+    {
+      code: "thesis",
+      name: "修士論文の審査",
+      status: "unknown",
+      source_document: "https://example.test/rules.pdf",
+      source_pages: "PDF1",
+    },
+  ];
+  const result = toGraduationResult(data);
+  assert.equal(result.result, "pending");
+  assert.equal(result.degreeLevel, "master");
+  assert.equal(result.completionConditions[0].status, "unknown");
+  assert.equal(result.completionConditions[0].sourcePages, "PDF1");
+  assert.throws(() =>
+    toGraduationResult({
+      ...data,
+      total: { ...data.total, result: "pending" },
+    }),
+  );
+  assert.throws(() =>
+    toGraduationResult({
+      ...data,
+      completion_conditions: [
+        { ...data.completion_conditions[0], status: true },
+      ],
+    }),
+  );
+});
+
+test("修了条件の本人回答を成績版とともに送信し、履歴の結果を保持する", async (context) => {
+  const payload = savedCheck();
+  context.mock.method(globalThis, "fetch", async (_url, options) => {
+    assert.deepEqual(JSON.parse(options.body), {
+      expected_revision: 2,
+      completion_answers: [{ code: "thesis", status: "met" }],
+    });
+    return Response.json(payload, { status: 201 });
+  });
+  const repository = new HttpGraduationRepository("/api");
+  await repository.createCheck(2, "csrf", undefined, [
+    { code: "thesis", status: "met" },
+  ]);
+});

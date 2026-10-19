@@ -3,7 +3,7 @@
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from modules.requirements.grad_checker_requirements.domain.requirement import (
     CreditRuleKind,
@@ -16,6 +16,8 @@ from modules.subjects.grad_checker_subjects.application.subject_data_validation 
     SeedRecord,
 )
 from modules.subjects.grad_checker_subjects.domain import curriculum_verification_status
+
+from .completion_policy import CompletionPolicyData
 
 VerificationStatus = curriculum_verification_status.VerificationStatus
 
@@ -97,3 +99,4 @@ class RequirementSeed(SeedRecord):
     credit_rules: list[CreditRuleData]
     credit_rule_courses: list[CreditRuleCourseData]
     credit_rule_limits: list[CreditRuleLimitData]
+    completion_policies: list[CompletionPolicyData] = Field(default_factory=list)

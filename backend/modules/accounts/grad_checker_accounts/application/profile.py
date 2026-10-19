@@ -8,12 +8,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from modules.accounts.grad_checker_accounts.application.errors.profile import (
     ProfileError,
 )
+from modules.requirements.grad_checker_requirements.application import (
+    completion_policy as completion_contracts,
+)
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 type VerificationStatus = Literal["unverified", "verified"]
 
 
 class ProgramOption(BaseModel):
+    completion_policy: completion_contracts.CompletionPolicyData | None = None
     program_id: str
     curriculum_id: str
     faculty_name: str

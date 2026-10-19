@@ -1,21 +1,25 @@
 package application
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+)
 
 type ProgramOption struct {
-	ProgramID          string  `json:"program_id"`
-	CurriculumID       string  `json:"curriculum_id"`
-	FacultyName        string  `json:"faculty_name"`
-	DepartmentName     *string `json:"department_name"`
-	SpecializationName *string `json:"specialization_name"`
-	CourseName         *string `json:"course_name"`
-	CurriculumName     string  `json:"curriculum_name"`
-	Revision           int64   `json:"revision"`
-	VerificationStatus string  `json:"verification_status"`
-	AdmissionYearFrom  *int    `json:"admission_year_from"`
-	AdmissionYearTo    *int    `json:"admission_year_to"`
-	SourceDocument     string  `json:"source_document"`
-	SourcePages        string  `json:"source_pages"`
+	CompletionPolicy   json.RawMessage `json:"completion_policy"`
+	ProgramID          string          `json:"program_id"`
+	CurriculumID       string          `json:"curriculum_id"`
+	FacultyName        string          `json:"faculty_name"`
+	DepartmentName     *string         `json:"department_name"`
+	SpecializationName *string         `json:"specialization_name"`
+	CourseName         *string         `json:"course_name"`
+	CurriculumName     string          `json:"curriculum_name"`
+	Revision           int64           `json:"revision"`
+	VerificationStatus string          `json:"verification_status"`
+	AdmissionYearFrom  *int            `json:"admission_year_from"`
+	AdmissionYearTo    *int            `json:"admission_year_to"`
+	SourceDocument     string          `json:"source_document"`
+	SourcePages        string          `json:"source_pages"`
 }
 
 type Profile struct {

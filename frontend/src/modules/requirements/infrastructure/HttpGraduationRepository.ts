@@ -1,3 +1,4 @@
+import type { CompletionAnswer } from "../domain/models.ts";
 import {
   requestJson,
   type JsonRequest,
@@ -53,13 +54,19 @@ export class HttpGraduationRepository implements GraduationRepository {
     expectedRevision: number,
     csrf: string,
     signal?: AbortSignal,
+    completionAnswers?: CompletionAnswer[],
   ) {
     const check = toSavedCheck(
       await this.checks(
         "",
         {
           method: "POST",
-          payload: { expected_revision: expectedRevision },
+          payload: {
+            expected_revision: expectedRevision,
+            ...(completionAnswers
+              ? { completion_answers: completionAnswers }
+              : {}),
+          },
           csrf,
           signal,
         },

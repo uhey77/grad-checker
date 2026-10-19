@@ -40,7 +40,7 @@ export function CheckHistory({
       ) : page.data.totalCount === 0 ? (
         <EmptyState
           title="判定履歴はまだありません"
-          message="「卒業要件をチェック」を実行すると、判定結果が履歴に保存されます。"
+          message="要件チェックを実行すると、判定結果が履歴に保存されます。"
           actionLabel="判定履歴を再取得"
           onAction={retry}
         />

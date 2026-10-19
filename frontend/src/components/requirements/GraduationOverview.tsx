@@ -9,14 +9,25 @@ export function GraduationOverview({
   result,
   categories,
 }: {
-  result: Pick<GraduationResult, "result" | "total" | "warnings">;
+  result: Pick<
+    GraduationResult,
+    "result" | "total" | "warnings" | "degreeLevel" | "completionConditions"
+  >;
   categories: RequirementResult[];
 }) {
   return (
     <>
       <p className={`judgment ${result.result}`} role="status">
-        卒業要件：{judgmentLabels[result.result]}
+        {result.degreeLevel && result.degreeLevel !== "bachelor"
+          ? "修了要件"
+          : "卒業要件"}
+        ：{judgmentLabels[result.result]}
       </p>
+      {result.degreeLevel && result.degreeLevel !== "bachelor" && (
+        <p className="source-note" role="note">
+          本人申告に基づく参考判定です。正式な修了認定は大学が行います。単位条件の達成だけでは修了を意味しません。
+        </p>
+      )}
       <GraduationInfographic result={result} categories={categories} />
       <dl className="credit-summary">
         <div>

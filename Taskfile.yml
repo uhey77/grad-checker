@@ -248,3 +248,19 @@ tasks:
     dir: backend
     cmds:
       - uv run --locked python -m scripts.benchmark_graduation --iterations 10
+
+
+  backend-all-seed:
+    desc: CS既存シードを先に投入し、全学部・大学院の各追加シードを原子的に順番に投入
+    dir: backend
+    cmds:
+      - task: backend-seed
+      - task: backend-requirements-seed
+      - uv run --locked python -m scripts.seed_subjects --file seeds/university_2026.json
+      - uv run --locked python -m scripts.seed_requirements --file seeds/university_requirements_2026.json
+
+  backend-all-seed-build:
+    desc: 保存済みの公式表転記から全課程の追加シードを再生成
+    dir: backend
+    cmds:
+      - uv run --locked python -m seeds.build_university_seed

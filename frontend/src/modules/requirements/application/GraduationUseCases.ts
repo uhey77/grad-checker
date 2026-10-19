@@ -1,5 +1,6 @@
 import type {
   CheckPage,
+  CompletionAnswer,
   DashboardResult,
   GraduationResult,
   SavedCheck,
@@ -28,6 +29,7 @@ export interface GraduationRepository {
     expectedRevision: number,
     csrf: string,
     signal?: AbortSignal,
+    completionAnswers?: CompletionAnswer[],
   ): Promise<SavedCheck>;
   listChecks(page: CheckPageRequest, signal?: AbortSignal): Promise<CheckPage>;
   getCheck(id: string, signal?: AbortSignal): Promise<SavedCheck>;
@@ -41,8 +43,18 @@ export class GraduationUseCases implements GraduationRepository {
   evaluate(signal?: AbortSignal) {
     return this.repository.evaluate(signal);
   }
-  createCheck(expectedRevision: number, csrf: string, signal?: AbortSignal) {
-    return this.repository.createCheck(expectedRevision, csrf, signal);
+  createCheck(
+    expectedRevision: number,
+    csrf: string,
+    signal?: AbortSignal,
+    completionAnswers?: CompletionAnswer[],
+  ) {
+    return this.repository.createCheck(
+      expectedRevision,
+      csrf,
+      signal,
+      completionAnswers,
+    );
   }
   listChecks(page: CheckPageRequest, signal?: AbortSignal) {
     return this.repository.listChecks(page, signal);
