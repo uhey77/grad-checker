@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { useProfile } from "../../hooks/profiles/useProfile";
+import { ProgramCoverage } from "../../components/profiles/ProgramCoverage";
 import { ProgramForm } from "../../components/profiles/ProgramForm";
 import { PageHeading } from "../../components/PageHeading";
 import { ErrorState, LoadingState } from "../../components/StatusPanels";
@@ -79,6 +80,7 @@ export function ProfilePage({
                 ? "選択肢にないカリキュラム"
                 : "所属は未設定です。"}
           </p>
+          {!expanded && <ProgramCoverage program={profile.savedProgram} />}
           {profile.notice && !expanded ? (
             <p className="profile-saved" role="status">
               <span aria-hidden="true">✓ </span>

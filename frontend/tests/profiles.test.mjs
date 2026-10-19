@@ -153,3 +153,44 @@ test("欠損・不正な所属と未確認状態の誤変換を拒否する", ()
   }
   assert.deepEqual(toPrograms({ programs: [] }), []);
 });
+
+test("課程別の対応状況と未確認理由・大学院条件を所属選択へ渡す", () => {
+  const data = {
+    ...option,
+    completion_policy: {
+      degree_level: "master",
+      campus: "hachioji",
+      catalog_status: "verified",
+      requirements_status: "unverified",
+      rules_status: "unverified",
+      unresolved_reasons: ["学位申請要件が未確認"],
+      source_document: "https://example.test/source.pdf",
+      source_pages: "PDF1",
+      non_credit_conditions: [
+        {
+          code: "thesis",
+          name: "論文の審査合格",
+          source_document: "https://example.test/source.pdf",
+          source_pages: "PDF1",
+        },
+      ],
+    },
+  };
+  const policy = toPrograms({ programs: [data] })[0].completionPolicy;
+  assert.equal(policy.degreeLevel, "master");
+  assert.deepEqual(policy.unresolvedReasons, ["学位申請要件が未確認"]);
+  assert.equal(policy.conditions[0].code, "thesis");
+  assert.throws(() =>
+    toPrograms({
+      programs: [
+        {
+          ...data,
+          completion_policy: {
+            ...data.completion_policy,
+            degree_level: "other",
+          },
+        },
+      ],
+    }),
+  );
+});

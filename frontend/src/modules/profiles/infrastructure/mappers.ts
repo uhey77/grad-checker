@@ -1,8 +1,12 @@
 import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
 import { ProfileError } from "../application/ProfileUseCases.ts";
-import type { Profile, ProgramOption } from "../domain/models.ts";
+import type {
+  CompletionPolicy,
+  Profile,
+  ProgramOption,
+} from "../domain/models.ts";
 
-const { invalid, record, text, nullableText, integer, nullableInteger } =
+const { invalid, record, list, text, nullableText, integer, nullableInteger } =
   createDtoReader(() => {
     throw new ProfileError(502, "所属情報を読み込めません。");
   });
@@ -30,6 +34,8 @@ export function toPrograms(data: unknown): ProgramOption[] {
     const status = p.verification_status;
     if (status !== "verified" && status !== "unverified") return invalid();
     const result: ProgramOption = {
+      completionPolicy:
+        p.completion_policy == null ? undefined : policy(p.completion_policy),
       programId: text(p.program_id),
       curriculumId: text(p.curriculum_id),
       facultyName: text(p.faculty_name),
@@ -55,4 +61,37 @@ export function toPrograms(data: unknown): ProgramOption[] {
     ids.add(result.curriculumId);
     return result;
   });
+}
+
+function policy(data: unknown): CompletionPolicy {
+  const p = record(data);
+  function status(value: unknown) {
+    return value === "verified" || value === "unverified" ? value : invalid();
+  }
+  const level = p.degree_level,
+    campus = p.campus;
+  if (
+    (level !== "bachelor" && level !== "master" && level !== "doctoral") ||
+    (campus !== "hachioji" && campus !== "kamata")
+  )
+    return invalid();
+  return {
+    degreeLevel: level,
+    campus,
+    catalogStatus: status(p.catalog_status),
+    requirementsStatus: status(p.requirements_status),
+    rulesStatus: status(p.rules_status),
+    unresolvedReasons: list(p.unresolved_reasons).map(text),
+    sourceDocument: text(p.source_document),
+    sourcePages: text(p.source_pages),
+    conditions: list(p.non_credit_conditions).map((data) => {
+      const c = record(data);
+      return {
+        code: text(c.code),
+        name: text(c.name),
+        sourceDocument: text(c.source_document),
+        sourcePages: text(c.source_pages),
+      };
+    }),
+  };
 }

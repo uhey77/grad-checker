@@ -3,7 +3,7 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from modules.grades.grad_checker_grades.application.grades import GradeAttempt
 from modules.requirements.grad_checker_requirements.application.seed import (
@@ -19,7 +19,9 @@ from modules.subjects.grad_checker_subjects.application.subject_data_validation 
     SubjectOfferingData,
 )
 
-type Judgment = Literal["pass", "fail"]
+from .completion_policy import CompletionAnswer, NonCreditCondition
+
+type Judgment = Literal["pass", "fail", "pending"]
 type EvaluationWarning = Literal["provisional_external_allocation"]
 
 
@@ -36,6 +38,7 @@ class EvaluationSnapshot(BaseModel):
     grades: list[GradeAttempt]
     subjects: SubjectDataSeed
     requirements: RequirementSeed
+    completion_answers: list[CompletionAnswer] = Field(default_factory=list)
 
 
 class CreditSummary(BaseModel):
@@ -43,7 +46,7 @@ class CreditSummary(BaseModel):
     earned_credits: int
     credited_credits: int
     shortage: int
-    result: Judgment
+    result: Literal["pass", "fail"]
 
 
 class ConditionResult(CreditSummary):
@@ -97,7 +100,13 @@ class ExternalAllocation(BaseModel):
     free_credits: int
 
 
+class CompletionConditionResult(NonCreditCondition):
+    status: Literal["met", "not_met", "unknown"]
+
+
 class EvaluationResult(BaseModel):
+    degree_level: Literal["bachelor", "master", "doctoral"] = "bachelor"
+    completion_conditions: list[CompletionConditionResult] = Field(default_factory=list)
     result: Judgment
     data_revision: int
     curriculum: CurriculumData

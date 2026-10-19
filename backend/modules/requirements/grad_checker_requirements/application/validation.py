@@ -139,6 +139,7 @@ def validate_requirements(
 
     validate_targets(seed, subjects, ordered)
     validate_rules(seed, subjects)
+    validate_completion_policies(seed, subjects)
     return ordered
 
 
@@ -313,3 +314,49 @@ def validate_rules(seed: RequirementSeed, subjects: SubjectDataSeed) -> None:
             or rule.verification_status == "verified"
         ):
             raise RequirementSeedError("この規則には明示的な対象科目が必要です。")
+
+
+def validate_completion_policies(
+    seed: RequirementSeed, subjects: SubjectDataSeed
+) -> None:
+    unique(seed.completion_policies, lambda row: row.id, "修了規則ID")
+    unique(seed.completion_policies, lambda row: row.curriculum_id, "課程の修了規則")
+    curricula = {row.id for row in subjects.curricula}
+    courses = {row.id: row for row in subjects.courses}
+    for policy in seed.completion_policies:
+        if policy.curriculum_id not in curricula:
+            raise RequirementSeedError("修了規則の課程が存在しません。")
+        associated = {
+            row.course_id
+            for row in subjects.curriculum_courses
+            if row.curriculum_id == policy.curriculum_id
+        }
+        covered = set()
+        for minimum in policy.credit_minimums:
+            if (
+                not set(minimum.course_ids) <= associated
+                or sum(courses[key].credits for key in minimum.course_ids)
+                < minimum.required_credits
+            ):
+                raise RequirementSeedError(
+                    "内訳条件の対象科目または必要単位が不正です。"
+                )
+        for group in policy.credit_groups:
+            if not set(group.course_ids) <= associated:
+                raise RequirementSeedError("修了規則の対象は本人課程の科目に限ります。")
+            if (
+                sum(courses[key].credits for key in group.course_ids)
+                < group.required_credits
+            ):
+                raise RequirementSeedError(
+                    "修了規則の対象単位が必要単位を満たしません。"
+                )
+            covered.update(group.course_ids)
+        if (
+            policy.degree_level == "master"
+            and policy.catalog_status == "verified"
+            and covered != associated
+        ):
+            raise RequirementSeedError(
+                "大学院の単位区分が課程の全科目を含んでいません。"
+            )

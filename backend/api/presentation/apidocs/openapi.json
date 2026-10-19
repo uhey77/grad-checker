@@ -1462,6 +1462,270 @@
         "type": "object",
         "additionalProperties": false
       },
+      "AdditionalCreditMinimum": {
+        "additionalProperties": false,
+        "description": "複数の分類をまたぐ、総単位に重複加算しない内訳条件。",
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_document": {
+            "minLength": 1,
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "minLength": 1,
+            "title": "Source Pages",
+            "type": "string"
+          },
+          "course_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Course Ids",
+            "type": "array"
+          },
+          "required_credits": {
+            "minimum": 0,
+            "title": "Required Credits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "source_document",
+          "source_pages",
+          "course_ids",
+          "required_credits"
+        ],
+        "type": "object"
+      },
+      "CompletionCreditGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "course_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Course Ids",
+            "type": "array"
+          },
+          "required_credits": {
+            "minimum": 0,
+            "title": "Required Credits",
+            "type": "integer"
+          },
+          "required_course_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Required Course Ids",
+            "type": "array"
+          },
+          "max_credits": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Credits"
+          },
+          "overflow_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Overflow Target"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "course_ids",
+          "required_credits",
+          "required_course_ids",
+          "max_credits",
+          "overflow_target"
+        ],
+        "type": "object"
+      },
+      "CompletionPolicyData": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "curriculum_id": {
+            "format": "uuid",
+            "title": "Curriculum Id",
+            "type": "string"
+          },
+          "degree_level": {
+            "enum": [
+              "bachelor",
+              "master",
+              "doctoral"
+            ],
+            "title": "Degree Level",
+            "type": "string"
+          },
+          "campus": {
+            "enum": [
+              "hachioji",
+              "kamata"
+            ],
+            "title": "Campus",
+            "type": "string"
+          },
+          "catalog_status": {
+            "enum": [
+              "verified",
+              "unverified"
+            ],
+            "title": "Catalog Status",
+            "type": "string"
+          },
+          "requirements_status": {
+            "enum": [
+              "verified",
+              "unverified"
+            ],
+            "title": "Requirements Status",
+            "type": "string"
+          },
+          "rules_status": {
+            "enum": [
+              "verified",
+              "unverified"
+            ],
+            "title": "Rules Status",
+            "type": "string"
+          },
+          "unresolved_reasons": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Unresolved Reasons",
+            "type": "array"
+          },
+          "source_document": {
+            "minLength": 1,
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "minLength": 1,
+            "title": "Source Pages",
+            "type": "string"
+          },
+          "credit_groups": {
+            "items": {
+              "$ref": "#/components/schemas/CompletionCreditGroup"
+            },
+            "title": "Credit Groups",
+            "type": "array"
+          },
+          "non_credit_conditions": {
+            "items": {
+              "$ref": "#/components/schemas/NonCreditCondition"
+            },
+            "title": "Non Credit Conditions",
+            "type": "array"
+          },
+          "credit_minimums": {
+            "items": {
+              "$ref": "#/components/schemas/AdditionalCreditMinimum"
+            },
+            "title": "Credit Minimums",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "curriculum_id",
+          "degree_level",
+          "campus",
+          "catalog_status",
+          "requirements_status",
+          "rules_status",
+          "unresolved_reasons",
+          "source_document",
+          "source_pages",
+          "credit_groups",
+          "non_credit_conditions",
+          "credit_minimums"
+        ],
+        "type": "object"
+      },
+      "NonCreditCondition": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_document": {
+            "minLength": 1,
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "minLength": 1,
+            "title": "Source Pages",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "source_document",
+          "source_pages"
+        ],
+        "type": "object"
+      },
       "VerificationStatus": {
         "enum": [
           "unverified",
@@ -1471,6 +1735,17 @@
       },
       "ProgramOption": {
         "properties": {
+          "completion_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompletionPolicyData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "program_id": {
             "title": "Program Id",
             "type": "string"
@@ -1559,6 +1834,7 @@
           }
         },
         "required": [
+          "completion_policy",
           "program_id",
           "curriculum_id",
           "faculty_name",
@@ -1684,6 +1960,48 @@
         "type": "object",
         "additionalProperties": false
       },
+      "CompletionConditionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_document": {
+            "minLength": 1,
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "minLength": 1,
+            "title": "Source Pages",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "met",
+              "not_met",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "source_document",
+          "source_pages",
+          "status"
+        ],
+        "type": "object"
+      },
       "ConditionResult": {
         "properties": {
           "required_credits": {
@@ -1703,7 +2021,12 @@
             "type": "integer"
           },
           "result": {
-            "$ref": "#/components/schemas/Judgment"
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Result",
+            "type": "string"
           },
           "id": {
             "format": "uuid",
@@ -1920,7 +2243,12 @@
             "type": "integer"
           },
           "result": {
-            "$ref": "#/components/schemas/Judgment"
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Result",
+            "type": "string"
           }
         },
         "required": [
@@ -2062,7 +2390,8 @@
       "Judgment": {
         "enum": [
           "pass",
-          "fail"
+          "fail",
+          "pending"
         ],
         "type": "string"
       },
@@ -2213,6 +2542,23 @@
       },
       "StudentEvaluation": {
         "properties": {
+          "degree_level": {
+            "default": "bachelor",
+            "enum": [
+              "bachelor",
+              "master",
+              "doctoral"
+            ],
+            "title": "Degree Level",
+            "type": "string"
+          },
+          "completion_conditions": {
+            "items": {
+              "$ref": "#/components/schemas/CompletionConditionResult"
+            },
+            "title": "Completion Conditions",
+            "type": "array"
+          },
           "result": {
             "$ref": "#/components/schemas/Judgment"
           },
@@ -2307,6 +2653,8 @@
           }
         },
         "required": [
+          "degree_level",
+          "completion_conditions",
           "result",
           "data_revision",
           "curriculum",
@@ -2327,6 +2675,18 @@
       },
       "StudentDashboard": {
         "properties": {
+          "degree_level": {
+            "default": "bachelor",
+            "title": "Degree Level",
+            "type": "string"
+          },
+          "completion_conditions": {
+            "items": {
+              "$ref": "#/components/schemas/CompletionConditionResult"
+            },
+            "title": "Completion Conditions",
+            "type": "array"
+          },
           "result": {
             "$ref": "#/components/schemas/Judgment"
           },
@@ -2379,6 +2739,8 @@
           }
         },
         "required": [
+          "degree_level",
+          "completion_conditions",
           "result",
           "evaluated_at",
           "data_revision",
@@ -2416,16 +2778,49 @@
             },
             "title": "Grades",
             "type": "array"
+          },
+          "completion_answers": {
+            "items": {
+              "$ref": "#/components/schemas/CompletionAnswer"
+            },
+            "title": "Completion Answers",
+            "type": "array"
           }
         },
         "required": [
           "program_id",
           "curriculum_id",
           "data_revision",
-          "grades"
+          "grades",
+          "completion_answers"
         ],
         "type": "object",
         "additionalProperties": false
+      },
+      "CompletionAnswer": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "met",
+              "not_met",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "status"
+        ],
+        "type": "object"
       },
       "SavedCheck": {
         "description": "保存済みの判定履歴。作成後は変更せず、現在のマスタで再計算しない。",
@@ -3125,6 +3520,23 @@
       },
       "LiveEvaluation": {
         "properties": {
+          "degree_level": {
+            "default": "bachelor",
+            "enum": [
+              "bachelor",
+              "master",
+              "doctoral"
+            ],
+            "title": "Degree Level",
+            "type": "string"
+          },
+          "completion_conditions": {
+            "items": {
+              "$ref": "#/components/schemas/CompletionConditionResult"
+            },
+            "title": "Completion Conditions",
+            "type": "array"
+          },
           "result": {
             "$ref": "#/components/schemas/Judgment"
           },
@@ -3210,6 +3622,8 @@
           }
         },
         "required": [
+          "degree_level",
+          "completion_conditions",
           "result",
           "data_revision",
           "curriculum",
@@ -3515,6 +3929,13 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740990
+          },
+          "completion_answers": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/CompletionAnswer"
+            }
           }
         },
         "required": [
@@ -4752,7 +5173,7 @@
         }
       },
       "createCheckError422": {
-        "description": "クエリパラメーターは指定できません。 / 判定の送信形式が不正です。expected_revisionだけを指定してください。",
+        "description": "クエリパラメーターは指定できません。 / 判定の送信形式が不正です。expected_revisionと修了条件の回答を確認してください。",
         "headers": {
           "Cache-Control": {
             "description": "保存を禁止する。",
@@ -4775,7 +5196,7 @@
               },
               "case_2": {
                 "value": {
-                  "detail": "判定の送信形式が不正です。expected_revisionだけを指定してください。"
+                  "detail": "判定の送信形式が不正です。expected_revisionと修了条件の回答を確認してください。"
                 }
               }
             }

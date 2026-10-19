@@ -145,7 +145,15 @@ def build_document() -> dict:  # noqa: PLR0915
     schemas["ProgramSelectionInput"] = obj(
         program_id=uuid_input, curriculum_id=uuid_input, expected_revision=revision
     )
-    schemas["CheckRequestInput"] = obj(expected_revision=revision)
+    schemas["CheckRequestInput"] = obj(
+        expected_revision=revision,
+        completion_answers={
+            "type": "array",
+            "maxItems": 50,
+            "items": ref("CompletionAnswer"),
+        },
+    )
+    schemas["CheckRequestInput"]["required"] = ["expected_revision"]
     grade = copy.deepcopy(schemas["GradeAttempt"])
     grade["properties"]["course_id"] = uuid_input
     grade["allOf"] = [
@@ -565,7 +573,7 @@ def build_document() -> dict:  # noqa: PLR0915
                     413: ["送信内容が上限を超えています。"],
                     415: ["JSON形式で送信してください。"],
                     422: [
-                        "判定の送信形式が不正です。expected_revisionだけを指定してください。"
+                        "判定の送信形式が不正です。expected_revisionと修了条件の回答を確認してください。"
                     ],
                 }
             )

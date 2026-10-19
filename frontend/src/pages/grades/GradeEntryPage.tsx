@@ -91,7 +91,14 @@ export function GradeEntryPage({
           busy={check.busy}
           blocked={checkBlocked}
           dirty={entry.dirty}
-          check={() => void check.check()}
+          check={(answers) => void check.check(answers)}
+          curriculumId={curriculum?.curriculumId}
+          degreeLevel={savedProgram?.completionPolicy?.degreeLevel}
+          completionConditions={
+            savedProgram?.curriculumId === curriculum?.curriculumId
+              ? savedProgram?.completionPolicy?.conditions
+              : []
+          }
           saved={check.saved}
           error={check.error}
           history={history}
@@ -138,6 +145,7 @@ export function GradeEntryPage({
             changeFilter={entry.changeFilter}
           />
           <GradeTable
+            key={`${curriculum?.curriculumId}:${JSON.stringify(entry.filters)}`}
             courses={entry.visibleCourses}
             draft={entry.draft}
             saved={data.saved.grades}

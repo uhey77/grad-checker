@@ -1,6 +1,6 @@
 # DB基本設計
 
-文書版：1.4（2026年10月15日更新）。[RDD](RDD.md)に基づき、SQLModel / SQLiteを採用する。2026年10月11日に課程・カリキュラム・分類・科目・開講期・課程別科目の6テーブルとシードを実装した。認証用4テーブルと、空の旧メール認証DB向けの移行処理も実装した。2026年10月16日に成績の`grade_attempts`を追加した。同日に卒業要件・算入規則の5テーブルとCS4課程のシードを追加した。判定履歴モデルと、既存メール認証アカウントを保持する移行は今後の対象とする。全課程のマスタが既に投入済みという意味ではない。
+文書版：1.5（2026年10月19日更新）。[RDD](RDD.md)に基づき、SQLModel / SQLiteを採用する。2026年10月11日に課程・カリキュラム・分類・科目・開講期・課程別科目の6テーブルとシードを実装した。認証用4テーブルと、空の旧メール認証DB向けの移行処理も実装した。2026年10月16日に成績の`grade_attempts`を追加した。同日に卒業要件・算入規則の5テーブルとCS4課程のシードを追加した。判定履歴モデルと、既存メール認証アカウントを保持する移行は今後の対象とする。全課程のマスタが既に投入済みという意味ではない。
 
 ## 1. 型と共通制約
 
@@ -54,11 +54,11 @@ finalizedはgrade_codeがS/A/B/C/D/Xのいずれか、pendingはnullというCHE
 
 ## 5. 判定スナップショット
 
-check_resultsは本人の入力と計算済み結果を保存する。input_jsonには本人の課程・適用カリキュラム・全成績を、result_jsonには条件・必要値・科目名・分類・実単位・算入・不足・pass/fail・換算・おすすめ・根拠版を含める。
+check_resultsは本人の入力と計算済み結果を保存する。input_jsonには本人の課程・適用カリキュラム・全成績とcompletion_answersを、result_jsonには条件・必要値・科目名・分類・実単位・算入・不足・pass/fail/pending・換算・おすすめ・根拠版を含める。
 
 チェックは整合した成績・マスタ版から計算して入力と結果を保存し、作成後は不変とする。現在の科目・成績へのFKだけで過去表示を再構成しない。公開トークン・共有URL・第三者閲覧テーブルは設けない。UUIDを知ることは閲覧権限ではない。
 
-実装では、BEGIN IMMEDIATEの書込みトランザクション内で所属・成績・マスタを読み、成績版の照合・判定・挿入を行ってからcommitする。input_jsonは課程ID・カリキュラムID・成績版・全成績、result_jsonは判定結果全体。curriculum_code・curriculum_revision・data_revisionは結果から複写する。JSONの妥当性と版の値域をCHECKで強制し、`check_results_immutable` トリガーでUPDATEを拒否する。索引は(student_id, created_at, id)。推薦はまだ判定結果にないため保存していない。
+実装では、BEGIN IMMEDIATEの書込みトランザクション内で所属・成績・マスタを読み、成績版の照合・判定・挿入を行ってからcommitする。input_jsonは課程ID・カリキュラムID・成績版・全成績、result_jsonは判定結果全体。curriculum_code・curriculum_revision・data_revisionは結果から複写する。JSONの妥当性と版の値域をCHECKで強制し、`check_results_immutable` トリガーでUPDATEを拒否する。索引は(student_id, created_at, id)。推薦も結果JSONに含めて保存する。
 
 ## 6. 索引・読取・認可
 
@@ -79,3 +79,11 @@ JSONシードを課程→カリキュラム→分類→科目・開講期→課�
 セットアップはリポジトリルートの`task setup` / `make setup`を使用する。起動は[バックエンドの構成](backend_architecture.md)、投入は[転記とコードの説明](../backend/seeds/README.md)、検証は[テスト仕様](test_specification.md)を参照する。通常の起動・投入・確認にはTask / Makeを使用する。添付便覧は手動確認元とし、自動取得機能は作らない。
 
 関連：[API](api_specification.md)、[判定](graduation_requirement_logic.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
+
+## 2026年度全課程と修了規則
+
+追加テーブル`completion_policies`はid（PK）、curriculum_id（FK・一意）、degree_level、campus、catalog_status、requirements_status、rules_status、unresolved_reasons、source_document、source_pages、credit_groups、non_credit_conditions、credit_minimumsを持つ。リストはJSONとして保存し、シード投入・読取でPydanticの構造・参照・必要値を検証する。起動時のテーブル作成は行うが、マスタの自動投入は行わない。既存の課程IDや成績を変更しない。
+
+credit_groupsは大学院の非重複単位区分・必修集合・上限・一度だけの超過換算先。credit_minimumsは学部の分類をまたぐ内訳条件で総単位に二重加算しない。non_credit_conditionsは本人入力する条件の定義と出典であり、学生の回答をマスタへ保存しない。回答はチェックごとのinput_json.completion_answers、当時の条件・出典・判定はresult_jsonに保持する。
+
+投入は既存CS科目→既存CS要件→追加科目→追加要件・修了規則の順。`task backend-all-seed` / `make backend-all-seed`で実行できる。各CLIの投入は原子的で、同一シードの再投入は追加0件、既存IDの内容変更は拒否する。対象38課程の整備状況は[対応表](curriculum_coverage_2026.md)。判定時のDB読取は、本人課程のマスタ・明示的な課程外算入対象・保存済み成績の科目に限定し、一貫した読取時点を維持する。

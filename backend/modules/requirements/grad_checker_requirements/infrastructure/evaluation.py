@@ -14,10 +14,14 @@ from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     TABLE_MAPPING as SUBJECT_MAPPING,
 )
+from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
+    CurriculumSubject,
+)
 
 from ..application.errors.evaluation import EvaluationError
 from ..application.evaluation_models import EvaluationSnapshot
 from ..application.student_evaluation import EvaluationRepository, EvaluationUnitOfWork
+from .models import CreditRule, CreditRuleCourse
 from .seed import TABLE_MAPPING
 
 
@@ -43,14 +47,31 @@ class SqliteEvaluationRepository(EvaluationRepository):
                     col(GradeAttemptRecord.student_id) == student_id
                 )
             ).all()
+            own_ids = self.db.exec(
+                select(CurriculumSubject.course_id).where(
+                    col(CurriculumSubject.curriculum_id) == student.curriculum_id
+                )
+            ).all()
+            external_ids = self.db.exec(
+                select(CreditRuleCourse.course_id).where(
+                    col(CreditRuleCourse.curriculum_id) == student.curriculum_id
+                )
+            ).all()
+            course_ids = (
+                set(own_ids) | set(external_ids) | {g.course_id for g in grades}
+            )
             return EvaluationSnapshot.model_validate(
                 {
                     "program_id": student.program_id,
                     "curriculum_id": student.curriculum_id,
                     "data_revision": student.data_revision,
                     "grades": [attempt_data(row) for row in grades],
-                    "subjects": self._master(SUBJECT_MAPPING),
-                    "requirements": self._master(TABLE_MAPPING),
+                    "subjects": self._master(
+                        SUBJECT_MAPPING, student.curriculum_id, course_ids
+                    ),
+                    "requirements": self._master(
+                        TABLE_MAPPING, student.curriculum_id, course_ids
+                    ),
                 }
             )
         except ValidationError as error:
@@ -58,14 +79,30 @@ class SqliteEvaluationRepository(EvaluationRepository):
                 "invalid_evaluation_input", "保存済みの判定データが不正です。"
             ) from error
 
-    def _master(self, mapping: tuple) -> dict:
-        return {
-            name: [
+    def _master(self, mapping: tuple, curriculum_id: str, course_ids: set[str]) -> dict:
+        # 本人課程と明示的な算入対象だけを読む。全課程マスタの増加を本人の
+        # 判定コストにせず、無関係な未整備課程を本人の判定へ混在させない。
+        result = {}
+        for name, model, schema in mapping:
+            query = select(model)
+            if name == "curricula":
+                query = query.where(col(model.id) == curriculum_id)
+            elif name == "courses":
+                query = query.where(col(model.id).in_(course_ids))
+            elif name == "course_offerings":
+                query = query.where(col(model.course_id).in_(course_ids))
+            elif name == "credit_rule_limits":
+                rule_ids = select(CreditRule.id).where(
+                    col(CreditRule.curriculum_id) == curriculum_id
+                )
+                query = query.where(col(model.rule_id).in_(rule_ids))
+            elif name != "academic_programs":
+                query = query.where(col(model.curriculum_id) == curriculum_id)
+            result[name] = [
                 row.model_dump(include=set(schema.model_fields))
-                for row in self.db.exec(select(model)).all()
+                for row in self.db.exec(query).all()
             ]
-            for name, model, schema in mapping
-        }
+        return result
 
 
 class SqliteEvaluationUnitOfWork(SqlUnitOfWork, EvaluationUnitOfWork):

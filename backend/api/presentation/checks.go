@@ -1,6 +1,7 @@
 package presentation
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -12,11 +13,11 @@ import (
 
 const (
 	checksPath       = "/api/checks"
-	maxCheckBody     = 1 << 10
+	maxCheckBody     = 16 << 10
 	defaultCheckPage = 20
 	maxCheckPage     = 100
 	checkNotFound    = "判定履歴が見つかりません。"
-	checkBodyDetail  = "判定の送信形式が不正です。expected_revisionだけを指定してください。"
+	checkBodyDetail  = "判定の送信形式が不正です。expected_revisionと修了条件の回答を確認してください。"
 	checkPageDetail  = "履歴の表示範囲が不正です。limitは1〜100、offsetは0以上の整数で各1回まで指定してください。"
 )
 
@@ -56,7 +57,10 @@ func NewCheckHandler(gateway application.CheckGateway, origin string, fallback h
 			if !ok {
 				return
 			}
-			fields, ok := strictObject(body, "expected_revision")
+			fields, ok := strictObject(body, "expected_revision", "completion_answers")
+			if !ok {
+				fields, ok = strictObject(body, "expected_revision")
+			}
 			if !ok {
 				writeError(w, 422, checkBodyDetail)
 				return
@@ -67,7 +71,12 @@ func NewCheckHandler(gateway application.CheckGateway, origin string, fallback h
 				return
 			}
 			call.Operation, call.CSRF, status = "create", csrf, 201
-			call.Request = &application.CheckRequest{ExpectedRevision: revision}
+			answers, valid := parseCompletionAnswers(fields["completion_answers"])
+			if !valid {
+				writeError(w, 422, checkBodyDetail)
+				return
+			}
+			call.Request = &application.CheckRequest{ExpectedRevision: revision, CompletionAnswers: answers}
 		case collection:
 			page, ok := parseCheckPage(r.URL.RawQuery)
 			if !ok {
@@ -142,4 +151,29 @@ func writeCheckError(w http.ResponseWriter, err error) {
 		}
 	}
 	writeEvaluationError(w, err)
+}
+
+func parseCompletionAnswers(raw json.RawMessage) ([]application.CompletionAnswer, bool) {
+	if len(raw) == 0 {
+		return nil, true
+	}
+	var rows []json.RawMessage
+	if string(raw) == "null" || json.Unmarshal(raw, &rows) != nil || len(rows) > 50 {
+		return nil, false
+	}
+	answers := []application.CompletionAnswer{}
+	seen := map[string]bool{}
+	for _, row := range rows {
+		fields, ok := strictObject(row, "code", "status")
+		if !ok || len(fields) != 2 {
+			return nil, false
+		}
+		var code, status string
+		if json.Unmarshal(fields["code"], &code) != nil || json.Unmarshal(fields["status"], &status) != nil || len(code) == 0 || len(code) > 100 || seen[code] || (status != "met" && status != "not_met" && status != "unknown") {
+			return nil, false
+		}
+		seen[code] = true
+		answers = append(answers, application.CompletionAnswer{Code: code, Status: status})
+	}
+	return answers, true
 }

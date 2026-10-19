@@ -297,6 +297,7 @@ def test_concurrent_grade_save_and_check_do_not_mix_revisions(checks_app):
             "curriculum_id": str(uid(2)),
             "data_revision": 1,
             "grades": [],
+            "completion_answers": [],
         }
         assert check_count(app) == 1
     else:

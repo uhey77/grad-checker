@@ -39,12 +39,16 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import i
     SqliteSubjectDataStore,
 )
 
+from ..application.completion_policy import CompletionPolicyData
+from .models import CompletionPolicy
+
 TABLE_MAPPING = (
     ("graduation_requirements", GraduationRequirement, RequirementData),
     ("requirement_scopes", RequirementScope, RequirementScopeData),
     ("credit_rules", CreditRule, CreditRuleData),
     ("credit_rule_courses", CreditRuleCourse, CreditRuleCourseData),
     ("credit_rule_limits", CreditRuleLimit, CreditRuleLimitData),
+    ("completion_policies", CompletionPolicy, CompletionPolicyData),
 )
 
 

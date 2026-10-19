@@ -17,6 +17,12 @@ from modules.accounts.grad_checker_accounts.application.profile import (
     VerificationStatus,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.models import Student
+from modules.requirements.grad_checker_requirements.application import (
+    completion_policy as completion_contracts,
+)
+from modules.requirements.grad_checker_requirements.infrastructure.models import (
+    CompletionPolicy,
+)
 from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
     SqlUnitOfWork,
 )
@@ -40,8 +46,15 @@ class SqliteProfileRepository(ProfileRepository):
             .join(Curriculum, col(Curriculum.program_id) == col(AcademicProgram.id))
             .order_by(AcademicProgram.code, Curriculum.code)
         ).all()
+        policies = {
+            row.curriculum_id: completion_contracts.CompletionPolicyData.model_validate(
+                row.model_dump()
+            )
+            for row in self.db.exec(select(CompletionPolicy)).all()
+        }
         return [
             ProgramOption(
+                completion_policy=policies.get(curriculum.id),
                 program_id=program.id,
                 curriculum_id=curriculum.id,
                 faculty_name=program.faculty_name,

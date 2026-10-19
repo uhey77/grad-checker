@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from modules.grades.grad_checker_grades.application.grades import GradeAttempt
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
+from .completion_policy import CompletionAnswer
 from .errors.evaluation import EvaluationError
 from .evaluation_models import CreditSummary, Judgment
 from .student_evaluation import (
@@ -24,6 +25,9 @@ MAX_CHECK_PAGE_SIZE = 100
 class CheckRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     expected_revision: int = Field(ge=0, le=MAX_REVISION)
+    completion_answers: list[CompletionAnswer] = Field(
+        default_factory=list, max_length=50
+    )
 
 
 class CheckInput(BaseModel):
@@ -33,6 +37,7 @@ class CheckInput(BaseModel):
     curriculum_id: UUID
     data_revision: int
     grades: list[GradeAttempt]
+    completion_answers: list[CompletionAnswer] = Field(default_factory=list)
 
 
 class SavedCheck(BaseModel):
@@ -118,6 +123,9 @@ class CheckService:
                 raise EvaluationError(
                     "revision_conflict", "成績・所属が別の画面で更新されました。"
                 )
+            snapshot = snapshot.model_copy(
+                update={"completion_answers": request.completion_answers}
+            )
             created_at = datetime.now(UTC)
             grades = sorted(
                 snapshot.grades, key=lambda grade: (grade.course_id, grade.attempt_no)
@@ -130,6 +138,7 @@ class CheckService:
                     curriculum_id=snapshot.curriculum_id,
                     data_revision=snapshot.data_revision,
                     grades=grades,
+                    completion_answers=request.completion_answers,
                 ),
                 result=evaluate_student(snapshot, created_at),
             )

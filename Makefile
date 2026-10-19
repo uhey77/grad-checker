@@ -14,6 +14,8 @@ help:
 	@echo "api-docs-check    OpenAPIの生成差分・構文・公開契約を検証"
 	@echo "backend-requirements-seed CS4課程の卒業要件・算入規則を追加投入（科目投入後）"
 	@echo "backend-requirements-build 卒業要件シードを再生成"
+	@echo "backend-all-seed-build 全学部・大学院の追加シードを再生成"
+	@echo "backend-all-seed   全学部・大学院のシードを順番に追加投入"
 	@echo "auth-dev          ユーザー名認証の画面・バックエンドを起動"
 	@echo "go-api-format     Goコードを整形"
 	@echo "backend-python-dev Pythonサービスだけを起動"
@@ -187,3 +189,14 @@ api-docs-check:
 
 benchmark-graduation:
 	cd backend && uv run --locked python -m scripts.benchmark_graduation --iterations 10
+
+
+.PHONY: backend-all-seed backend-all-seed-build
+backend-all-seed:
+	$(MAKE) backend-seed
+	$(MAKE) backend-requirements-seed
+	cd backend && uv run --locked python -m scripts.seed_subjects --file seeds/university_2026.json
+	cd backend && uv run --locked python -m scripts.seed_requirements --file seeds/university_requirements_2026.json
+
+backend-all-seed-build:
+	cd backend && uv run --locked python -m seeds.build_university_seed

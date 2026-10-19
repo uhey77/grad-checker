@@ -1,13 +1,13 @@
 # API基本設計
 
-文書版：1.4（2026年10月15日更新）。[RDD](RDD.md)に基づき、Goの外部HTTP APIとPythonの業務処理・SQLModel・SQLiteを使用する。FastAPIはブリッジ通信を担当する。React / TypeScriptからJSONで通信する。接頭辞は `/api`。現時点で `/v1` は付けない。本書は設計契約であり、エンドポイント・Swagger UIの実装は未完了。
+文書版：1.5（2026年10月19日更新）。[RDD](RDD.md)に基づき、Goの外部HTTP APIとPythonの業務処理・SQLModel・SQLiteを使用する。FastAPIはブリッジ通信を担当する。React / TypeScriptからJSONで通信する。接頭辞は `/api`。現時点で `/v1` は付けない。公開契約の機械可読定義は生成OpenAPIを参照する。
 
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
 Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）、判定履歴の保存（POST /checks）、本人の履歴一覧（GET /checks）と過去結果取得（GET /checks/{id}）も実装済み。最新概要（GET /me/dashboard）も実装済み。不足条件に対応するおすすめ科目も実装済み。
 
-IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
+IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。全体判定は学部がpass/fail、大学院は本人申告未入力のpendingを含む。単位条件別はpass/failの2値。エラーに成功resultを付けない。
 
 未履修は履歴なし。未確定・不合格を修得へ加算しない。科目単位や換算規則を学生のリクエストから採用しない。本人は認証セッションから決定し、本人IDを自由に指定するパラメータは受け付けない。全個人データ・認証レスポンスにCache-Control: no-storeを返す。
 
@@ -33,7 +33,7 @@ IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成�
 | 500 | 予期しない障害 |
 | 503 | DB・保存処理の利用不能 |
 
-正常な成績0件は200、修得0・判定fail。設定・算入規則エラーをfailへ読み替えない。現在の設定不足であっても、保存済み過去結果を読める場合は当時の結果を返せる。
+正常な成績0件は200、修得0・単位条件fail。大学院で非単位条件が未入力なら全体はpending。設定・算入規則エラーをfailへ読み替えない。現在の設定不足であっても、保存済み過去結果を読める場合は当時の結果を返せる。
 
 ## 2. 認証・更新保護
 
@@ -259,3 +259,11 @@ commit成功後に201を返す。成績版不一致は409（`revision_conflict`�
 各候補は `course_id`、`name`、`classification_id`（課程外はnull）、`credits`、`status`（not_earned / pending / not_taken）、`latest_attempt`、`is_required`、`offerings`、`contributions` を持つ。`offerings` は科目マスタの `course_id / term_code / semester_order / academic_year / source_note`。`contributions` は `requirement_id / code / name / shortage_reduction / reason` で、不足が減る条件だけを正の整数の減少量と理由付きで返す。科目と寄与条件はそれぞれ重複させない。
 
 過去詳細GETは保存した同じ情報を返す。導入前の保存データだけはnullを許容する。最新結果の欠落・nullや不正な候補を空配列へ読み替えない。
+
+## 2026年度全課程・大学院の追加契約
+
+`GET /programs` の各選択肢に任意の `completion_policy` を追加する。degree_level（bachelor/master/doctoral）、campus（hachioji/kamata）、catalog_status/requirements_status/rules_status、unresolved_reasons、source_document/source_pages、non_credit_conditionsを持つ。従来のcurriculum.verification_statusは適用入学年度の確認であり、課程内規則の整備状況と混同しない。マスタ未整備課程も選択できるが判定は409（unverified_completion_policy）で理由を返す。
+
+`POST /checks` は従来のexpected_revisionだけの本文を維持し、任意のcompletion_answers配列を追加する。例：`{"expected_revision":3,"completion_answers":[{"code":"duration","status":"met"}]}`。回答は課程に定義されたcodeとmet/not_met/unknown。省略した条件はunknown。配列は最大50、codeは1〜100文字、本文は16 KiB以下。型不正・重複code・未知フィールドは422、課程にないcodeと学部への回答は409（invalid_completion_answers）。Origin・CSRF・本人認可・成績版照合は従来どおり。
+
+判定結果にはdegree_levelとcompletion_conditions（code、name、status、source_document、source_pages）を追加する。全体のresultだけがpendingを許す。履歴のinput.completion_answersとresultの条件・出典・結果は当時のまま保存し、後のマスタ変更や再取得で上書きしない。履歴一覧とdashboardも全体pendingを扱う。大学院のおすすめ科目は未対応のため空配列。旧保存結果には追加項目がなくても従来の学部結果として表示する。

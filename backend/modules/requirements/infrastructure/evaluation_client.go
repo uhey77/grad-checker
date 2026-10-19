@@ -163,7 +163,7 @@ func (t *creditTotal) valid() bool {
 			return false
 		}
 	}
-	return judgment(t.Result)
+	return t.Result == "pass" || t.Result == "fail"
 }
 
-func judgment(value string) bool { return value == "pass" || value == "fail" }
+func judgment(value string) bool { return value == "pass" || value == "fail" || value == "pending" }

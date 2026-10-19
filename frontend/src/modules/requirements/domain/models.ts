@@ -1,6 +1,6 @@
 import type { Offering } from "../../subjects/public.ts";
 
-export type Judgment = "pass" | "fail";
+export type Judgment = "pass" | "fail" | "pending";
 
 export interface CourseRecommendation {
   courseId: string;
@@ -23,7 +23,7 @@ export interface CreditSummary {
   earnedCredits: number;
   creditedCredits: number;
   shortage: number;
-  result: Judgment;
+  result: "pass" | "fail";
 }
 
 export interface RequirementResult extends CreditSummary {
@@ -41,7 +41,19 @@ export interface RequirementResult extends CreditSummary {
   classificationId: string | null;
 }
 
+export interface CompletionAnswer {
+  code: string;
+  status: "met" | "not_met" | "unknown";
+}
+export interface CompletionCondition extends CompletionAnswer {
+  name: string;
+  sourceDocument: string;
+  sourcePages: string;
+}
+
 export interface GraduationResult {
+  degreeLevel?: "bachelor" | "master" | "doctoral";
+  completionConditions?: CompletionCondition[];
   result: Judgment;
   dataRevision: number;
   ruleRevisions: Record<string, number>;
@@ -70,6 +82,8 @@ export interface GraduationResult {
 }
 
 export interface DashboardResult {
+  degreeLevel?: GraduationResult["degreeLevel"];
+  completionConditions?: CompletionCondition[];
   result: Judgment;
   dataRevision: number;
   ruleRevisions: Record<string, number>;

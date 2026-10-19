@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from copy import copy
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from pydantic import ValidationError
 
@@ -16,6 +16,7 @@ from modules.requirements.grad_checker_requirements.domain.requirement import (
 from .errors.evaluation import (
     EvaluationError,
 )
+from .errors.seed import RequirementSeedError
 from .evaluation_context import (
     EvaluationContext,
     invalid_master,
@@ -30,10 +31,12 @@ from .evaluation_models import (
     OverflowAllocation,
 )
 from .external_allocation import allocate_external
+from .graduate_evaluation import evaluate_graduate
 from .recommendations import recommend_courses
 from .seed import (
     RequirementData,
 )
+from .validation import validate_requirements
 
 
 def summarize(required: int, earned: int, credited: int) -> CreditSummary:
@@ -206,7 +209,9 @@ class _Evaluation:
     def run(self) -> EvaluationResult:
         self.allocate()
         context = self.context
-        conditions = [self.condition_result(row) for row in context.conditions]
+        conditions = [
+            self.condition_result(row) for row in context.conditions
+        ] + self.minimum_results()
         total = next(row for row in conditions if row.kind == RequirementKind.TOTAL)
         courses = [
             self.course_result(key)
@@ -267,7 +272,34 @@ class _Evaluation:
             return None
         if self.warnings or projected.warnings:
             return None
-        return [projected.condition_result(row) for row in context.conditions]
+        return [
+            projected.condition_result(row) for row in context.conditions
+        ] + projected.minimum_results()
+
+    def minimum_results(self) -> list[ConditionResult]:
+        """分類をまたぐ内訳は総算入へ足さず、独立した最低条件として評価する。"""
+        return [
+            ConditionResult(
+                **summarize(
+                    minimum.required_credits,
+                    self.credits(set(minimum.course_ids)),
+                    self.credits(set(minimum.course_ids)),
+                ).model_dump(),
+                id=uuid5(NAMESPACE_URL, f"{policy.id}:{minimum.code}"),
+                code=minimum.code,
+                name=minimum.name,
+                kind=RequirementKind.SUBMINIMUM,
+                parent_id=next(
+                    c.id
+                    for c in self.context.conditions
+                    if c.kind == RequirementKind.TOTAL
+                ),
+                classification_id=None,
+            )
+            for policy in self.context.snapshot.requirements.completion_policies
+            if policy.curriculum_id == self.context.curriculum.id
+            for minimum in policy.credit_minimums
+        ]
 
 
 def evaluate_graduation(snapshot: EvaluationSnapshot) -> EvaluationResult:
@@ -283,4 +315,35 @@ def evaluate_graduation(snapshot: EvaluationSnapshot) -> EvaluationResult:
         raise EvaluationError(
             "invalid_evaluation_input", "判定入力の形式が不正です。"
         ) from error
+    policies = [
+        p
+        for p in validated.requirements.completion_policies
+        if p.curriculum_id == validated.curriculum_id
+    ]
+    if policies:
+        policy = policies[0]
+        if policy.unresolved_reasons:
+            raise EvaluationError(
+                "unverified_completion_policy", " / ".join(policy.unresolved_reasons)
+            )
+        if policy.degree_level != "bachelor":
+            try:
+                validate_requirements(validated.requirements, validated.subjects)
+            except RequirementSeedError as error:
+                raise invalid_master(str(error)) from error
+            curriculum = next(
+                (
+                    c
+                    for c in validated.subjects.curricula
+                    if c.id == validated.curriculum_id
+                ),
+                None,
+            )
+            if curriculum is None or curriculum.program_id != validated.program_id:
+                raise invalid_master("所属と修了課程が一致しません。")
+            return evaluate_graduate(validated, policy)
+    if validated.completion_answers:
+        raise EvaluationError(
+            "invalid_completion_answers", "学部課程に大学院の修了条件を指定できません。"
+        )
     return _Evaluation(EvaluationContext(validated)).run()

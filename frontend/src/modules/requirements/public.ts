@@ -19,3 +19,5 @@ export type {
   CheckedGrade,
   SavedCheck,
 } from "./domain/models.ts";
+
+export type { CompletionAnswer, CompletionCondition } from "./domain/models.ts";

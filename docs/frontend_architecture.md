@@ -2,7 +2,7 @@
 
 バックエンドと同じ4層の責務・依存方向を維持する。
 domain・application・infrastructureは業務モジュールにまとめ、presentationはReactの役割ごとにsrc直下へ配置する。
-React・TypeScript・Viteを使用する。現在はユーザー名登録・復旧・ログイン画面、ログイン後の所属設定・成績入力と開発用科目一覧。卒業判定画面は未実装。
+React・TypeScript・Viteを使用する。現在はユーザー名登録・復旧・ログイン画面、ログイン後の所属設定・成績入力と開発用科目一覧。卒業・修了判定と本人専用履歴も実装する。
 
 ## 配置
 
@@ -289,3 +289,7 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 条件別詳細は利用者の操作時だけ `GET /api/me/graduation-requirements` で取得する。概要と成績版・課程・カリキュラム版・算入規則版が異なる場合は再取得を案内する。ダッシュボードの閲覧・再取得・詳細展開では `POST /checks` を呼ばず、履歴保存は成績入力の明示的なチェック操作に限る。
 
 `GraduationOverview` と `GraduationInfographic` を概要・最新詳細・履歴詳細で共有し、単位と注意文の表示を統一する。
+
+## 2026年10月19日の全課程・修了判定拡張
+
+2026年度の所属選択はProgramCoverageで学位段階・キャンパス・整備状況・根拠を表示する。GraduationCheckPanelで課程別の非単位条件を入力し、requirements/public.tsの契約を通じて保存判定を呼ぶ。DTO検証は各モジュールのinfrastructureに保持し、Reactは修了規則を計算しない。未入力の判定保留と本人申告の参考判定を結果・履歴に表示する。成績表は100件ずつ表示し、検索・絞り込みと全件の入力状態を維持する。

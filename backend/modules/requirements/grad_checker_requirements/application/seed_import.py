@@ -22,6 +22,8 @@ from modules.subjects.grad_checker_subjects.application.subject_data_validation 
     SubjectDataSeed,
 )
 
+from .completion_policy import CompletionPolicyData
+
 # 投入するテーブルの順。参照先のテーブルを先に置く。
 TABLES = tuple(RequirementSeed.model_fields)
 
@@ -31,7 +33,8 @@ def record_key(
     | RequirementScopeData
     | CreditRuleData
     | CreditRuleCourseData
-    | CreditRuleLimitData,
+    | CreditRuleLimitData
+    | CompletionPolicyData,
 ) -> tuple:
     if isinstance(record, CreditRuleCourseData):
         return record.rule_id, record.course_id

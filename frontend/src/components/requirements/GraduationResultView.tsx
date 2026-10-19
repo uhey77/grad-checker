@@ -54,6 +54,26 @@ export function GraduationResultView({
           <p>自由科目の単位は卒業要件に算入しません。</p>
         </details>
       )}
+      {(result.completionConditions?.length ?? 0) > 0 && (
+        <section aria-label="単位以外の修了条件">
+          <h3>単位以外の修了条件（本人申告）</h3>
+          <ul>
+            {result.completionConditions?.map((c) => (
+              <li key={c.code}>
+                {c.name}：
+                {c.status === "met"
+                  ? "達成（本人申告）"
+                  : c.status === "not_met"
+                    ? "未達成"
+                    : "未確認・判定保留"}{" "}
+                <a href={c.sourceDocument} target="_blank" rel="noreferrer">
+                  根拠（{c.sourcePages}）
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <h3>条件別判定</h3>
       <div
         className="requirement-filters"
@@ -117,7 +137,9 @@ export function GraduationResultView({
       ) : (
         <p>未修得の必修科目はありません。</p>
       )}
-      <CourseRecommendations recommendations={result.recommendations} />
+      {(!result.degreeLevel || result.degreeLevel === "bachelor") && (
+        <CourseRecommendations recommendations={result.recommendations} />
+      )}
       {result.allocations.length > 0 && (
         <details>
           <summary>選択必修から選択への超過換算</summary>
