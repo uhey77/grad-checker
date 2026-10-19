@@ -98,6 +98,7 @@ start(
     "-public-origin",
     process.env.PUBLIC_ORIGIN || "http://127.0.0.1:5173",
     ...(subjectListPreview ? ["-subject-list-preview"] : []),
+    ...(process.argv.includes("--api-docs") ? ["-api-docs"] : []),
   ],
   "backend/",
 );

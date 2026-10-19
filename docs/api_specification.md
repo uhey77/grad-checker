@@ -173,7 +173,11 @@ GET /checks/{id}は所有者を確認して当時のinputとresultを200で返�
 
 ## 9. ドキュメントと検証
 
-外部入力検証・日本語エラー文字列・HTTPステータスはGoのpresentationに集約する。PythonはPydanticでブリッジ通信契約を検証し、SQLModelでDB処理を行う。外部APIのOpenAPIとSwagger UIは今後整備する。Pythonサービスの/docs・/openapi.jsonは公開しない。Goのtestingで外部HTTPとブリッジ通信クライアントを、pytestでPythonの業務処理・DBとGo／Pythonの実プロセス結合を検証する。本人認可・原子的保存・履歴不変を含む学生向けケースは[テスト仕様](test_specification.md)、起動・初期化・シードの手順は[バックエンドの構成](backend_architecture.md)と[DB設計](database_design.md)を参照する。
+外部入力検証・日本語エラー文字列・HTTPステータスはGoのpresentationに集約する。PythonはPydanticでブリッジ通信契約を検証し、SQLModelでDB処理を行う。
+Goの公開契約は[OpenAPI 3.1](../backend/api/presentation/apidocs/openapi.json)でも提供する。認証・所属・成績・科目・分類・最新判定・ダッシュボード・履歴・稼働確認・開発用科目一覧のパス、メソッド、入力、成功応答と主要なエラーの日本語detailを含む。
+`api-docs-build`で生成し、`api-docs-check`で差分・構文・ルート・実HTTP応答を照合する。生成元は`backend/scripts/build_openapi.py`とPythonのapplicationレスポンス契約。Goの公開形（認証のomitempty、Cookieへの分離、入力のUUID正規化、現在と過去の推薦null許容の違い）は生成処理で反映する。
+Goは`-api-docs`指定時だけ`/docs`・`/openapi.json`を配信する（通常は404）。これらは仕様閲覧用の開発経路で、業務APIの`paths`には含めない。起動・Swagger UIからの認証と更新手順は[README](../README.md#go公開apiのopenapiとswagger-ui)を参照する。Pythonサービスの/docs・/openapi.jsonは公開しない。
+Goのtestingで外部HTTPとブリッジ通信クライアントを、pytestでPythonの業務処理・DBとGo／Pythonの実プロセス結合を検証する。本人認可・原子的保存・履歴不変を含む学生向けケースは[テスト仕様](test_specification.md)、起動・初期化・シードの手順は[バックエンドの構成](backend_architecture.md)と[DB設計](database_design.md)を参照する。
 
 関連：[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
 

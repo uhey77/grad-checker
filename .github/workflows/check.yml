@@ -20,6 +20,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - check: api-docs
+            target: api-docs-check
           - check: lint
             target: backend-lint
           - check: format-check

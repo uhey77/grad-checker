@@ -1,0 +1,5076 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "grad-checker Go公開API",
+    "version": "1.0.0",
+    "description": "外部HTTPはGo。Pythonの/bridge/*、/docs、/openapi.jsonは公開契約に含めない。本人IDはCookieセッションから決定。JSON応答はCache-Control:no-store。認証済みの変更はOriginとX-CSRF-Tokenを両方確認。"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Swagger UIと同じOrigin。ローカルはViteのプロキシ経由。"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Goの稼働確認",
+        "description": "Python・DBの稼働を保証しない。\n\nクエリは使用しない（実装は無視する）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          }
+        }
+      }
+    },
+    "/api/auth/config": {
+      "get": {
+        "operationId": "authConfig",
+        "summary": "パスワード方針",
+        "description": "\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "認証"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "502": {
+            "$ref": "#/components/responses/authConfigError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/authConfigError503"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "authRegister",
+        "summary": "新規登録",
+        "description": "本文上限8192 bytes。上限超過も422。復旧コードは登録・復旧時だけ返す。ログインのみCookieを設定。復旧は全セッションを失効させる。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "認証"
+        ],
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Registered"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "422": {
+            "$ref": "#/components/responses/authRegisterError422"
+          },
+          "403": {
+            "$ref": "#/components/responses/authRegisterError403"
+          },
+          "400": {
+            "$ref": "#/components/responses/authRegisterError400"
+          },
+          "429": {
+            "$ref": "#/components/responses/authRegisterError429"
+          },
+          "502": {
+            "$ref": "#/components/responses/authConfigError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/authConfigError503"
+          },
+          "409": {
+            "$ref": "#/components/responses/authRegisterError409"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "application/json。全項目必須。未知・重複キーを拒否。",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/recover": {
+      "post": {
+        "operationId": "authRecover",
+        "summary": "復旧コードでパスワード再設定",
+        "description": "本文上限8192 bytes。上限超過も422。復旧コードは登録・復旧時だけ返す。ログインのみCookieを設定。復旧は全セッションを失効させる。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "認証"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recovered"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "422": {
+            "$ref": "#/components/responses/authRegisterError422"
+          },
+          "403": {
+            "$ref": "#/components/responses/authRegisterError403"
+          },
+          "400": {
+            "$ref": "#/components/responses/authRecoverError400"
+          },
+          "429": {
+            "$ref": "#/components/responses/authRegisterError429"
+          },
+          "502": {
+            "$ref": "#/components/responses/authConfigError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/authConfigError503"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "application/json。全項目必須。未知・重複キーを拒否。",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recovery"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "authLogin",
+        "summary": "ログイン",
+        "description": "本文上限8192 bytes。上限超過も422。復旧コードは登録・復旧時だけ返す。ログインのみCookieを設定。復旧は全セッションを失効させる。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "認証"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "grad_checker_session。Path=/; HttpOnly; SameSite=Lax。public-originがHTTPSならSecure。セッション原値はJSONに返さない。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "422": {
+            "$ref": "#/components/responses/authRegisterError422"
+          },
+          "403": {
+            "$ref": "#/components/responses/authRegisterError403"
+          },
+          "400": {
+            "$ref": "#/components/responses/authRegisterError400"
+          },
+          "429": {
+            "$ref": "#/components/responses/authRegisterError429"
+          },
+          "502": {
+            "$ref": "#/components/responses/authConfigError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/authConfigError503"
+          },
+          "401": {
+            "$ref": "#/components/responses/authLoginError401"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "application/json。全項目必須。未知・重複キーを拒否。",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "operationId": "authSession",
+        "summary": "セッション取得",
+        "description": "セッション未認証時はCookieを削除。ログアウト成功時も削除。本文は使用しない。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "認証"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "description": "ログインしてください。 / ユーザー名またはパスワードを確認してください。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "grad_checker_session。Path=/; HttpOnly; SameSite=Lax。public-originがHTTPSならSecure。セッション原値はJSONに返さない。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "case_1": {
+                    "value": {
+                      "detail": "ログインしてください。"
+                    }
+                  },
+                  "case_2": {
+                    "value": {
+                      "detail": "ユーザー名またはパスワードを確認してください。"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "502": {
+            "$ref": "#/components/responses/authConfigError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/authConfigError503"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "authLogout",
+        "summary": "ログアウト",
+        "description": "セッション未認証時はCookieを削除。ログアウト成功時も削除。本文は使用しない。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "認証"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "grad_checker_session。Path=/; HttpOnly; SameSite=Lax。public-originがHTTPSならSecure。セッション原値はJSONに返さない。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoggedOut"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "403": {
+            "$ref": "#/components/responses/authRegisterError403"
+          },
+          "502": {
+            "$ref": "#/components/responses/authConfigError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/authConfigError503"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ]
+      }
+    },
+    "/api/programs": {
+      "get": {
+        "operationId": "listPrograms",
+        "summary": "所属の選択肢",
+        "description": "所属と成績は同じdata_revisionを共有する。所属保存の本文上限4096 bytes。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Programs"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "502": {
+            "$ref": "#/components/responses/listProgramsError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/listProgramsError503"
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "operationId": "getProfile",
+        "summary": "本人プロフィール",
+        "description": "所属と成績は同じdata_revisionを共有する。所属保存の本文上限4096 bytes。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "502": {
+            "$ref": "#/components/responses/listProgramsError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/listProgramsError503"
+          }
+        }
+      }
+    },
+    "/api/me/program": {
+      "put": {
+        "operationId": "saveProgram",
+        "summary": "本人の所属を保存",
+        "description": "所属と成績は同じdata_revisionを共有する。所属保存の本文上限4096 bytes。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/saveProgramError422"
+          },
+          "403": {
+            "$ref": "#/components/responses/saveProgramError403"
+          },
+          "502": {
+            "$ref": "#/components/responses/listProgramsError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/listProgramsError503"
+          },
+          "409": {
+            "$ref": "#/components/responses/saveProgramError409"
+          },
+          "413": {
+            "$ref": "#/components/responses/saveProgramError413"
+          },
+          "415": {
+            "$ref": "#/components/responses/saveProgramError415"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "application/json。全項目必須。未知・重複キーを拒否。",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramSelectionInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/grades": {
+      "get": {
+        "operationId": "getGrades",
+        "summary": "本人成績の取得",
+        "description": "保存は全集合置換。空配列は全取消。回次は1から連番で直前が確定不合格(D/X)の場合だけ再履修できる。所属保存と版を共有。本文上限256 KiB。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentGrades"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "502": {
+            "$ref": "#/components/responses/getGradesError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/getGradesError503"
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveGrades",
+        "summary": "本人成績の全集合置換",
+        "description": "保存は全集合置換。空配列は全取消。回次は1から連番で直前が確定不合格(D/X)の場合だけ再履修できる。所属保存と版を共有。本文上限256 KiB。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentGrades"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/saveGradesError422"
+          },
+          "403": {
+            "$ref": "#/components/responses/saveProgramError403"
+          },
+          "502": {
+            "$ref": "#/components/responses/getGradesError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/getGradesError503"
+          },
+          "400": {
+            "$ref": "#/components/responses/saveGradesError400"
+          },
+          "409": {
+            "$ref": "#/components/responses/saveProgramError409"
+          },
+          "413": {
+            "$ref": "#/components/responses/saveGradesError413"
+          },
+          "415": {
+            "$ref": "#/components/responses/saveProgramError415"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "application/json。全項目必須。未知・重複キーを拒否。",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeSetInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses": {
+      "get": {
+        "operationId": "listCourses",
+        "summary": "本人課程から見た科目一覧",
+        "description": "category_idは子孫分類も一致。faculty/departmentは開講元名の完全一致。qは科目名・コードの大小文字を区別しない部分一致。semesterは開講学期。placement:nullは本人課程での算入先未確定。\n\n未知・重複・空のクエリは拒否する。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseList"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "409": {
+            "$ref": "#/components/responses/listCoursesError409"
+          },
+          "503": {
+            "$ref": "#/components/responses/listCoursesError503"
+          },
+          "502": {
+            "$ref": "#/components/responses/listCoursesError502"
+          },
+          "504": {
+            "$ref": "#/components/responses/listCoursesError504"
+          },
+          "422": {
+            "$ref": "#/components/responses/listCoursesError422"
+          }
+        },
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "各1回。複数条件はAND。"
+          },
+          {
+            "name": "faculty",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "各1回。複数条件はAND。"
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "各1回。複数条件はAND。"
+          },
+          {
+            "name": "semester",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "enum": [
+                "first",
+                "second"
+              ]
+            },
+            "description": "各1回。複数条件はAND。"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "各1回。複数条件はAND。"
+          }
+        ]
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "summary": "本人課程の分類階層",
+        "description": "\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryList"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "409": {
+            "$ref": "#/components/responses/listCoursesError409"
+          },
+          "503": {
+            "$ref": "#/components/responses/listCoursesError503"
+          },
+          "502": {
+            "$ref": "#/components/responses/listCoursesError502"
+          },
+          "504": {
+            "$ref": "#/components/responses/listCoursesError504"
+          }
+        }
+      }
+    },
+    "/api/me/dashboard": {
+      "get": {
+        "operationId": "dashboard",
+        "summary": "最新判定の概要",
+        "description": "読取り専用。履歴・data_revisionを更新しない。修得と算入を区別。適用年度のunverifiedだけでは停止しない。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。未達成の判定もHTTP成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentDashboard"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "400": {
+            "$ref": "#/components/responses/dashboardError400"
+          },
+          "409": {
+            "$ref": "#/components/responses/dashboardError409"
+          },
+          "502": {
+            "$ref": "#/components/responses/dashboardError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/dashboardError503"
+          }
+        }
+      }
+    },
+    "/api/me/graduation-requirements": {
+      "get": {
+        "operationId": "evaluate",
+        "summary": "最新の卒業要件判定",
+        "description": "読取り専用。履歴・data_revisionを更新しない。修得と算入を区別。適用年度のunverifiedだけでは停止しない。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。未達成の判定もHTTP成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveEvaluation"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "400": {
+            "$ref": "#/components/responses/dashboardError400"
+          },
+          "409": {
+            "$ref": "#/components/responses/dashboardError409"
+          },
+          "502": {
+            "$ref": "#/components/responses/dashboardError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/dashboardError503"
+          }
+        }
+      }
+    },
+    "/api/checks": {
+      "get": {
+        "operationId": "listChecks",
+        "summary": "本人の判定履歴一覧",
+        "description": "一覧はcreated_at降順・同時刻id昇順。POSTは本人版を照合し保存commit後に201。失敗時は履歴を残さない。本文上限1 KiB。\n\n未知・重複・空のクエリは拒否する。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckList"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "400": {
+            "$ref": "#/components/responses/dashboardError400"
+          },
+          "409": {
+            "$ref": "#/components/responses/dashboardError409"
+          },
+          "502": {
+            "$ref": "#/components/responses/dashboardError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/listChecksError503"
+          },
+          "422": {
+            "$ref": "#/components/responses/listChecksError422"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "符号・小数なしの10進整数。各1回。"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740990,
+              "default": 0
+            },
+            "description": "符号・小数なしの10進整数。各1回。"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createCheck",
+        "summary": "判定して履歴へ保存",
+        "description": "一覧はcreated_at降順・同時刻id昇順。POSTは本人版を照合し保存commit後に201。失敗時は履歴を残さない。本文上限1 KiB。\n\nクエリは使用しない（指定すると422）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "成功。未達成の判定もHTTP成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedCheck"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/createCheckError422"
+          },
+          "403": {
+            "$ref": "#/components/responses/saveProgramError403"
+          },
+          "400": {
+            "$ref": "#/components/responses/dashboardError400"
+          },
+          "409": {
+            "$ref": "#/components/responses/createCheckError409"
+          },
+          "502": {
+            "$ref": "#/components/responses/dashboardError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/listChecksError503"
+          },
+          "413": {
+            "$ref": "#/components/responses/createCheckError413"
+          },
+          "415": {
+            "$ref": "#/components/responses/saveProgramError415"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "application/json。全項目必須。未知・重複キーを拒否。",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequestInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checks/{id}": {
+      "get": {
+        "operationId": "getCheck",
+        "summary": "本人の過去の判定",
+        "description": "形式不正・他人・存在しないIDは同じ404。現在のマスタで再計算しない。推薦導入前の保存結果だけrecommendations:null。\n\n未知・重複・空のクエリは拒否する。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedCheck"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "401": {
+            "$ref": "#/components/responses/authSessionError401"
+          },
+          "422": {
+            "$ref": "#/components/responses/authConfigError422"
+          },
+          "400": {
+            "$ref": "#/components/responses/dashboardError400"
+          },
+          "409": {
+            "$ref": "#/components/responses/dashboardError409"
+          },
+          "502": {
+            "$ref": "#/components/responses/dashboardError502"
+          },
+          "503": {
+            "$ref": "#/components/responses/listChecksError503"
+          },
+          "404": {
+            "$ref": "#/components/responses/getCheckError404"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "UUID。標準ハイフン表記を推奨。Goは32桁・波括弧・urn:uuid:形式も正規化して受け付ける。"
+            }
+          }
+        ]
+      }
+    },
+    "/api/dev/subject-list/programs": {
+      "get": {
+        "operationId": "previewPrograms",
+        "summary": "開発用課程一覧",
+        "description": "-subject-list-preview指定時だけ有効。通常・本番は404。学生データを返さない。\n\nクエリは使用しない（実装は無視する）。",
+        "tags": [
+          "開発用"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewPrograms"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "404": {
+            "$ref": "#/components/responses/previewProgramsError404"
+          },
+          "409": {
+            "$ref": "#/components/responses/previewProgramsError409"
+          },
+          "500": {
+            "$ref": "#/components/responses/previewProgramsError500"
+          },
+          "503": {
+            "$ref": "#/components/responses/listCoursesError503"
+          },
+          "504": {
+            "$ref": "#/components/responses/listCoursesError504"
+          },
+          "502": {
+            "$ref": "#/components/responses/previewProgramsError502"
+          }
+        }
+      }
+    },
+    "/api/dev/subject-list/{curriculum_id}": {
+      "get": {
+        "operationId": "previewSubjects",
+        "summary": "開発用科目一覧",
+        "description": "-subject-list-preview指定時だけ有効。通常・本番は404。学生データを返さない。\n\n未知・重複・空のクエリは拒否する。",
+        "tags": [
+          "開発用"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectList"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "404": {
+            "$ref": "#/components/responses/previewProgramsError404"
+          },
+          "409": {
+            "$ref": "#/components/responses/previewProgramsError409"
+          },
+          "500": {
+            "$ref": "#/components/responses/previewProgramsError500"
+          },
+          "503": {
+            "$ref": "#/components/responses/listCoursesError503"
+          },
+          "504": {
+            "$ref": "#/components/responses/listCoursesError504"
+          },
+          "502": {
+            "$ref": "#/components/responses/previewProgramsError502"
+          },
+          "422": {
+            "$ref": "#/components/responses/previewSubjectsError422"
+          }
+        },
+        "parameters": [
+          {
+            "name": "curriculum_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "UUID。標準ハイフン表記を推奨。Goは32桁・波括弧・urn:uuid:形式も正規化して受け付ける。"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Profile": {
+        "properties": {
+          "student_id": {
+            "title": "Student Id",
+            "type": "string"
+          },
+          "login_name": {
+            "title": "Login Name",
+            "type": "string"
+          },
+          "program_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Id"
+          },
+          "curriculum_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Curriculum Id"
+          },
+          "data_revision": {
+            "title": "Data Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "student_id",
+          "login_name",
+          "program_id",
+          "curriculum_id",
+          "data_revision"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "VerificationStatus": {
+        "enum": [
+          "unverified",
+          "verified"
+        ],
+        "type": "string"
+      },
+      "ProgramOption": {
+        "properties": {
+          "program_id": {
+            "title": "Program Id",
+            "type": "string"
+          },
+          "curriculum_id": {
+            "title": "Curriculum Id",
+            "type": "string"
+          },
+          "faculty_name": {
+            "title": "Faculty Name",
+            "type": "string"
+          },
+          "department_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Name"
+          },
+          "specialization_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialization Name"
+          },
+          "course_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Name"
+          },
+          "curriculum_name": {
+            "title": "Curriculum Name",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "verification_status": {
+            "$ref": "#/components/schemas/VerificationStatus"
+          },
+          "admission_year_from": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year From"
+          },
+          "admission_year_to": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year To"
+          },
+          "source_document": {
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "title": "Source Pages",
+            "type": "string"
+          }
+        },
+        "required": [
+          "program_id",
+          "curriculum_id",
+          "faculty_name",
+          "department_name",
+          "specialization_name",
+          "course_name",
+          "curriculum_name",
+          "revision",
+          "verification_status",
+          "admission_year_from",
+          "admission_year_to",
+          "source_document",
+          "source_pages"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "GradeAttempt": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Course Id",
+            "type": "string"
+          },
+          "attempt_no": {
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Attempt No",
+            "type": "integer"
+          },
+          "result_status": {
+            "$ref": "#/components/schemas/ResultStatusValue"
+          },
+          "grade_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeCodeValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "academic_year": {
+            "anyOf": [
+              {
+                "maximum": 2100,
+                "minimum": 1900,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Academic Year"
+          },
+          "term_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "attempt_no",
+          "result_status",
+          "grade_code",
+          "academic_year",
+          "term_code"
+        ],
+        "type": "object"
+      },
+      "GradeCodeValue": {
+        "enum": [
+          "S",
+          "A",
+          "B",
+          "C",
+          "D",
+          "X"
+        ],
+        "type": "string"
+      },
+      "ResultStatusValue": {
+        "enum": [
+          "finalized",
+          "pending"
+        ],
+        "type": "string"
+      },
+      "TermCode": {
+        "enum": [
+          "first",
+          "second"
+        ],
+        "type": "string"
+      },
+      "StudentGrades": {
+        "properties": {
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/GradeAttempt"
+            },
+            "title": "Grades",
+            "type": "array"
+          },
+          "data_revision": {
+            "title": "Data Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grades",
+          "data_revision"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ConditionResult": {
+        "properties": {
+          "required_credits": {
+            "title": "Required Credits",
+            "type": "integer"
+          },
+          "earned_credits": {
+            "title": "Earned Credits",
+            "type": "integer"
+          },
+          "credited_credits": {
+            "title": "Credited Credits",
+            "type": "integer"
+          },
+          "shortage": {
+            "title": "Shortage",
+            "type": "integer"
+          },
+          "result": {
+            "$ref": "#/components/schemas/Judgment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RequirementKind"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "classification_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Id"
+          }
+        },
+        "required": [
+          "required_credits",
+          "earned_credits",
+          "credited_credits",
+          "shortage",
+          "result",
+          "id",
+          "code",
+          "name",
+          "kind",
+          "parent_id",
+          "classification_id"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CourseRecommendation": {
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "title": "Course Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "classification_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Id"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "earned",
+              "not_earned",
+              "pending",
+              "not_taken"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "latest_attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeAttempt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_required": {
+            "title": "Is Required",
+            "type": "boolean"
+          },
+          "offerings": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectOfferingData"
+            },
+            "title": "Offerings",
+            "type": "array"
+          },
+          "contributions": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationReason"
+            },
+            "title": "Contributions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "course_id",
+          "name",
+          "classification_id",
+          "credits",
+          "status",
+          "latest_attempt",
+          "is_required",
+          "offerings",
+          "contributions"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CourseResult": {
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "title": "Course Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "classification_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Id"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "earned",
+              "not_earned",
+              "pending",
+              "not_taken"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "latest_attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeAttempt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "name",
+          "classification_id",
+          "credits",
+          "status",
+          "latest_attempt"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CreditSummary": {
+        "properties": {
+          "required_credits": {
+            "title": "Required Credits",
+            "type": "integer"
+          },
+          "earned_credits": {
+            "title": "Earned Credits",
+            "type": "integer"
+          },
+          "credited_credits": {
+            "title": "Credited Credits",
+            "type": "integer"
+          },
+          "shortage": {
+            "title": "Shortage",
+            "type": "integer"
+          },
+          "result": {
+            "$ref": "#/components/schemas/Judgment"
+          }
+        },
+        "required": [
+          "required_credits",
+          "earned_credits",
+          "credited_credits",
+          "shortage",
+          "result"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CurriculumData": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "program_id": {
+            "format": "uuid",
+            "title": "Program Id",
+            "type": "string"
+          },
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "revision": {
+            "exclusiveMinimum": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "admission_year_from": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Admission Year From"
+          },
+          "admission_year_to": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Admission Year To"
+          },
+          "source_document": {
+            "minLength": 1,
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "minLength": 1,
+            "title": "Source Pages",
+            "type": "string"
+          },
+          "verification_status": {
+            "$ref": "#/components/schemas/VerificationStatus"
+          }
+        },
+        "required": [
+          "id",
+          "program_id",
+          "code",
+          "name",
+          "revision",
+          "admission_year_from",
+          "admission_year_to",
+          "source_document",
+          "source_pages",
+          "verification_status"
+        ],
+        "type": "object"
+      },
+      "EvaluationWarning": {
+        "const": "provisional_external_allocation",
+        "type": "string"
+      },
+      "ExternalAllocation": {
+        "properties": {
+          "rule_id": {
+            "format": "uuid",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "target_classification_id": {
+            "format": "uuid",
+            "title": "Target Classification Id",
+            "type": "string"
+          },
+          "target_name": {
+            "title": "Target Name",
+            "type": "string"
+          },
+          "earned_credits": {
+            "title": "Earned Credits",
+            "type": "integer"
+          },
+          "credited_credits": {
+            "title": "Credited Credits",
+            "type": "integer"
+          },
+          "free_credits": {
+            "title": "Free Credits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rule_id",
+          "target_classification_id",
+          "target_name",
+          "earned_credits",
+          "credited_credits",
+          "free_credits"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "Judgment": {
+        "enum": [
+          "pass",
+          "fail"
+        ],
+        "type": "string"
+      },
+      "OverflowAllocation": {
+        "properties": {
+          "rule_id": {
+            "format": "uuid",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "requirement_id": {
+            "format": "uuid",
+            "title": "Requirement Id",
+            "type": "string"
+          },
+          "target_classification_id": {
+            "format": "uuid",
+            "title": "Target Classification Id",
+            "type": "string"
+          },
+          "earned_credits": {
+            "title": "Earned Credits",
+            "type": "integer"
+          },
+          "group_credits": {
+            "title": "Group Credits",
+            "type": "integer"
+          },
+          "overflow_credits": {
+            "title": "Overflow Credits",
+            "type": "integer"
+          },
+          "transferred_credits": {
+            "title": "Transferred Credits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rule_id",
+          "requirement_id",
+          "target_classification_id",
+          "earned_credits",
+          "group_credits",
+          "overflow_credits",
+          "transferred_credits"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "RecommendationReason": {
+        "properties": {
+          "requirement_id": {
+            "format": "uuid",
+            "title": "Requirement Id",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "shortage_reduction": {
+            "title": "Shortage Reduction",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requirement_id",
+          "code",
+          "name",
+          "shortage_reduction",
+          "reason"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "RequirementKind": {
+        "enum": [
+          "total",
+          "classification_total",
+          "required_courses",
+          "selective_group",
+          "subminimum",
+          "elective_total"
+        ],
+        "type": "string"
+      },
+      "SubjectOfferingData": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "format": "uuid",
+            "title": "Course Id",
+            "type": "string"
+          },
+          "term_code": {
+            "minLength": 1,
+            "title": "Term Code",
+            "type": "string"
+          },
+          "semester_order": {
+            "exclusiveMinimum": 0,
+            "title": "Semester Order",
+            "type": "integer"
+          },
+          "academic_year": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Academic Year"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Note"
+          }
+        },
+        "required": [
+          "course_id",
+          "term_code",
+          "semester_order",
+          "academic_year",
+          "source_note"
+        ],
+        "type": "object"
+      },
+      "StudentEvaluation": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/Judgment"
+          },
+          "data_revision": {
+            "title": "Data Revision",
+            "type": "integer"
+          },
+          "curriculum": {
+            "$ref": "#/components/schemas/CurriculumData"
+          },
+          "rule_revisions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Rule Revisions",
+            "type": "object"
+          },
+          "total": {
+            "$ref": "#/components/schemas/CreditSummary"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionResult"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionResult"
+            },
+            "title": "Requirements",
+            "type": "array"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseResult"
+            },
+            "title": "Courses",
+            "type": "array"
+          },
+          "missing_required_courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseResult"
+            },
+            "title": "Missing Required Courses",
+            "type": "array"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/OverflowAllocation"
+            },
+            "title": "Allocations",
+            "type": "array"
+          },
+          "external_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalAllocation"
+            },
+            "title": "External Allocations",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "recommendations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CourseRecommendation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Recommendations"
+          },
+          "evaluated_at": {
+            "format": "date-time",
+            "title": "Evaluated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result",
+          "data_revision",
+          "curriculum",
+          "rule_revisions",
+          "total",
+          "categories",
+          "requirements",
+          "courses",
+          "missing_required_courses",
+          "allocations",
+          "external_allocations",
+          "warnings",
+          "recommendations",
+          "evaluated_at"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "StudentDashboard": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/Judgment"
+          },
+          "evaluated_at": {
+            "format": "date-time",
+            "title": "Evaluated At",
+            "type": "string"
+          },
+          "data_revision": {
+            "title": "Data Revision",
+            "type": "integer"
+          },
+          "curriculum_revision": {
+            "title": "Curriculum Revision",
+            "type": "integer"
+          },
+          "curriculum": {
+            "$ref": "#/components/schemas/CurriculumData"
+          },
+          "rule_revisions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Rule Revisions",
+            "type": "object"
+          },
+          "grade_count": {
+            "title": "Grade Count",
+            "type": "integer"
+          },
+          "total": {
+            "$ref": "#/components/schemas/CreditSummary"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionResult"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result",
+          "evaluated_at",
+          "data_revision",
+          "curriculum_revision",
+          "curriculum",
+          "rule_revisions",
+          "grade_count",
+          "total",
+          "categories",
+          "warnings"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CheckInput": {
+        "description": "判定に使った本人の課程・適用カリキュラム・全成績と成績版。",
+        "properties": {
+          "program_id": {
+            "format": "uuid",
+            "title": "Program Id",
+            "type": "string"
+          },
+          "curriculum_id": {
+            "format": "uuid",
+            "title": "Curriculum Id",
+            "type": "string"
+          },
+          "data_revision": {
+            "title": "Data Revision",
+            "type": "integer"
+          },
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/GradeAttempt"
+            },
+            "title": "Grades",
+            "type": "array"
+          }
+        },
+        "required": [
+          "program_id",
+          "curriculum_id",
+          "data_revision",
+          "grades"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SavedCheck": {
+        "description": "保存済みの判定履歴。作成後は変更せず、現在のマスタで再計算しない。",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/CheckInput"
+          },
+          "result": {
+            "$ref": "#/components/schemas/StudentEvaluation"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "input",
+          "result"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CheckCurriculum": {
+        "description": "判定当時の課程名と規則版。保存済みの結果から読む。",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "revision"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CheckSummary": {
+        "description": "一覧に表示する保存済み判定の要約。現在のマスタで再計算しない。",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_revision": {
+            "title": "Data Revision",
+            "type": "integer"
+          },
+          "result": {
+            "$ref": "#/components/schemas/Judgment"
+          },
+          "curriculum": {
+            "$ref": "#/components/schemas/CheckCurriculum"
+          },
+          "total": {
+            "$ref": "#/components/schemas/CreditSummary"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "data_revision",
+          "result",
+          "curriculum",
+          "total"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CheckList": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CheckSummary"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checks",
+          "limit",
+          "offset",
+          "total_count"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CatalogClassification": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CatalogCourse": {
+        "properties": {
+          "course_id": {
+            "title": "Course Id",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "offering_faculty_name": {
+            "title": "Offering Faculty Name",
+            "type": "string"
+          },
+          "offering_department_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offering Department Name"
+          },
+          "offering_specialization_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offering Specialization Name"
+          },
+          "teaching_type": {
+            "title": "Teaching Type",
+            "type": "string"
+          },
+          "teaching_type_label": {
+            "title": "Teaching Type Label",
+            "type": "string"
+          },
+          "offerings": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogOffering"
+            },
+            "title": "Offerings",
+            "type": "array"
+          },
+          "placement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CatalogPlacement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "code",
+          "name",
+          "credits",
+          "offering_faculty_name",
+          "offering_department_name",
+          "offering_specialization_name",
+          "teaching_type",
+          "teaching_type_label",
+          "offerings",
+          "placement"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CatalogCurriculum": {
+        "properties": {
+          "curriculum_id": {
+            "title": "Curriculum Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "verification_status": {
+            "$ref": "#/components/schemas/VerificationStatus"
+          },
+          "admission_year_from": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year From"
+          },
+          "admission_year_to": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year To"
+          },
+          "source_document": {
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "title": "Source Pages",
+            "type": "string"
+          }
+        },
+        "required": [
+          "curriculum_id",
+          "name",
+          "verification_status",
+          "admission_year_from",
+          "admission_year_to",
+          "source_document",
+          "source_pages"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CatalogOffering": {
+        "properties": {
+          "term_code": {
+            "title": "Term Code",
+            "type": "string"
+          },
+          "semester_order": {
+            "title": "Semester Order",
+            "type": "integer"
+          },
+          "academic_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Academic Year"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          }
+        },
+        "required": [
+          "term_code",
+          "semester_order",
+          "academic_year",
+          "source_note"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CatalogPlacement": {
+        "description": "本人課程での分類・種別。科目表にない科目には推測で設定しない。",
+        "properties": {
+          "classification_path": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogClassification"
+            },
+            "title": "Classification Path",
+            "type": "array"
+          },
+          "course_type": {
+            "$ref": "#/components/schemas/SubjectType"
+          }
+        },
+        "required": [
+          "classification_path",
+          "course_type"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SubjectType": {
+        "enum": [
+          "required",
+          "selective",
+          "elective"
+        ],
+        "type": "string"
+      },
+      "CourseList": {
+        "properties": {
+          "curriculum": {
+            "$ref": "#/components/schemas/CatalogCurriculum"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogCourse"
+            },
+            "title": "Courses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "curriculum",
+          "courses"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CatalogCategory": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "display_order": {
+            "title": "Display Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "parent_id",
+          "level",
+          "display_order"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CategoryList": {
+        "properties": {
+          "curriculum": {
+            "$ref": "#/components/schemas/CatalogCurriculum"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "curriculum",
+          "categories"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SubjectListClassification": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SubjectListItem": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "faculty_name": {
+            "title": "Faculty Name",
+            "type": "string"
+          },
+          "department_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Name"
+          },
+          "specialization_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialization Name"
+          },
+          "teaching_type_label": {
+            "title": "Teaching Type Label",
+            "type": "string"
+          },
+          "course_type": {
+            "title": "Course Type",
+            "type": "string"
+          },
+          "classification_path": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectListClassification"
+            },
+            "title": "Classification Path",
+            "type": "array"
+          },
+          "offerings": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectListOffering"
+            },
+            "title": "Offerings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "credits",
+          "faculty_name",
+          "department_name",
+          "specialization_name",
+          "teaching_type_label",
+          "course_type",
+          "classification_path",
+          "offerings"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SubjectListOffering": {
+        "properties": {
+          "term_code": {
+            "title": "Term Code",
+            "type": "string"
+          },
+          "semester_order": {
+            "title": "Semester Order",
+            "type": "integer"
+          },
+          "academic_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Academic Year"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          }
+        },
+        "required": [
+          "term_code",
+          "semester_order",
+          "academic_year",
+          "source_note"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SubjectListProgram": {
+        "properties": {
+          "curriculum_id": {
+            "format": "uuid",
+            "title": "Curriculum Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "faculty_name": {
+            "title": "Faculty Name",
+            "type": "string"
+          },
+          "specialization_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialization Name"
+          },
+          "course_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Name"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
+          },
+          "admission_year_from": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year From"
+          },
+          "admission_year_to": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year To"
+          },
+          "source_document": {
+            "title": "Source Document",
+            "type": "string"
+          },
+          "source_pages": {
+            "title": "Source Pages",
+            "type": "string"
+          }
+        },
+        "required": [
+          "curriculum_id",
+          "name",
+          "faculty_name",
+          "specialization_name",
+          "course_name",
+          "verification_status",
+          "admission_year_from",
+          "admission_year_to",
+          "source_document",
+          "source_pages"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SubjectList": {
+        "properties": {
+          "program": {
+            "$ref": "#/components/schemas/SubjectListProgram"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectListItem"
+            },
+            "title": "Courses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "program",
+          "courses"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "LiveEvaluation": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/Judgment"
+          },
+          "data_revision": {
+            "title": "Data Revision",
+            "type": "integer"
+          },
+          "curriculum": {
+            "$ref": "#/components/schemas/CurriculumData"
+          },
+          "rule_revisions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Rule Revisions",
+            "type": "object"
+          },
+          "total": {
+            "$ref": "#/components/schemas/CreditSummary"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionResult"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionResult"
+            },
+            "title": "Requirements",
+            "type": "array"
+          },
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseResult"
+            },
+            "title": "Courses",
+            "type": "array"
+          },
+          "missing_required_courses": {
+            "items": {
+              "$ref": "#/components/schemas/CourseResult"
+            },
+            "title": "Missing Required Courses",
+            "type": "array"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/OverflowAllocation"
+            },
+            "title": "Allocations",
+            "type": "array"
+          },
+          "external_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalAllocation"
+            },
+            "title": "External Allocations",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseRecommendation"
+            }
+          },
+          "evaluated_at": {
+            "format": "date-time",
+            "title": "Evaluated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result",
+          "data_revision",
+          "curriculum",
+          "rule_revisions",
+          "total",
+          "categories",
+          "requirements",
+          "courses",
+          "missing_required_courses",
+          "allocations",
+          "external_allocations",
+          "warnings",
+          "recommendations",
+          "evaluated_at"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CreatedCheck": {
+        "description": "保存済みの判定履歴。作成後は変更せず、現在のマスタで再計算しない。",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/CheckInput"
+          },
+          "result": {
+            "$ref": "#/components/schemas/LiveEvaluation"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "input",
+          "result"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "Programs": {
+        "type": "object",
+        "properties": {
+          "programs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramOption"
+            }
+          }
+        },
+        "required": [
+          "programs"
+        ],
+        "additionalProperties": false
+      },
+      "PreviewPrograms": {
+        "items": {
+          "$ref": "#/components/schemas/SubjectListProgram"
+        },
+        "type": "array"
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "const": "ok",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "additionalProperties": false
+      },
+      "AuthConfig": {
+        "type": "object",
+        "properties": {
+          "authenticated": {
+            "type": "boolean",
+            "const": false
+          },
+          "policy": {
+            "type": "object",
+            "properties": {
+              "password_min_length": {
+                "type": "integer"
+              },
+              "password_max_length": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "password_min_length",
+              "password_max_length"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "authenticated",
+          "policy"
+        ],
+        "additionalProperties": false
+      },
+      "AuthSession": {
+        "type": "object",
+        "properties": {
+          "authenticated": {
+            "type": "boolean",
+            "const": true
+          },
+          "student": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "login_name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "login_name"
+            ],
+            "additionalProperties": false
+          },
+          "csrf_token": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "authenticated",
+          "student",
+          "csrf_token",
+          "expires_at"
+        ],
+        "additionalProperties": false
+      },
+      "Registered": {
+        "type": "object",
+        "properties": {
+          "registered": {
+            "type": "boolean",
+            "const": true
+          },
+          "authenticated": {
+            "type": "boolean",
+            "const": false
+          },
+          "recovery_code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "registered",
+          "authenticated",
+          "recovery_code"
+        ],
+        "additionalProperties": false
+      },
+      "Recovered": {
+        "type": "object",
+        "properties": {
+          "recovered": {
+            "type": "boolean",
+            "const": true
+          },
+          "authenticated": {
+            "type": "boolean",
+            "const": false
+          },
+          "recovery_code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recovered",
+          "authenticated",
+          "recovery_code"
+        ],
+        "additionalProperties": false
+      },
+      "LoggedOut": {
+        "type": "object",
+        "properties": {
+          "authenticated": {
+            "type": "boolean",
+            "const": false
+          }
+        },
+        "required": [
+          "authenticated"
+        ],
+        "additionalProperties": false
+      },
+      "Credentials": {
+        "type": "object",
+        "properties": {
+          "login_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "登録時は半角英数字・_の3〜32文字。小文字へ正規化。ログイン・復旧も大文字小文字を区別しない。"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "format": "password",
+            "description": "実際の許容文字数はGET /api/auth/configのpolicyを参照。既定12〜128文字。"
+          }
+        },
+        "required": [
+          "login_name",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "Recovery": {
+        "type": "object",
+        "properties": {
+          "login_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "登録時は半角英数字・_の3〜32文字。小文字へ正規化。ログイン・復旧も大文字小文字を区別しない。"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "format": "password",
+            "description": "実際の許容文字数はGET /api/auth/configのpolicyを参照。既定12〜128文字。"
+          },
+          "recovery_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "login_name",
+          "password",
+          "recovery_code"
+        ],
+        "additionalProperties": false
+      },
+      "ProgramSelectionInput": {
+        "type": "object",
+        "properties": {
+          "program_id": {
+            "type": "string",
+            "description": "UUID。標準ハイフン表記を推奨。Goは32桁・波括弧・urn:uuid:形式も正規化して受け付ける。"
+          },
+          "curriculum_id": {
+            "type": "string",
+            "description": "UUID。標準ハイフン表記を推奨。Goは32桁・波括弧・urn:uuid:形式も正規化して受け付ける。"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740990
+          }
+        },
+        "required": [
+          "program_id",
+          "curriculum_id",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "CheckRequestInput": {
+        "type": "object",
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740990
+          }
+        },
+        "required": [
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "GradeAttemptInput": {
+        "additionalProperties": false,
+        "properties": {
+          "course_id": {
+            "type": "string",
+            "description": "UUID。標準ハイフン表記を推奨。Goは32桁・波括弧・urn:uuid:形式も正規化して受け付ける。"
+          },
+          "attempt_no": {
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Attempt No",
+            "type": "integer"
+          },
+          "result_status": {
+            "$ref": "#/components/schemas/ResultStatusValue"
+          },
+          "grade_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeCodeValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "academic_year": {
+            "anyOf": [
+              {
+                "maximum": 2100,
+                "minimum": 1900,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Academic Year"
+          },
+          "term_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "course_id",
+          "attempt_no",
+          "result_status",
+          "grade_code",
+          "academic_year",
+          "term_code"
+        ],
+        "type": "object",
+        "allOf": [
+          {
+            "oneOf": [
+              {
+                "properties": {
+                  "result_status": {
+                    "const": "pending"
+                  },
+                  "grade_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "result_status": {
+                    "const": "finalized"
+                  },
+                  "grade_code": {
+                    "type": "string",
+                    "enum": [
+                      "S",
+                      "A",
+                      "B",
+                      "C",
+                      "D",
+                      "X"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "GradeSetInput": {
+        "type": "object",
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740990
+          },
+          "grades": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/GradeAttemptInput"
+            }
+          }
+        },
+        "required": [
+          "expected_revision",
+          "grades"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "healthError405": {
+        "description": "HTTPメソッドが不正です。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          },
+          "Allow": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "そのパスで許可するメソッド。"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "HTTPメソッドが不正です。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authConfigError422": {
+        "description": "クエリパラメーターは指定できません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "クエリパラメーターは指定できません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authConfigError502": {
+        "description": "認証サービスに接続できません。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "認証サービスに接続できません。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authConfigError503": {
+        "description": "認証処理を利用できません。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "認証処理を利用できません。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authRegisterError422": {
+        "description": "クエリパラメーターは指定できません。 / 入力形式が不正です。 / JSON形式で入力してください。 / 入力項目が重複しています。 / 入力項目は文字列で指定してください。 / 必要な入力項目を指定してください。 / 入力項目が不正です。 / 入力が長すぎます。 / ユーザー名は半角英数字・アンダースコアの3〜32文字で入力してください。 / パスワードの文字数が設定された範囲外です。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "クエリパラメーターは指定できません。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "入力形式が不正です。"
+                }
+              },
+              "case_3": {
+                "value": {
+                  "detail": "JSON形式で入力してください。"
+                }
+              },
+              "case_4": {
+                "value": {
+                  "detail": "入力項目が重複しています。"
+                }
+              },
+              "case_5": {
+                "value": {
+                  "detail": "入力項目は文字列で指定してください。"
+                }
+              },
+              "case_6": {
+                "value": {
+                  "detail": "必要な入力項目を指定してください。"
+                }
+              },
+              "case_7": {
+                "value": {
+                  "detail": "入力項目が不正です。"
+                }
+              },
+              "case_8": {
+                "value": {
+                  "detail": "入力が長すぎます。"
+                }
+              },
+              "case_9": {
+                "value": {
+                  "detail": "ユーザー名は半角英数字・アンダースコアの3〜32文字で入力してください。"
+                }
+              },
+              "case_10": {
+                "value": {
+                  "detail": "パスワードの文字数が設定された範囲外です。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authRegisterError403": {
+        "description": "操作を確認できません。画面を再読み込みしてください。 / アクセス元を確認できません。画面を再読み込みしてください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "操作を確認できません。画面を再読み込みしてください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "アクセス元を確認できません。画面を再読み込みしてください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authRegisterError400": {
+        "description": "接続元を確認できません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "接続元を確認できません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authRegisterError429": {
+        "description": "試行回数の上限に達しました。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "試行回数の上限に達しました。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authRegisterError409": {
+        "description": "このユーザー名は使用されています。別のユーザー名を指定してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "このユーザー名は使用されています。別のユーザー名を指定してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authRecoverError400": {
+        "description": "接続元を確認できません。 / ユーザー名または復旧コードを確認してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "接続元を確認できません。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "ユーザー名または復旧コードを確認してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authLoginError401": {
+        "description": "ユーザー名またはパスワードを確認してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "ユーザー名またはパスワードを確認してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authSessionError401": {
+        "description": "ログインしてください。 / ユーザー名またはパスワードを確認してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "ログインしてください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "ユーザー名またはパスワードを確認してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listProgramsError502": {
+        "description": "所属サービスに接続できません。時間をおいて再試行してください。 / 所属サービスの応答を読み込めません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "所属サービスに接続できません。時間をおいて再試行してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "所属サービスの応答を読み込めません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listProgramsError503": {
+        "description": "所属情報を処理できません。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "所属情報を処理できません。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveProgramError422": {
+        "description": "クエリパラメーターは指定できません。 / 所属・カリキュラム・更新版を正しい形式で指定してください。 / 所属とカリキュラムの組合せが不正です。選択肢を再取得してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "クエリパラメーターは指定できません。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "所属・カリキュラム・更新版を正しい形式で指定してください。"
+                }
+              },
+              "case_3": {
+                "value": {
+                  "detail": "所属とカリキュラムの組合せが不正です。選択肢を再取得してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveProgramError403": {
+        "description": "操作を確認できません。画面を再読み込みしてください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "操作を確認できません。画面を再読み込みしてください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveProgramError409": {
+        "description": "別の画面でデータが更新されました。再取得してから保存してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "別の画面でデータが更新されました。再取得してから保存してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveProgramError413": {
+        "description": "所属・カリキュラム・更新版を正しい形式で指定してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "所属・カリキュラム・更新版を正しい形式で指定してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveProgramError415": {
+        "description": "JSON形式で送信してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "JSON形式で送信してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "getGradesError502": {
+        "description": "成績サービスに接続できません。時間をおいて再試行してください。 / 成績サービスの応答を読み込めません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "成績サービスに接続できません。時間をおいて再試行してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "成績サービスの応答を読み込めません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "getGradesError503": {
+        "description": "成績を処理できません。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "成績を処理できません。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveGradesError422": {
+        "description": "クエリパラメーターは指定できません。 / 成績の送信形式が不正です。expected_revisionとgradesだけを指定してください。 / 一度に保存できる成績の件数を超えています。 / 成績の形式が不正です。科目・履修回次・成績・年度・学期を確認してください。 / 同じ科目の履修回次が重複しています。 / 履修回次は1から順に入力してください。再履修は不合格（D・X）の後だけ追加できます。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "クエリパラメーターは指定できません。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "成績の送信形式が不正です。expected_revisionとgradesだけを指定してください。"
+                }
+              },
+              "case_3": {
+                "value": {
+                  "detail": "一度に保存できる成績の件数を超えています。"
+                }
+              },
+              "case_4": {
+                "value": {
+                  "detail": "成績の形式が不正です。科目・履修回次・成績・年度・学期を確認してください。"
+                }
+              },
+              "case_5": {
+                "value": {
+                  "detail": "同じ科目の履修回次が重複しています。"
+                }
+              },
+              "case_6": {
+                "value": {
+                  "detail": "履修回次は1から順に入力してください。再履修は不合格（D・X）の後だけ追加できます。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveGradesError400": {
+        "description": "選択した科目が見つかりません。科目一覧を再読み込みしてください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "選択した科目が見つかりません。科目一覧を再読み込みしてください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "saveGradesError413": {
+        "description": "送信する成績の量が上限を超えています。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "送信する成績の量が上限を超えています。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listCoursesError409": {
+        "description": "所属課程を設定してから科目を表示してください。 / 所属課程のデータが見つかりません。所属を設定し直してください。 / 科目分類のデータが不整合です。課程・科目データを確認してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "所属課程を設定してから科目を表示してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "所属課程のデータが見つかりません。所属を設定し直してください。"
+                }
+              },
+              "case_3": {
+                "value": {
+                  "detail": "科目分類のデータが不整合です。課程・科目データを確認してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listCoursesError503": {
+        "description": "科目データを読み込めません。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "科目データを読み込めません。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listCoursesError502": {
+        "description": "科目サービスに接続できません。時間をおいて再試行してください。 / 科目サービスの応答を読み込めません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "科目サービスに接続できません。時間をおいて再試行してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "科目サービスの応答を読み込めません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listCoursesError504": {
+        "description": "Pythonサービスの応答がタイムアウトしました。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "Pythonサービスの応答がタイムアウトしました。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listCoursesError422": {
+        "description": "絞り込み条件の形式が不正です。 / 未対応の絞り込み条件が指定されています。 / 絞り込み条件は各1回、1〜100文字で指定してください。 / 科目区分IDの形式が不正です。 / 開講学期はfirst（前期）またはsecond（後期）で指定してください。 / 指定した科目区分は本人の課程にありません。科目区分を選び直してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "絞り込み条件の形式が不正です。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "未対応の絞り込み条件が指定されています。"
+                }
+              },
+              "case_3": {
+                "value": {
+                  "detail": "絞り込み条件は各1回、1〜100文字で指定してください。"
+                }
+              },
+              "case_4": {
+                "value": {
+                  "detail": "科目区分IDの形式が不正です。"
+                }
+              },
+              "case_5": {
+                "value": {
+                  "detail": "開講学期はfirst（前期）またはsecond（後期）で指定してください。"
+                }
+              },
+              "case_6": {
+                "value": {
+                  "detail": "指定した科目区分は本人の課程にありません。科目区分を選び直してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "dashboardError400": {
+        "description": "保存済みの成績に未知の科目が含まれています。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "保存済みの成績に未知の科目が含まれています。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "dashboardError409": {
+        "description": "所属が未設定です。所属設定を保存してから判定してください。 / 必要な単位換算・他学部算入の規則が未確認のため、卒業要件を判定できません。 / 他学部科目の算入先を決めるため、履修年度・学期が必要です。他学部科目の未入力の年度・学期を入力して保存し、再度判定してください。 / 所属課程外の修得科目に、算入先が未登録の科目があります。対象科目と算入先のマスタ整備が必要です。 / 卒業要件の科目・条件・算入規則の設定が不足しているか、不整合があります。 / 保存済みの成績または判定マスタが不正なため、判定できません。 / 保存済みの成績データが不正なため、判定できません。 / 保存済みの履修回次が不正なため、判定できません。 / 保存済みの履修回次が重複しているため、判定できません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "所属が未設定です。所属設定を保存してから判定してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "必要な単位換算・他学部算入の規則が未確認のため、卒業要件を判定できません。"
+                }
+              },
+              "case_3": {
+                "value": {
+                  "detail": "他学部科目の算入先を決めるため、履修年度・学期が必要です。他学部科目の未入力の年度・学期を入力して保存し、再度判定してください。"
+                }
+              },
+              "case_4": {
+                "value": {
+                  "detail": "所属課程外の修得科目に、算入先が未登録の科目があります。対象科目と算入先のマスタ整備が必要です。"
+                }
+              },
+              "case_5": {
+                "value": {
+                  "detail": "卒業要件の科目・条件・算入規則の設定が不足しているか、不整合があります。"
+                }
+              },
+              "case_6": {
+                "value": {
+                  "detail": "保存済みの成績または判定マスタが不正なため、判定できません。"
+                }
+              },
+              "case_7": {
+                "value": {
+                  "detail": "保存済みの成績データが不正なため、判定できません。"
+                }
+              },
+              "case_8": {
+                "value": {
+                  "detail": "保存済みの履修回次が不正なため、判定できません。"
+                }
+              },
+              "case_9": {
+                "value": {
+                  "detail": "保存済みの履修回次が重複しているため、判定できません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "dashboardError502": {
+        "description": "卒業要件の判定サービスに接続できません。時間をおいて再試行してください。 / 卒業要件の判定サービスの応答を読み込めません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "卒業要件の判定サービスに接続できません。時間をおいて再試行してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "卒業要件の判定サービスの応答を読み込めません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "dashboardError503": {
+        "description": "卒業要件の判定を処理できません。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "卒業要件の判定を処理できません。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listChecksError503": {
+        "description": "卒業要件の判定を処理できません。時間をおいて再試行してください。 / 判定履歴を処理できません。時間をおいて再試行してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "卒業要件の判定を処理できません。時間をおいて再試行してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "判定履歴を処理できません。時間をおいて再試行してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "listChecksError422": {
+        "description": "履歴の表示範囲が不正です。limitは1〜100、offsetは0以上の整数で各1回まで指定してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "履歴の表示範囲が不正です。limitは1〜100、offsetは0以上の整数で各1回まで指定してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "createCheckError422": {
+        "description": "クエリパラメーターは指定できません。 / 判定の送信形式が不正です。expected_revisionだけを指定してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "クエリパラメーターは指定できません。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "判定の送信形式が不正です。expected_revisionだけを指定してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "createCheckError409": {
+        "description": "所属が未設定です。所属設定を保存してから判定してください。 / 必要な単位換算・他学部算入の規則が未確認のため、卒業要件を判定できません。 / 他学部科目の算入先を決めるため、履修年度・学期が必要です。他学部科目の未入力の年度・学期を入力して保存し、再度判定してください。 / 所属課程外の修得科目に、算入先が未登録の科目があります。対象科目と算入先のマスタ整備が必要です。 / 卒業要件の科目・条件・算入規則の設定が不足しているか、不整合があります。 / 保存済みの成績または判定マスタが不正なため、判定できません。 / 保存済みの成績データが不正なため、判定できません。 / 保存済みの履修回次が不正なため、判定できません。 / 保存済みの履修回次が重複しているため、判定できません。 / 別の画面でデータが更新されました。再取得してから保存してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "所属が未設定です。所属設定を保存してから判定してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "必要な単位換算・他学部算入の規則が未確認のため、卒業要件を判定できません。"
+                }
+              },
+              "case_3": {
+                "value": {
+                  "detail": "他学部科目の算入先を決めるため、履修年度・学期が必要です。他学部科目の未入力の年度・学期を入力して保存し、再度判定してください。"
+                }
+              },
+              "case_4": {
+                "value": {
+                  "detail": "所属課程外の修得科目に、算入先が未登録の科目があります。対象科目と算入先のマスタ整備が必要です。"
+                }
+              },
+              "case_5": {
+                "value": {
+                  "detail": "卒業要件の科目・条件・算入規則の設定が不足しているか、不整合があります。"
+                }
+              },
+              "case_6": {
+                "value": {
+                  "detail": "保存済みの成績または判定マスタが不正なため、判定できません。"
+                }
+              },
+              "case_7": {
+                "value": {
+                  "detail": "保存済みの成績データが不正なため、判定できません。"
+                }
+              },
+              "case_8": {
+                "value": {
+                  "detail": "保存済みの履修回次が不正なため、判定できません。"
+                }
+              },
+              "case_9": {
+                "value": {
+                  "detail": "保存済みの履修回次が重複しているため、判定できません。"
+                }
+              },
+              "case_10": {
+                "value": {
+                  "detail": "別の画面でデータが更新されました。再取得してから保存してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "createCheckError413": {
+        "description": "送信内容が上限を超えています。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "送信内容が上限を超えています。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "getCheckError404": {
+        "description": "判定履歴が見つかりません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "判定履歴が見つかりません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "previewProgramsError404": {
+        "description": "科目一覧の開発用表示は無効です。 / 選択したカリキュラムが見つかりません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "科目一覧の開発用表示は無効です。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "選択したカリキュラムが見つかりません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "previewProgramsError409": {
+        "description": "科目分類のデータが不整合です。課程・科目データを確認してください。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "科目分類のデータが不整合です。課程・科目データを確認してください。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "previewProgramsError500": {
+        "description": "科目データの取得中に予期しないエラーが発生しました。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "科目データの取得中に予期しないエラーが発生しました。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "previewProgramsError502": {
+        "description": "Pythonサービスに接続できません。起動状態を確認してください。 / Pythonサービスの応答を読み込めません。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "Pythonサービスに接続できません。起動状態を確認してください。"
+                }
+              },
+              "case_2": {
+                "value": {
+                  "detail": "Pythonサービスの応答を読み込めません。"
+                }
+              }
+            }
+          }
+        }
+      },
+      "previewSubjectsError422": {
+        "description": "カリキュラムIDの形式が不正です。",
+        "headers": {
+          "Cache-Control": {
+            "description": "保存を禁止する。",
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "case_1": {
+                "value": {
+                  "detail": "カリキュラムIDの形式が不正です。"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "grad_checker_session",
+        "description": "ログインで設定するHttpOnly Cookie。Swagger UIには手入力せず、ブラウザーから同じOriginへ自動送信する。"
+      },
+      "csrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "ログインまたはセッション応答のcsrf_token（64文字）。Authorizeへ入力。ブラウザーストレージへ保存しない。"
+      }
+    },
+    "parameters": {
+      "Origin": {
+        "name": "Origin",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "default": "http://127.0.0.1:5173"
+        },
+        "description": "ブラウザーが現在のOriginを送信。Go/PythonのPUBLIC_ORIGINと一致させる。既定http://127.0.0.1:5173。"
+      }
+    }
+  }
+}

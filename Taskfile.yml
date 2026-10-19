@@ -27,6 +27,7 @@ tasks:
   backend-check:
     desc: バックエンドのlint・整形状態・型を検証
     cmds:
+      - task: api-docs-check
       - task: backend-lint
       - task: backend-format-check
       - task: backend-typecheck
@@ -223,3 +224,21 @@ tasks:
     dir: frontend
     cmds:
       - npm run preview
+
+  api-docs:
+    desc: Go公開APIのSwagger UIを画面と同じOriginで起動
+    cmds:
+      - node scripts/dev.mjs --api-docs
+
+  api-docs-build:
+    desc: Go公開APIのOpenAPIを再生成
+    dir: backend
+    cmds:
+      - uv run --locked python -m scripts.build_openapi
+
+  api-docs-check:
+    desc: OpenAPIの生成差分・構文・公開契約を検証
+    dir: backend
+    cmds:
+      - uv run --locked python -m scripts.build_openapi --check
+      - uv run --locked pytest tests/test_openapi.py

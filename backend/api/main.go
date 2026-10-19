@@ -23,6 +23,7 @@ func main() {
 	listen := flag.String("listen", "127.0.0.1:8000", "外部APIの待受アドレス")
 	pythonURL := flag.String("python-url", "http://127.0.0.1:8001", "Pythonサービスのオリジン")
 	preview := flag.Bool("subject-list-preview", false, "開発用科目一覧APIを有効にする")
+	docs := flag.Bool("api-docs", false, "開発用のOpenAPIとSwagger UIを有効にする")
 	origin := flag.String("public-origin", "http://127.0.0.1:5173", "認証で許可する画面のオリジン")
 	flag.Parse()
 	client, err := infrastructure.NewPythonSubjectListClient(*pythonURL, 5*time.Second)
@@ -67,7 +68,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	server := &http.Server{Addr: *listen, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	server := &http.Server{Addr: *listen, Handler: presentation.NewAPIDocsHandler(*docs, handler), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	done := make(chan struct{})

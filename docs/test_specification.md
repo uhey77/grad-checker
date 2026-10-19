@@ -119,6 +119,7 @@ U14・U15は `backend/tests/test_recommendations.py` で必修優先、複数開
 
 | 確認 | Task | Make |
 |---|---|---|
+| OpenAPIの生成差分・構文・公開契約 | `task api-docs-check` | `make api-docs-check` |
 | Python・Goのlint・整形状態・型・静的解析 | `task backend-check` | `make backend-check` |
 | Python・実プロセス結合・Goテスト | `task backend-test` | `make backend-test` |
 | Goテスト（競合検出付き） | `task go-api-test` | `make go-api-test` |
@@ -127,7 +128,11 @@ U14・U15は `backend/tests/test_recommendations.py` で必修優先、複数開
 
 `backend-test`はpytestの後に競合検出付きGoテストを実行する。`go-api-test`はGoのみを確認する場合に使用する。フロントエンドの自動テストは`npm --prefix frontend test`で実行する。Go・gofmtをPATHに用意し、ローカルポートを使える環境で検証する。Goがない場合にpytestの実プロセス結合テストがスキップされても、全体の合格とは扱わない。
 
-第三者が`task setup` / `make setup`、[バックエンドの起動・確認手順](backend_architecture.md)、[シード手順](../backend/seeds/README.md)、Task / Makeの定義から初期化・投入・Go／Python／Reactの起動・テストを再現できることを確認する。外部APIのOpenAPI / Swagger UIは今後整備し、Goが公開するパスと入力・出力・エラーに一致することを受入条件とする。Pythonサービスの`/docs`・`/openapi.json`は無効のままとする。学生向けJSONファイル入出力と公開共有は受入対象にしない。
+第三者が`task setup` / `make setup`、[バックエンドの起動・確認手順](backend_architecture.md)、[シード手順](../backend/seeds/README.md)、Task / Makeの定義から初期化・投入・Go／Python／Reactの起動・テストを再現できることを確認する。Swagger UIの起動・認証操作は[README](../README.md#go公開apiのopenapiとswagger-ui)に記載する。Pythonサービスの`/docs`・`/openapi.json`は無効のままとする。学生向けJSONファイル入出力と公開共有は受入対象にしない。
+
+`test_openapi.py`は、生成結果とコミット済み仕様の一致、OpenAPI 3.1構文、Goルート宣言の追加・削除・改名、実Goの許可メソッドを照合する。一時SQLite＋実Go/Pythonで認証・所属・成績・科目・判定・履歴を操作し、成功JSONをスキーマに照合する。主要な422・401・403・409・404・413・415はステータス・日本語detailの例も照合する。開発用の未認証一覧もスキーマで確認し、通常起動のGoのドキュメント経路は404とする。Goの`docs_test.go`は配信フラグ・埋込みJSON・HTML・許可メソッドを検証する。
+
+`api-docs-check`は`backend-check`とPRのCIにも含める。全入力値・全業務エラーの網羅を保証するものではなく、残りは各機能のGo/Pythonテストで確認する。ブラウザーではVite経由の`127.0.0.1:5173/docs`で仕様の読込み、ログインCookie、CSRF付き更新と履歴保存を確認する。
 
 関連：[API](api_specification.md)、[DB](database_design.md)、[判定](graduation_requirement_logic.md)、[画面](screen_design/student_screen_design.md)、[未確定事項](open_questions.md)。
 

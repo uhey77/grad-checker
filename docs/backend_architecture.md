@@ -148,6 +148,9 @@ Go 1.22以上の`go`・`gofmt`をPATHに用意する。Goは標準ライブラ�
 | バックエンドのみ（科目一覧を有効化） | `task backend-subject-list` | `make backend-subject-list` |
 | Pythonサービスのみ | `task backend-python-dev` | `make backend-python-dev` |
 | Go外部APIのみ（科目一覧有効） | `task go-api-dev` | `make go-api-dev` |
+| Swagger UI付き画面＋Go＋Python | `task api-docs` | `make api-docs` |
+| Go公開OpenAPIの再生成 | `task api-docs-build` | `make api-docs-build` |
+| OpenAPI・公開契約の照合 | `task api-docs-check` | `make api-docs-check` |
 | Python・Goのlint・整形状態・型 | `task backend-check` | `make backend-check` |
 | Python・実プロセス結合・Goテスト | `task backend-test` | `make backend-test` |
 | Goテスト（競合検出付き） | `task go-api-test` | `make go-api-test` |
@@ -159,7 +162,12 @@ Goの設定例は、`backend/`で`go run ./api -listen 127.0.0.1:8000 -python-ur
 単独起動の`backend-python-dev`と`go-api-dev`は別々のターミナルで実行する。片方のコマンドからもう片方のサービスは起動しない。
 Pythonを直接起動して確認する場合も、`backend/`で`uv run --locked uvicorn api.api_service.main:app --host 127.0.0.1 --port 8001`と待受を明示する。ポートを省略すると8000になり、Goの待受と競合する。
 Pythonサービスは127.0.0.1:8001で起動し、外部には公開しない。
-Pythonの`/api`・Swagger UIは削除しており、画面はGoを介して取得する。外部OpenAPI/Swagger UIの整備は今後実施する。
+Pythonの`/api`・Swagger UIは削除しており、画面はGoを介して取得する。
+Goの`-api-docs`（既定false）は、埋め込んだ公開OpenAPI 3.1とSwagger UIを`/openapi.json`・`/docs`で配信する。
+`api-docs`コマンドではViteがこれらの経路もGoへプロキシするため、`http://127.0.0.1:5173/docs`から通常のCookie・Origin・CSRF制約を保って操作できる。
+Goの通常起動とPythonの同名経路は404。ブリッジのOpenAPIは生成・公開しない。
+Swagger UIのJS/CSSは固定バージョンのCDNを利用し、仕様の外部バリデーター送信・認証情報の永続化は無効。
+生成・認証操作の詳細は[README](../README.md#go公開apiのopenapiとswagger-ui)を参照する。
 
 起動時にデータは自動投入しない。初回の卒業判定前には`backend-seed`、続けて`backend-requirements-seed`の両方を実行する。科目マスタだけでは科目表示・成績保存はできても、卒業判定は設定不足エラーになる。
 
