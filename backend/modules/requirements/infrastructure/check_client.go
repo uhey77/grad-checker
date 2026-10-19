@@ -49,7 +49,7 @@ func (c *PythonCheckClient) Call(ctx context.Context, call application.CheckCall
 	var result struct {
 		DataRevision int64 `json:"data_revision"`
 	}
-	if json.Unmarshal(data, &shape) != nil || len(shape.ID) != 36 || json.Unmarshal(shape.Input, &input) != nil || input.DataRevision == nil || input.Grades == nil || !validEvaluation(shape.Result) {
+	if json.Unmarshal(data, &shape) != nil || len(shape.ID) != 36 || json.Unmarshal(shape.Input, &input) != nil || input.DataRevision == nil || input.Grades == nil || !validEvaluationResult(shape.Result, call.Operation == "get") {
 		return nil, application.ErrBackend
 	}
 	// 入力と結果は同じ成績版のスナップショットから作られている。

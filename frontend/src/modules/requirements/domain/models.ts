@@ -1,4 +1,22 @@
+import type { Offering } from "../../subjects/public.ts";
+
 export type Judgment = "pass" | "fail";
+
+export interface CourseRecommendation {
+  courseId: string;
+  name: string;
+  credits: number;
+  status: "not_earned" | "pending" | "not_taken";
+  isRequired: boolean;
+  offerings: Offering[];
+  contributions: {
+    requirementId: string;
+    code: string;
+    name: string;
+    shortageReduction: number;
+    reason: string;
+  }[];
+}
 
 export interface CreditSummary {
   requiredCredits: number;
@@ -48,6 +66,7 @@ export interface GraduationResult {
     freeCredits: number;
   }[];
   warnings: "provisional_external_allocation"[];
+  recommendations: CourseRecommendation[] | null;
 }
 
 export interface DashboardResult {

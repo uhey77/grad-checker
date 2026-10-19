@@ -5,6 +5,7 @@ import type {
   CheckSummary,
   CheckedGrade,
   CreditSummary,
+  CourseRecommendation,
   DashboardResult,
   GraduationResult,
   Judgment,
@@ -111,7 +112,64 @@ export function toDashboardResult(data: unknown): DashboardResult {
   };
 }
 
+function recommendations(data: unknown): CourseRecommendation[] {
+  const rows = list(data).map((data): CourseRecommendation => {
+    const row = record(data);
+    const status = row.status;
+    if (
+      (status !== "not_earned" &&
+        status !== "pending" &&
+        status !== "not_taken") ||
+      typeof row.is_required !== "boolean"
+    )
+      return invalid();
+    const contributions = list(row.contributions).map((data) => {
+      const reason = record(data);
+      return {
+        requirementId: text(reason.requirement_id),
+        code: text(reason.code),
+        name: text(reason.name),
+        shortageReduction: integer(reason.shortage_reduction, 1),
+        reason: text(reason.reason),
+      };
+    });
+    if (
+      !contributions.length ||
+      new Set(contributions.map((r) => r.requirementId)).size !==
+        contributions.length
+    )
+      return invalid();
+    return {
+      courseId: text(row.course_id),
+      name: text(row.name),
+      credits: integer(row.credits, 1),
+      status,
+      isRequired: row.is_required,
+      offerings: list(row.offerings).map((data) => {
+        const offering = record(data);
+        return {
+          termCode: text(offering.term_code),
+          semesterOrder: integer(offering.semester_order, 1),
+          academicYear:
+            offering.academic_year === null
+              ? null
+              : integer(offering.academic_year, 1),
+          sourceNote: nullableText(offering.source_note),
+        };
+      }),
+      contributions,
+    };
+  });
+  if (new Set(rows.map((row) => row.courseId)).size !== rows.length)
+    return invalid();
+  return rows;
+}
+
 export function toGraduationResult(data: unknown): GraduationResult {
+  return graduationResult(data, false);
+}
+
+function graduationResult(data: unknown, legacy: boolean): GraduationResult {
   const value = record(data);
   const requirements = list(value.requirements).map(condition);
   if (
@@ -121,6 +179,10 @@ export function toGraduationResult(data: unknown): GraduationResult {
     return invalid();
   return {
     ...evaluationSummary(value),
+    recommendations:
+      legacy && value.recommendations == null
+        ? null
+        : recommendations(value.recommendations),
     externalAllocations: list(value.external_allocations).map((data) => {
       const row = record(data);
       const earnedCredits = integer(row.earned_credits);
@@ -198,7 +260,7 @@ export function toSavedCheck(data: unknown): SavedCheck {
   const value = record(data);
   const input = record(value.input);
   const resultData = record(value.result);
-  const result = toGraduationResult(resultData);
+  const result = graduationResult(resultData, true);
   const createdAt = timestamp(value.created_at);
   // 科目名は保存済みの判定結果から引き、現在の科目マスタを参照しない。
   const names = new Map(

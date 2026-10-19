@@ -66,6 +66,8 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 | U15 | 同一候補が複数不足条件へ寄与 | 候補は1件、理由と条件コードを併記 | T20 |
 | U16 | 課程を切り替えて同じ科目を判定 | 課程別種別・必要値・算入先を使用 | T06/T16 |
 
+U14・U15は `backend/tests/test_recommendations.py` で必修優先、複数開講期の最小順・不明末尾、同順位ID順、理由集約、修得済み除外、不合格・未確定、全条件達成、確認済み超過換算、他学部対応表・共通上限・取得時期未確定を検証する。`test_check_results.py` で推薦を含む保存結果の不変性と推薦導入前の履歴互換を、`frontend/tests/requirements.test.mjs` でDTO検証・順序保持・旧履歴の情報なし表示契約を検証する。V07は一時DBのブラウザーで最新詳細・保存直後・過去詳細、375pxの横スクロール、読込み・失敗・再試行を確認する。
+
 ## 3. Go外部API・Python・SQLite結合テスト
 
 下表のHTTPステータスと日本語detailはGoの外部APIを通して検証する。Goのtestingで外部入力・HTTP変換を確認し、pytestでPythonの業務処理・SQLiteの保存結果を確認する。言語間の結合はGo → FastAPIのブリッジ通信 → Pythonのユースケース → SQLiteを実プロセスで通し、HTTP応答とDB状態の両方を検証する。

@@ -1,5 +1,6 @@
 """判定履歴の保存・本人限定の取得・不変性・失敗時のロールバックを実SQLiteで確認する。"""
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
@@ -154,6 +155,8 @@ def test_past_check_is_unchanged_after_grade_and_master_updates(checks_app):
     app, client, identity = checks_app
     revision = save_grades(client, identity, [grade(uid(i)) for i in (10, 11)], 1)
     created = create(client, identity, revision)["data"]
+    assert created["result"]["recommendations"]
+    assert all(row["contributions"] for row in created["result"]["recommendations"])
     save_grades(client, identity, [grade(uid(i)) for i in (10, 11, 13, 15)], revision)
     engine = app.state.database_engine
     with engine.begin() as connection:
@@ -167,6 +170,20 @@ def test_past_check_is_unchanged_after_grade_and_master_updates(checks_app):
     with pytest.raises(IntegrityError), engine.begin() as connection:
         connection.execute(text("UPDATE check_results SET result_json = '{}'"))
     assert get(client, identity, created["id"])["data"] == created
+
+
+def test_pre_recommendation_history_remains_readable_without_recalculation(checks_app):
+    app, client, identity = checks_app
+    created = create(client, identity, 1)["data"]
+    legacy = dict(created["result"])
+    del legacy["recommendations"]
+    check_id = str(uuid4())
+    copy_check(app, created["id"], check_id, created["created_at"], json.dumps(legacy))
+    with app.state.database_engine.begin() as connection:
+        connection.execute(text("DROP TABLE requirement_scopes"))
+    restored = get(client, identity, check_id)["data"]
+    assert restored["result"].pop("recommendations") is None
+    assert restored["result"] == legacy
 
 
 def test_owner_lists_checks_newest_first_with_paging(checks_app):

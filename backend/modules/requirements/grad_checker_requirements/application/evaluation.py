@@ -1,10 +1,12 @@
 """卒業単位条件の共通計算。副作用を持たず、未確認事項をfailに読み替えない。"""
 
 from collections import defaultdict
+from copy import copy
 from uuid import UUID
 
 from pydantic import ValidationError
 
+from modules.grades.grad_checker_grades.application.grades import GradeAttempt
 from modules.grades.grad_checker_grades.domain.grade import PASSING_GRADE_CODES
 from modules.requirements.grad_checker_requirements.domain.requirement import (
     CreditRuleKind,
@@ -28,6 +30,7 @@ from .evaluation_models import (
     OverflowAllocation,
 )
 from .external_allocation import allocate_external
+from .recommendations import recommend_courses
 from .seed import (
     RequirementData,
 )
@@ -237,13 +240,40 @@ class _Evaluation:
             allocations=self.allocations,
             external_allocations=self.external_allocations,
             warnings=self.warnings,
+            recommendations=recommend_courses(
+                context, courses, conditions, self.project_course
+            ),
         )
+
+    def project_course(self, course_id: UUID) -> list[ConditionResult] | None:
+        # 成績・マスタ・元の判定状態は変更しない。取得時期は仮定しない。
+        context = copy(self.context)
+        context.latest = {
+            **context.latest,
+            course_id: GradeAttempt(
+                course_id=str(course_id),
+                attempt_no=1,
+                result_status="finalized",
+                grade_code="A",
+                academic_year=None,
+                term_code=None,
+            ),
+        }
+        projected = _Evaluation(context)
+        try:
+            projected.allocate()
+        except EvaluationError:
+            # 未確認換算・設定不足・取得時期不足を候補の確定に使わない。
+            return None
+        if self.warnings or projected.warnings:
+            return None
+        return [projected.condition_result(row) for row in context.conditions]
 
 
 def evaluate_graduation(snapshot: EvaluationSnapshot) -> EvaluationResult:
     """検証済みの独立コピーで計算し、正常結果か理由付き業務エラーを返す。
 
-    入力を変更せず、履歴保存・時刻採番・DB読取・推薦は行わない。
+    入力を変更せず、判定と推薦を計算する。履歴保存・時刻採番・DB読取は行わない。
     """
     try:
         validated = EvaluationSnapshot.model_validate(

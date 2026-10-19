@@ -16,6 +16,8 @@ Goの`/api/me/graduation-requirements`からPythonの`/bridge/graduation-require
 判定履歴は同モジュールの`application/check_results.py`（`CheckService`、成績版の照合と履歴の組立て）と`infrastructure/check_results.py`・`check_models.py`（`check_results`テーブル）に置く。`CheckService`がUnit of Workの一つの`write`で、`SqliteEvaluationRepository`からの入力取得、成績版の照合、判定、`SqliteCheckRepository`への保存を行う。一覧は`CheckService.list_checks`が一つの`read`で件数とページを読み、`SqliteCheckRepository`は結果JSONから要約の項目だけを取り出す。Goの`POST /api/checks`・`GET /api/checks`・`GET /api/checks/{id}`（`api/presentation/checks.go`）からPythonの`/bridge/checks`（`operation: create`とCSRF・`expected_revision`、`operation: list`と`page`の`limit`・`offset`、`operation: get`と`check_id`）を呼ぶ。
 具体的な対応範囲と未確認規則の扱いは[判定ロジック](graduation_requirement_logic.md)を参照。
 
+おすすめ科目は `application/recommendations.py` で候補・寄与条件・理由・開講期を組み立てる。`evaluation.py` は同じ計算処理で1科目修得時の算入を試算し、未確認規則や暫定配分に依存する候補を除く。DB・外部HTTPには依存しない。推薦は `EvaluationResult` の一部として履歴JSONに保存し、取得時には再生成しない。Goは推薦応答の形だけを検証する。
+
 ```text
 React / Vite :5173
   → Go presentation :8000

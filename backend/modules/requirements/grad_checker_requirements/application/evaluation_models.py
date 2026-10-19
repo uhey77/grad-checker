@@ -16,6 +16,7 @@ from modules.subjects.grad_checker_subjects.application.subject_data_validation 
     CurriculumData,
     NonnegativeInteger,
     SubjectDataSeed,
+    SubjectOfferingData,
 )
 
 type Judgment = Literal["pass", "fail"]
@@ -73,6 +74,20 @@ class OverflowAllocation(BaseModel):
     transferred_credits: int
 
 
+class RecommendationReason(BaseModel):
+    requirement_id: UUID
+    code: str
+    name: str
+    shortage_reduction: int
+    reason: str
+
+
+class CourseRecommendation(CourseResult):
+    is_required: bool
+    offerings: list[SubjectOfferingData]
+    contributions: list[RecommendationReason]
+
+
 class ExternalAllocation(BaseModel):
     rule_id: UUID
     target_classification_id: UUID
@@ -95,3 +110,5 @@ class EvaluationResult(BaseModel):
     allocations: list[OverflowAllocation]
     external_allocations: list[ExternalAllocation]
     warnings: list[EvaluationWarning]
+    # 推薦導入前の保存済み履歴には情報がない。現在のマスタで補完しない。
+    recommendations: list[CourseRecommendation] | None = None
