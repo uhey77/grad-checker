@@ -172,6 +172,7 @@ func TestCheckClientEnvelopeAndInvalidResponses(t *testing.T) {
 	}{
 		{"保存", create, `{"data":` + checkData + `}`, true},
 		{"取得", get, `{"data":` + checkData + `}`, true},
+		{"推薦導入前の履歴取得", get, `{"data":` + strings.Replace(checkData, `"recommendations":[],`, ``, 1) + `}`, true},
 		{"要求と異なる版", application.CheckCall{Operation: "create", Token: "token", CSRF: strings.Repeat("c", 64), Request: &application.CheckRequest{ExpectedRevision: 2}}, `{"data":` + checkData + `}`, false},
 		{"要求と異なるID", application.CheckCall{Operation: "get", Token: "token", CheckID: "00000000-0000-4000-8000-000000000002"}, `{"data":` + checkData + `}`, false},
 		{"入力と結果の版の不一致", get, `{"data":` + strings.Replace(checkData, `"data_revision":1,"grades"`, `"data_revision":2,"grades"`, 1) + `}`, false},
@@ -209,7 +210,7 @@ func TestCheckClientEnvelopeAndInvalidResponses(t *testing.T) {
 		if (err == nil) != tc.good {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
-		if tc.good && tc.call.Operation != "list" && string(data) != checkData {
+		if tc.good && tc.call.Operation != "list" && tc.response != `{"data":`+string(data)+`}` {
 			t.Fatalf("%s: %s", tc.name, data)
 		}
 		if err != nil && strings.Contains(err.Error(), "SQL") {

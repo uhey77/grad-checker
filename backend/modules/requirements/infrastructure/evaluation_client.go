@@ -74,6 +74,10 @@ func validDashboard(data json.RawMessage) bool {
 
 // validEvaluationは判定結果の必須フィールドと値域を検証する。単位の再計算は行わない。
 func validEvaluation(data json.RawMessage) bool {
+	return validEvaluationResult(data, false)
+}
+
+func validEvaluationResult(data json.RawMessage, legacy bool) bool {
 	var shape struct {
 		Result       string `json:"result"`
 		DataRevision *int64 `json:"data_revision"`
@@ -91,6 +95,7 @@ func validEvaluation(data json.RawMessage) bool {
 		ExternalAllocations *[]json.RawMessage `json:"external_allocations"`
 		Warnings            *[]string          `json:"warnings"`
 		RuleRevisions       map[string]int64   `json:"rule_revisions"`
+		Recommendations     json.RawMessage    `json:"recommendations"`
 	}
 	if json.Unmarshal(data, &shape) != nil || !judgment(shape.Result) || shape.DataRevision == nil || *shape.DataRevision < 0 || shape.Curriculum == nil || shape.Curriculum.ID == "" || shape.Curriculum.Revision == nil || *shape.Curriculum.Revision < 1 || shape.Total == nil || shape.Requirements == nil || len(*shape.Requirements) == 0 || shape.Categories == nil || shape.Missing == nil || shape.Courses == nil || shape.Allocations == nil || shape.ExternalAllocations == nil || shape.Warnings == nil || shape.RuleRevisions == nil {
 		return false
@@ -98,7 +103,46 @@ func validEvaluation(data json.RawMessage) bool {
 	if _, err := time.Parse(time.RFC3339Nano, shape.EvaluatedAt); err != nil {
 		return false
 	}
-	return shape.Total.valid()
+	return shape.Total.valid() && validRecommendations(shape.Recommendations, legacy)
+}
+
+func validRecommendations(data json.RawMessage, legacy bool) bool {
+	if len(data) == 0 || string(data) == "null" {
+		return legacy
+	}
+	var rows []struct {
+		CourseID      string             `json:"course_id"`
+		Name          string             `json:"name"`
+		Credits       int64              `json:"credits"`
+		Status        string             `json:"status"`
+		IsRequired    *bool              `json:"is_required"`
+		Offerings     *[]json.RawMessage `json:"offerings"`
+		Contributions []struct {
+			RequirementID string `json:"requirement_id"`
+			Code          string `json:"code"`
+			Name          string `json:"name"`
+			Reduction     int64  `json:"shortage_reduction"`
+			Reason        string `json:"reason"`
+		} `json:"contributions"`
+	}
+	if json.Unmarshal(data, &rows) != nil {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, row := range rows {
+		if row.CourseID == "" || seen[row.CourseID] || row.Name == "" || row.Credits <= 0 || row.IsRequired == nil || row.Offerings == nil || len(row.Contributions) == 0 || (row.Status != "not_taken" && row.Status != "pending" && row.Status != "not_earned") {
+			return false
+		}
+		seen[row.CourseID] = true
+		reasons := map[string]bool{}
+		for _, reason := range row.Contributions {
+			if reason.RequirementID == "" || reasons[reason.RequirementID] || reason.Code == "" || reason.Name == "" || reason.Reduction <= 0 || reason.Reason == "" {
+				return false
+			}
+			reasons[reason.RequirementID] = true
+		}
+	}
+	return true
 }
 
 // creditTotalは総単位の必要・修得・算入・不足と判定。

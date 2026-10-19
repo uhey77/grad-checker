@@ -79,7 +79,7 @@ func TestEvaluationHandlerAuthorizationAndErrors(t *testing.T) {
 
 }
 
-const evaluationData = `{"result":"fail","data_revision":1,"evaluated_at":"2026-10-16T00:00:00Z","curriculum":{"id":"c1","revision":1},"total":{"required_credits":10,"earned_credits":0,"credited_credits":0,"shortage":10,"result":"fail"},"requirements":[{}],"categories":[],"missing_required_courses":[],"courses":[],"allocations":[],"external_allocations":[],"warnings":[],"rule_revisions":{}}`
+const evaluationData = `{"result":"fail","data_revision":1,"evaluated_at":"2026-10-16T00:00:00Z","curriculum":{"id":"c1","revision":1},"total":{"required_credits":10,"earned_credits":0,"credited_credits":0,"shortage":10,"result":"fail"},"requirements":[{}],"categories":[],"missing_required_courses":[],"courses":[],"allocations":[],"external_allocations":[],"recommendations":[],"warnings":[],"rule_revisions":{}}`
 
 func TestEvaluationClientEnvelopeAndInvalidResponses(t *testing.T) {
 	for _, tc := range []struct {
@@ -91,6 +91,9 @@ func TestEvaluationClientEnvelopeAndInvalidResponses(t *testing.T) {
 		{`{"data":` + strings.Replace(evaluationData, `"fail"`, `"unknown"`, 1) + `}`, false},
 		{`{"data":` + strings.Replace(evaluationData, `"data_revision":1`, `"data_revision":null`, 1) + `}`, false},
 		{`{"data":` + strings.Replace(evaluationData, `"missing_required_courses":[]`, `"missing_required_courses":null`, 1) + `}`, false},
+		{`{"data":` + strings.Replace(evaluationData, `"recommendations":[]`, `"recommendations":null`, 1) + `}`, false},
+		{`{"data":` + strings.Replace(evaluationData, `"recommendations":[],`, ``, 1) + `}`, false},
+		{`{"data":` + strings.Replace(evaluationData, `"recommendations":[]`, `"recommendations":[{"course_id":"x","status":"earned"}]`, 1) + `}`, false},
 		{`{"error":{"code":"unverified_credit_rule","detail":"private SQL"}}`, false},
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

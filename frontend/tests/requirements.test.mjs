@@ -73,6 +73,7 @@ function fixture() {
     total: { ...summary },
     warnings: [],
     external_allocations: [],
+    recommendations: [],
     requirements: [
       {
         ...summary,
@@ -90,6 +91,82 @@ function fixture() {
     allocations: [{ requirement_id: "total", transferred_credits: 2 }],
   };
 }
+
+function recommendation() {
+  return {
+    course_id: "candidate",
+    name: "候補科目",
+    credits: 2,
+    status: "pending",
+    is_required: true,
+    offerings: [
+      {
+        course_id: "candidate",
+        term_code: "first",
+        semester_order: 1,
+        academic_year: null,
+        source_note: "便覧の注記",
+      },
+    ],
+    contributions: [
+      {
+        requirement_id: "total",
+        code: "T01",
+        name: "総単位",
+        shortage_reduction: 2,
+        reason: "総単位の不足を2単位減らせる候補です。",
+      },
+    ],
+  };
+}
+
+test("推薦の順序・状態・開講期・条件コードと保存済みの理由を保持する", () => {
+  const data = fixture();
+  data.recommendations = [
+    recommendation(),
+    { ...recommendation(), course_id: "second", status: "not_taken" },
+  ];
+  const result = toGraduationResult(data);
+  assert.deepEqual(
+    result.recommendations.map((r) => r.courseId),
+    ["candidate", "second"],
+  );
+  const course = result.recommendations[0];
+  assert.equal(course.status, "pending");
+  assert.equal(course.isRequired, true);
+  assert.equal(course.offerings[0].semesterOrder, 1);
+  assert.equal(course.offerings[0].sourceNote, "便覧の注記");
+  assert.equal(course.contributions[0].code, "T01");
+  assert.equal(
+    course.contributions[0].reason,
+    data.recommendations[0].contributions[0].reason,
+  );
+});
+
+test("欠損・重複候補・不正な状態・理由・開講期を推薦へ読み替えない", () => {
+  for (const change of [
+    (d) => delete d.recommendations,
+    (d) => (d.recommendations = null),
+    (d) => d.recommendations.push(recommendation()),
+    (d) => (d.recommendations[0].status = "earned"),
+    (d) => (d.recommendations[0].is_required = "true"),
+    (d) => (d.recommendations[0].contributions = []),
+    (d) => (d.recommendations[0].contributions[0].shortage_reduction = 0),
+    (d) =>
+      d.recommendations[0].contributions.push({
+        ...d.recommendations[0].contributions[0],
+      }),
+    (d) => (d.recommendations[0].offerings[0].semester_order = -1),
+  ]) {
+    const data = fixture();
+    data.recommendations = [recommendation()];
+    change(data);
+    assert.throws(
+      () => toGraduationResult(data),
+      (error) => error.status === 502,
+    );
+  }
+});
 
 test("判定は本人の保存済みデータをGETし、Cookie・キャンセル・キャッシュ禁止を維持する", async (context) => {
   const calls = [];
@@ -242,6 +319,14 @@ function savedCheck() {
     result,
   };
 }
+
+test("推薦導入前の履歴を再計算せず推薦情報なしとして読む", () => {
+  const saved = savedCheck();
+  delete saved.result.recommendations;
+  assert.equal(toSavedCheck(saved).result.recommendations, null);
+  saved.result.recommendations = [recommendation()];
+  assert.equal(toSavedCheck(saved).result.recommendations[0].name, "候補科目");
+});
 function checkPage() {
   return {
     checks: [

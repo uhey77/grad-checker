@@ -5,7 +5,7 @@
 ## 1. 共通仕様
 
 ローカル開発用の科目一覧は[バックエンドの構成](backend_architecture.md)に従い、GoがUUID検証・外部応答・業務エラーのHTTP変換を担当する。
-Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）、判定履歴の保存（POST /checks）、本人の履歴一覧（GET /checks）と過去結果取得（GET /checks/{id}）も実装済み。最新概要（GET /me/dashboard）も実装済み。おすすめは未実装。
+Pythonはブリッジ通信で結果またはエラーコードを返す。認証API、所属選択・本人プロフィール取得・所属保存、学生向け科目一覧・分類、本人成績の取得・保存は実装済み。最新保存データの卒業要件判定（GET /me/graduation-requirements）、判定履歴の保存（POST /checks）、本人の履歴一覧（GET /checks）と過去結果取得（GET /checks/{id}）も実装済み。最新概要（GET /me/dashboard）も実装済み。不足条件に対応するおすすめ科目も実装済み。
 
 IDはUUID文字列、日時はUTC ISO 8601、科目単位は正の整数。成績はS/A/B/C/D/X、未確定はresult_status=pendingかつgrade_code=null。卒業判定は `result: pass / fail`、条件別も同じ2値。エラーに成功resultを付けない。
 
@@ -198,12 +198,12 @@ Goの`-subject-list-preview`は既定falseで、無効時は404。ローカル�
 
 成功200は `EvaluationResult` にUTCの `evaluated_at` を付けたJSONを返す。
 `result`、`data_revision`、`curriculum`、`rule_revisions`、`total`、`categories`、
-`requirements`、`courses`、`missing_required_courses`、`allocations`、`external_allocations`、`warnings` を含む。
+`requirements`、`courses`、`missing_required_courses`、`allocations`、`external_allocations`、`warnings`、`recommendations` を含む。
 `external_allocations` はrule_id/target_classification_id/target_name/earned_credits/credited_credits/free_creditsを持つ区分別配分。warningsは通常空配列、上限超過かつ複数算入先では `provisional_external_allocation` を含む。
 `curriculum.id` はカリキュラムIDで、名称・コード・revision・出典・確認状態も保持する。
 条件はid/code/name/kind/parent_id/classification_idと必要・修得・算入・不足・result、
 科目はcourse_id/name/classification_id/credits/status/latest_attemptを持つ。
-履歴API、おすすめは含まない。他学部算入は照合済みの対象対応表と配分方針がある規則に限る。実シードの対象他学部科目は未転記。
+履歴APIは別経路で提供する。他学部算入は照合済みの対象対応表と配分方針がある規則に限る。実シードの対象他学部科目は未転記。
 
 所属未設定・マスタ不足・未採用の算入規則・算入先未登録の課程外修得科目は409。
 配分に影響する取得年度・学期が欠けている場合は `external_acquisition_period_required` を409に変換し、入力・保存・再判定を案内する。適用年度の未確認だけでは停止しない。
@@ -246,4 +246,12 @@ commit成功後に201を返す。成績版不一致は409（`revision_conflict`�
 | input | program_id・curriculum_id・data_revision・判定に使った全成績（course_id・attempt_no順） |
 | result | 判定結果全体（課程名・規則版・条件・科目名・算入・不足を含む） |
 
-おすすめは判定結果に未実装のため保存内容にも含まれない。追加時は判定結果と同じ契約で保存する。
+おすすめは判定結果と同じ契約で保存する。推薦導入前の履歴は `recommendations: null` として返し、現在のマスタから補完しない。
+
+### おすすめ科目の応答契約（2026年10月19日）
+
+最新詳細GETと新規履歴POSTの判定結果に `recommendations` 配列を必須で返す。候補なし・不足なしは空配列。ダッシュボード概要には含めない。生成規則・除外条件は[判定ロジック](graduation_requirement_logic.md#おすすめの実装契約2026年10月19日43)を参照する。
+
+各候補は `course_id`、`name`、`classification_id`（課程外はnull）、`credits`、`status`（not_earned / pending / not_taken）、`latest_attempt`、`is_required`、`offerings`、`contributions` を持つ。`offerings` は科目マスタの `course_id / term_code / semester_order / academic_year / source_note`。`contributions` は `requirement_id / code / name / shortage_reduction / reason` で、不足が減る条件だけを正の整数の減少量と理由付きで返す。科目と寄与条件はそれぞれ重複させない。
+
+過去詳細GETは保存した同じ情報を返す。導入前の保存データだけはnullを許容する。最新結果の欠落・nullや不正な候補を空配列へ読み替えない。

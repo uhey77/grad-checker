@@ -6,6 +6,7 @@ import {
 import { ScrollTable } from "../ScrollTable";
 import { CreditsCell } from "../subjects/SubjectCells";
 import { GraduationOverview } from "./GraduationOverview";
+import { CourseRecommendations } from "./CourseRecommendations";
 import { judgmentLabels } from "./labels";
 const categoryLabels: Record<string, string> = {
   実学基礎科目合計: "実学基礎",
@@ -116,6 +117,7 @@ export function GraduationResultView({
       ) : (
         <p>未修得の必修科目はありません。</p>
       )}
+      <CourseRecommendations recommendations={result.recommendations} />
       {result.allocations.length > 0 && (
         <details>
           <summary>選択必修から選択への超過換算</summary>
