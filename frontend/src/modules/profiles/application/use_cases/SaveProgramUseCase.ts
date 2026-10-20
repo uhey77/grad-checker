@@ -1,4 +1,4 @@
-import type { ProgramSelection } from "../../domain/models.ts";
+import type { ProgramSelection } from "../dto/profile.ts";
 import type { ProfileRepository } from "../ports/ProfileRepository.ts";
 
 export class SaveProgramUseCase {

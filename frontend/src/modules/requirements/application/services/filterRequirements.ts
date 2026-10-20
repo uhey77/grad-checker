@@ -1,4 +1,4 @@
-import type { RequirementResult } from "../../domain/models.ts";
+import type { RequirementResult } from "../../domain/entities/requirements.ts";
 
 /** 区分合計と、その子孫条件をAPIの表示順で返す。 */
 export function filterRequirements(

@@ -1,10 +1,10 @@
 import type {
   CheckPage,
-  CompletionAnswer,
   DashboardResult,
   GraduationResult,
   SavedCheck,
-} from "../../domain/models.ts";
+} from "../dto/results.ts";
+import type { CompletionAnswer } from "../../domain/value_objects/requirements.ts";
 import type { CheckPageRequest } from "../dto/CheckPageRequest.ts";
 export interface GraduationRepository {
   dashboard(signal?: AbortSignal): Promise<DashboardResult>;

@@ -24,38 +24,32 @@ from uuid import NAMESPACE_URL, uuid5
 import httpx
 from sqlalchemy import text
 
-from modules.accounts.grad_checker_accounts.infrastructure.schema import (
-    create_account_schema,
-)
-from modules.grades.grad_checker_grades.infrastructure.schema import create_grade_schema
-from modules.requirements.grad_checker_requirements.application.services import (
+from modules.accounts.infrastructure.persistence.schema import create_account_schema
+from modules.grades.infrastructure.persistence.schema import create_grade_schema
+from modules.requirements.application.services import (
     student_evaluation as student_evaluation_services,
 )
-from modules.requirements.grad_checker_requirements.infrastructure.evaluation import (
-    SqliteEvaluationUnitOfWork,
-)
-from modules.requirements.grad_checker_requirements.infrastructure.schema import (
-    create_requirement_schema,
-)
-from modules.requirements.grad_checker_requirements.infrastructure.seed import (
-    SqliteRequirementUnitOfWork,
+from modules.requirements.infrastructure.persistence.repositories.seed import (
     load_requirement_seed,
 )
-from modules.requirements.grad_checker_requirements.public import (
-    ImportRequirementsUseCase,
+from modules.requirements.infrastructure.persistence.schema import (
+    create_requirement_schema,
 )
-from modules.subjects.grad_checker_subjects.application.dto.subject_data import (
-    SubjectDataSeed,
+from modules.requirements.infrastructure.persistence.unit_of_work import (
+    SqliteEvaluationUnitOfWork,
+    SqliteRequirementUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.infrastructure.database import (
-    create_database_engine,
-    create_database_schema,
-)
-from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    SqliteSubjectDataUnitOfWork,
+from modules.requirements.public import ImportRequirementsUseCase
+from modules.subjects.application.dto.subject_data import SubjectDataSeed
+from modules.subjects.infrastructure.persistence.database import create_database_schema
+from modules.subjects.infrastructure.persistence.repositories.subject_data import (
     load_seed,
 )
-from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
+from modules.subjects.infrastructure.persistence.unit_of_work import (
+    SqliteSubjectDataUnitOfWork,
+)
+from modules.subjects.public import ImportSubjectDataUseCase
+from shared.infrastructure.persistence.database import create_database_engine
 
 BACKEND = Path(__file__).resolve().parents[1]
 ORIGIN = "http://127.0.0.1:5173"
@@ -171,7 +165,7 @@ def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
             )
             binary = temp / "grad-checker-api"
             subprocess.run(
-                [go, "build", "-o", str(binary), "./api"], cwd=BACKEND, check=True
+                [go, "build", "-o", str(binary), "./apps/api"], cwd=BACKEND, check=True
             )
             python_port, go_port = port(), port()
             while python_port == go_port:
@@ -186,7 +180,7 @@ def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
                     sys.executable,
                     "-m",
                     "uvicorn",
-                    "api.api_service.main:app",
+                    "apps.bridge.main:app",
                     "--host",
                     "127.0.0.1",
                     "--port",

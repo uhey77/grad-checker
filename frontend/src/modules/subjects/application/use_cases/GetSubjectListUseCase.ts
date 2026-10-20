@@ -1,4 +1,4 @@
-import type { SubjectListRepository } from "../ports/SubjectListRepository.ts";
+import type { SubjectListRepository } from "../queries/SubjectListRepository.ts";
 export class GetSubjectListUseCase {
   constructor(private readonly repository: SubjectListRepository) {}
   execute(curriculumId: string, signal: AbortSignal) {

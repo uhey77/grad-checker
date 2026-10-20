@@ -1,4 +1,4 @@
-import type { GradeSet } from "../../domain/models.ts";
+import type { GradeSet } from "../dto/grades.ts";
 import type { GradeRepository } from "../ports/GradeRepository.ts";
 
 export class SaveGradesUseCase {

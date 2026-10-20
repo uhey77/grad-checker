@@ -1,4 +1,4 @@
-import type { Subject } from "../../domain/subject-list/models.ts";
+import type { Subject } from "../../domain/entities/subject.ts";
 
 export const emptyFilters = {
   search: "",

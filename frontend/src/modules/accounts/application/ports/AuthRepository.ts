@@ -1,4 +1,5 @@
-import type { AuthSession, AuthPolicy } from "../../domain/models.ts";
+import type { AuthSession } from "../dto/auth.ts";
+import type { AuthPolicy } from "../../domain/value_objects/authPolicy.ts";
 export interface AuthRepository {
   config(signal?: AbortSignal): Promise<AuthPolicy>;
   session(signal?: AbortSignal): Promise<AuthSession | null>;

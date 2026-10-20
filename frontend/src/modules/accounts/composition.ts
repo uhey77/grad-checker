@@ -5,7 +5,7 @@ import { RecoverAccountUseCase } from "./application/use_cases/RecoverAccountUse
 import { LoginUseCase } from "./application/use_cases/LoginUseCase.ts";
 import { LogoutUseCase } from "./application/use_cases/LogoutUseCase.ts";
 import type { AuthUseCases } from "./application/ports/AuthUseCases.ts";
-import { HttpAuthRepository } from "./infrastructure/HttpAuthRepository.ts";
+import { HttpAuthRepository } from "./infrastructure/external_services/HttpAuthRepository.ts";
 
 export function createAccountsModule(base: string): AuthUseCases {
   const repository = new HttpAuthRepository(base);

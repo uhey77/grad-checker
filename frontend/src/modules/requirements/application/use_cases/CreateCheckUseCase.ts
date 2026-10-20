@@ -1,4 +1,4 @@
-import type { CompletionAnswer } from "../../domain/models.ts";
+import type { CompletionAnswer } from "../../domain/value_objects/requirements.ts";
 
 import type { GraduationRepository } from "../ports/GraduationRepository.ts";
 

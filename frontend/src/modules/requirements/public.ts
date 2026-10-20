@@ -5,18 +5,23 @@ export type { CheckPageRequest } from "./application/dto/CheckPageRequest.ts";
 export { filterRequirements } from "./application/services/filterRequirements.ts";
 export type {
   GraduationResult,
-  CourseRecommendation,
   DashboardResult,
-  CreditSummary,
-  RequirementResult,
-  Judgment,
   CheckSummary,
   CheckPage,
   CheckedGrade,
   SavedCheck,
-} from "./domain/models.ts";
+} from "./application/dto/results.ts";
+export type {
+  CourseRecommendation,
+  RequirementResult,
+} from "./domain/entities/requirements.ts";
+export type {
+  CreditSummary,
+  Judgment,
+} from "./domain/value_objects/requirements.ts";
 
-export type { CompletionAnswer, CompletionCondition } from "./domain/models.ts";
+export type { CompletionAnswer } from "./domain/value_objects/requirements.ts";
+export type { CompletionCondition } from "./domain/entities/requirements.ts";
 
 export { GetDashboardUseCase } from "./application/use_cases/GetDashboardUseCase.ts";
 export { EvaluateGraduationUseCase } from "./application/use_cases/EvaluateGraduationUseCase.ts";

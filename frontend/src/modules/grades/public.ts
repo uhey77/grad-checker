@@ -1,12 +1,11 @@
 // UIと他モジュールが利用する成績モジュールの公開契約。
+export type { GradeAttempt } from "./domain/entities/gradeAttempt.ts";
 export type {
-  GradeAttempt,
   GradeCode,
-  GradeSet,
   ResultStatus,
-  StudentGrades,
   TermCode,
-} from "./domain/models.ts";
+} from "./domain/value_objects/grade.ts";
+export type { GradeSet, StudentGrades } from "./application/dto/grades.ts";
 export {
   allowsRetake,
   courseStatus,
@@ -15,7 +14,7 @@ export {
   maxAcademicYear,
   minAcademicYear,
   type CourseStatus,
-} from "./domain/attempts.ts";
+} from "./domain/services/attempts.ts";
 export type { GradeUseCases } from "./application/ports/GradeUseCases.ts";
 export { GradeError } from "./application/errors/GradeError.ts";
 export {

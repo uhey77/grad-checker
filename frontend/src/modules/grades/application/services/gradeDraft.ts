@@ -5,8 +5,9 @@ import {
   maxAcademicYear,
   minAcademicYear,
   type CourseStatus,
-} from "../../domain/attempts.ts";
-import type { GradeAttempt, GradeCode, TermCode } from "../../domain/models.ts";
+} from "../../domain/services/attempts.ts";
+import type { GradeAttempt } from "../../domain/entities/gradeAttempt.ts";
+import type { GradeCode, TermCode } from "../../domain/value_objects/grade.ts";
 
 // 未保存の成績全集合を編集する純粋関数。非表示の科目の成績も保持する。
 export type GradeChoice = GradeCode | "pending";

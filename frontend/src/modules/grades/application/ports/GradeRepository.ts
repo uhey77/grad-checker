@@ -1,4 +1,4 @@
-import type { GradeSet, StudentGrades } from "../../domain/models.ts";
+import type { GradeSet, StudentGrades } from "../dto/grades.ts";
 export interface GradeRepository {
   getGrades(signal?: AbortSignal): Promise<StudentGrades>;
   saveGrades(

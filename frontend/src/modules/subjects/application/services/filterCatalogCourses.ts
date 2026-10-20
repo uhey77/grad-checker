@@ -1,4 +1,4 @@
-import type { CatalogCourse } from "../../domain/course-catalog/models.ts";
+import type { CatalogCourse } from "../../domain/entities/courseCatalog.ts";
 
 export const emptyCatalogFilters = {
   search: "",
