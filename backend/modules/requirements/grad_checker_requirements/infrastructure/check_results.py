@@ -8,22 +8,19 @@ from sqlalchemy import Engine, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
 
-from ..application.check_results import (
+from ..application.dto.check_results import (
     CheckCurriculum,
     CheckInput,
     CheckPage,
-    CheckRepository,
     CheckSummary,
-    CheckUnitOfWork,
     SavedCheck,
 )
+from ..application.dto.evaluation import CreditSummary, Judgment
+from ..application.dto.student_evaluation import StudentEvaluation
 from ..application.errors.evaluation import EvaluationError
-from ..application.evaluation_models import CreditSummary, Judgment
-from ..application.student_evaluation import StudentEvaluation
+from ..application.ports.check_results import CheckRepository, CheckUnitOfWork
 from .check_models import CheckResultRecord
 from .evaluation import SqliteEvaluationRepository
 

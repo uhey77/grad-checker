@@ -4,7 +4,7 @@ from pathlib import Path
 
 from test_auth_http import (
     PASSWORD,
-    auth_services,  # noqa: F401 -- pytest fixture
+    auth_services,  # noqa: F401 -- pytest fixture or shared test data
 )
 
 from modules.subjects.grad_checker_subjects.infrastructure.database import (

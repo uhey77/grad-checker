@@ -9,22 +9,22 @@ import (
 	"time"
 
 	"grad-checker/backend/api/presentation"
-	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/application/ports"
 )
 
 type fakeAuth struct {
-	calls  []application.AuthCall
-	result application.AuthResult
+	calls  []ports.AuthCall
+	result ports.AuthResult
 	err    error
 }
 
-func (f *fakeAuth) Call(_ context.Context, call application.AuthCall) (application.AuthResult, error) {
+func (f *fakeAuth) Call(_ context.Context, call ports.AuthCall) (ports.AuthResult, error) {
 	f.calls = append(f.calls, call)
 	return f.result, f.err
 }
 
 func TestAuthLoginSecureCookieAndNoTokenInBody(t *testing.T) {
-	fake := &fakeAuth{result: application.AuthResult{Authenticated: true, SessionToken: strings.Repeat("s", 43), CSRFToken: strings.Repeat("c", 64), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339), Student: &application.Student{ID: "id", LoginName: "student_01"}}}
+	fake := &fakeAuth{result: ports.AuthResult{Authenticated: true, SessionToken: strings.Repeat("s", 43), CSRFToken: strings.Repeat("c", 64), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339), Student: &ports.Student{ID: "id", LoginName: "student_01"}}}
 	handler, err := presentation.NewAuthHandler(fake, "https://checker.example", http.NotFoundHandler())
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func TestAuthRejectsInvalidExternalCallsBeforeBackend(t *testing.T) {
 }
 
 func TestAuthIgnoresSpoofedForwardedIPAndMapsErrors(t *testing.T) {
-	fake := &fakeAuth{err: &application.AuthError{Code: "rate_limited"}}
+	fake := &fakeAuth{err: &ports.AuthError{Code: "rate_limited"}}
 	handler, err := presentation.NewAuthHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler())
 	if err != nil {
 		t.Fatal(err)

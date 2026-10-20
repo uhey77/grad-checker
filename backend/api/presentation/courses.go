@@ -6,13 +6,13 @@ import (
 	"net/url"
 	"unicode/utf8"
 
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 )
 
 var courseFilterKeys = map[string]bool{"category_id": true, "faculty": true, "department": true, "semester": true, "q": true}
 
 // 本人課程から見た科目一覧・分類を返す。本人課程は外部入力ではなくセッションから決める。
-func NewCourseHandler(reader application.CourseCatalogReader, fallback http.Handler) http.Handler {
+func NewCourseHandler(reader ports.CourseCatalogReader, fallback http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		operation := ""
 		switch r.URL.Path {
@@ -32,7 +32,7 @@ func NewCourseHandler(reader application.CourseCatalogReader, fallback http.Hand
 		if !ok {
 			return
 		}
-		call := application.CourseCatalogCall{Operation: operation, Token: token}
+		call := ports.CourseCatalogCall{Operation: operation, Token: token}
 		if operation == "categories" {
 			if rejectQuery(w, r) {
 				return
@@ -54,7 +54,7 @@ func NewCourseHandler(reader application.CourseCatalogReader, fallback http.Hand
 	})
 }
 
-func parseCourseFilters(rawQuery string) (*application.CourseFilters, string) {
+func parseCourseFilters(rawQuery string) (*ports.CourseFilters, string) {
 	query, err := url.ParseQuery(rawQuery)
 	if err != nil {
 		return nil, "絞り込み条件の形式が不正です。"
@@ -69,7 +69,7 @@ func parseCourseFilters(rawQuery string) (*application.CourseFilters, string) {
 		}
 		values[key] = list[0]
 	}
-	filters := &application.CourseFilters{Faculty: values["faculty"], Department: values["department"], Q: values["q"]}
+	filters := &ports.CourseFilters{Faculty: values["faculty"], Department: values["department"], Q: values["q"]}
 	if id, ok := values["category_id"]; ok {
 		if filters.CategoryID, err = normalizeUUID(id); err != nil {
 			return nil, "科目区分IDの形式が不正です。"
@@ -85,7 +85,7 @@ func parseCourseFilters(rawQuery string) (*application.CourseFilters, string) {
 }
 
 func writeCourseError(w http.ResponseWriter, err error) {
-	var business *application.CourseCatalogError
+	var business *ports.CourseCatalogError
 	if errors.As(err, &business) {
 		switch business.Code {
 		case "invalid_credentials", "profile_not_found":
@@ -105,7 +105,7 @@ func writeCourseError(w http.ResponseWriter, err error) {
 		}
 		return
 	}
-	if errors.Is(err, application.ErrTimeout) {
+	if errors.Is(err, ports.ErrTimeout) {
 		writeError(w, 504, "Pythonサービスの応答がタイムアウトしました。")
 		return
 	}

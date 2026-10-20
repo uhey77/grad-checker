@@ -3,7 +3,7 @@ package infrastructure
 import (
 	"errors"
 
-	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/application/ports"
 	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
@@ -12,7 +12,7 @@ import (
 func accountError(err error) error {
 	var failure *pythonbridge.BusinessError
 	if errors.As(err, &failure) {
-		return &application.AuthError{Code: failure.Code}
+		return &ports.AuthError{Code: failure.Code}
 	}
-	return application.ErrBackend
+	return ports.ErrBackend
 }

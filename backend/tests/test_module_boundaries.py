@@ -88,6 +88,31 @@ def test_business_models_do_not_use_dataclasses() -> None:
         assert "dataclasses" not in imports, source
 
 
+@pytest.mark.parametrize(
+    "module", ["accounts", "grades", "requirements", "subjects", "shared"]
+)
+def test_application_files_are_grouped_by_responsibility(module: str) -> None:
+    application = BACKEND / f"modules/{module}/grad_checker_{module}/application"
+    assert not [p for p in application.glob("*.py") if p.name != "__init__.py"]
+    assert {p.name for p in application.iterdir() if p.is_dir()} <= {
+        "dto",
+        "ports",
+        "services",
+        "errors",
+        "use_cases",
+        "__pycache__",
+    }
+    for source, imports in imported_modules(str(application.relative_to(BACKEND))):
+        role = source.relative_to(application).parts[0]
+        if role not in ("dto", "ports"):
+            continue
+        assert not [
+            name
+            for name in imports
+            if ".application.services." in name or ".application.use_cases." in name
+        ], source
+
+
 @pytest.mark.parametrize("module", ["accounts", "grades", "requirements", "subjects"])
 def test_public_operations_are_individual_use_cases(module: str) -> None:
     package = BACKEND / f"modules/{module}/grad_checker_{module}"

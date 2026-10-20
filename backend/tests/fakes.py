@@ -4,8 +4,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 
-from modules.shared.grad_checker_shared.application.clock import Clock
-from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
+from modules.shared.grad_checker_shared.application.ports.clock import Clock
+from modules.shared.grad_checker_shared.application.ports.unit_of_work import UnitOfWork
 
 
 class FakeUnitOfWork(UnitOfWork):

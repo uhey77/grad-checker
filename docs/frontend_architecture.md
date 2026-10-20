@@ -32,13 +32,15 @@ frontend/
 │       ├── domain/subject-list/          # 課程・科目・分類・開講時期のモデル
 │       ├── application/
 │       │   ├── errors/                   # 取得失敗のエラー契約
-│       │   └── subject-list/             # ユースケース・取得契約・検索・並べ替え
+│       │   ├── ports/                    # RepositoryとUseCase集合の注入型
+│       │   ├── services/                 # 検索・並べ替えの純粋関数
+│       │   └── use_cases/                # 1操作1クラス、executeで実行
 │       └── infrastructure/subject-list/  # HTTP・DTO・モデル変換
 └── tests/                                # 契約・通信・依存境界テスト
 ```
 
 科目専用のUIもcomponents・hooks・pagesに置き、各ディレクトリ内でsubjectsにまとめる。
-共通部品は各ディレクトリの共通領域へ配置する。業務領域をmodules/subjects、一覧という操作を内部のsubject-listとする。
+共通部品は各ディレクトリの共通領域へ配置する。業務領域をmodules/subjectsとし、Application内は役割ごと、DomainとInfrastructure内は必要に応じてsubject-listなどの操作別に分ける。
 画像素材・Context・多言語化・API生成コードなどは実装する時点で対応するディレクトリを追加する。
 モジュールごとのpackage.jsonやロックは作らず、フロントエンド全体で依存管理する。
 
@@ -106,7 +108,7 @@ Python応答のタイムアウトによる日本語エラーと、サービス�
 
 ## アカウント認証の追加（2026-10-11）
 
-認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
+認証モジュールは `modules/accounts/`。バックエンドは `application/ports/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
 
 再現手順と認証設定は[認証の開発手順](auth_development.md)を参照する。
 
@@ -299,3 +301,19 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 成績の連番と再履修条件は `modules/grades/domain/attempts.ts` の純粋関数で扱う。編集用Applicationはその規則を呼び出し、`GradeDraftProblem` のコードを返す。`hooks/grades/errors.ts` がコードを日本語の表示文言へ変換し、`useGradeEntry` が表示する。既存の年度範囲・メッセージ・保存操作を維持し、同じ業務条件をバックエンドでも検証する。
 
 モジュールをまたぐ参照は引き続き `public.ts` を使う。公開窓口を経由しても層の依存方向は変わらない。Domainから参照できるのは他モジュールのDomain由来の公開型だけとし、Applicationのユースケース・エラー・検索処理をDomainへ持ち込まない。境界テストは公開名のexport元も確認する。
+
+## 操作別UseCaseとApplication内の配置
+
+フロントエンドも `application/use_cases/<操作>UseCase.ts` の1操作1クラスとし、公開実行メソッドを `execute` に統一する。認証6操作、所属3操作、成績2操作、卒業要件・履歴5操作、科目3操作の合計19クラスを配置する。複数メソッドを持つUseCaseクラスや、複数の取得関数を返す旧ファクトリーは置かない。
+
+| ディレクトリ | 所有するもの |
+| --- | --- |
+| `use_cases/` | 取得・保存など、一つの操作と `execute` |
+| `dto/` | 履歴一覧の取得範囲など、Application固有の入出力型。必要なモジュールだけに置く |
+| `ports/` | Repositoryの取得保存契約と、画面へ渡すUseCase集合のreadonlyな注入型 |
+| `services/` | 検索・並べ替え・未保存成績の編集など、副作用のない共通処理 |
+| `errors/` | 取得・保存のエラー契約 |
+
+`AuthUseCases`・`ProfileUseCases`などの複数形の名前は、操作別インスタンスを参照するreadonlyな型だけに使う。実行処理は持たせない。Compositionが各クラスを生成し、画面用Hookは `useCases.login.execute(...)` や `useCases.saveGrades.execute(...)` を呼ぶ。取得関数をHookへ渡す場合は `useCallback` でインスタンスの呼出しを包み、`this`と関数の参照を安定させる。
+
+UseCaseとRepositoryの入力・出力、AbortSignal、Cookie・CSRF・成績版、失敗・キャンセルの扱いは維持する。UIは引き続き `public.ts` の公開契約だけを使い、HTTP実装を呼ばない。境界テストは役割別配置・各UseCaseの `execute`・Portに複数操作の実装クラスを置かないことを検査する。

@@ -1,6 +1,7 @@
 """ListChecksUseCaseの処理手順とトランザクション境界。"""
 
-from ..check_results import CheckList, CheckPage, CheckUnitOfWork
+from ..dto.check_results import CheckList, CheckPage
+from ..ports.check_results import CheckUnitOfWork
 
 
 class ListChecksUseCase:

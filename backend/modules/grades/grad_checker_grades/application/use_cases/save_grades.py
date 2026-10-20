@@ -1,6 +1,8 @@
 """SaveGradesUseCaseの処理手順とトランザクション境界。"""
 
-from ..grades import GradeSet, GradeUnitOfWork, StudentGrades, check_attempts
+from ..dto.grades import GradeSet, StudentGrades
+from ..ports.grades import GradeUnitOfWork
+from ..services.grade_validation import check_attempts
 
 
 class SaveGradesUseCase:

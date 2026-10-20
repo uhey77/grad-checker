@@ -1,7 +1,7 @@
 """本人セッションと、変更時のCSRFを確認する。"""
 
-from ..auth import SessionIdentity
-from ..authentication import SessionAuthentication
+from ..dto.auth import SessionIdentity
+from ..services.authentication import SessionAuthentication
 
 
 class AuthenticateSessionUseCase:

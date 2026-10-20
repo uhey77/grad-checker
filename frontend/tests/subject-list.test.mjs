@@ -9,14 +9,18 @@ async function loadModule(path) {
   );
 }
 const { filterSubjects, emptyFilters } = await loadModule(
-  "modules/subjects/application/subject-list/filterSubjects.js",
+  "modules/subjects/application/services/filterSubjects.js",
 );
 const { toSubjectList } = await loadModule(
   "modules/subjects/infrastructure/subject-list/mappers.js",
 );
-const { createSubjectListUseCases } = await loadModule(
-  "modules/subjects/application/subject-list/SubjectListUseCases.js",
+const { ListSubjectProgramsUseCase, GetSubjectListUseCase } = await loadModule(
+  "modules/subjects/public.js",
 );
+const subjectUseCases = (repository) => ({
+  listPrograms: new ListSubjectProgramsUseCase(repository),
+  getSubjectList: new GetSubjectListUseCase(repository),
+});
 
 const program = {
   curriculum_id: "social",
@@ -115,7 +119,7 @@ test("ユースケースは注入した取得先に課程IDとキャンセル信
   const signal = new AbortController().signal;
   const subjectList = toSubjectList(dto);
   const calls = [];
-  const useCases = createSubjectListUseCases({
+  const useCases = subjectUseCases({
     async listPrograms(received) {
       calls.push(received);
       return [subjectList.program];
@@ -125,19 +129,24 @@ test("ユースケースは注入した取得先に課程IDとキャンセル信
       return subjectList;
     },
   });
-  assert.deepEqual(await useCases.listPrograms(signal), [subjectList.program]);
-  assert.equal(await useCases.getSubjectList("social", signal), subjectList);
+  assert.deepEqual(await useCases.listPrograms.execute(signal), [
+    subjectList.program,
+  ]);
+  assert.equal(
+    await useCases.getSubjectList.execute("social", signal),
+    subjectList,
+  );
   assert.deepEqual(calls, [signal, ["social", signal]]);
-  const failed = createSubjectListUseCases({
+  const failed = subjectUseCases({
     listPrograms: async () => {
       throw new Error("取得失敗");
     },
   });
-  await assert.rejects(failed.listPrograms(signal), /取得失敗/);
+  await assert.rejects(failed.listPrograms.execute(signal), /取得失敗/);
 });
 
 const { sortSubjects } = await loadModule(
-  "modules/subjects/application/subject-list/sortSubjects.js",
+  "modules/subjects/application/services/sortSubjects.js",
 );
 const { offeringLabels, programLabel, sharedAcrossYears, joinLabels } =
   await loadModule("components/subjects/labels.js");

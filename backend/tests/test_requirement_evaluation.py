@@ -5,18 +5,20 @@ from uuid import UUID
 
 import pytest
 
-from modules.grades.grad_checker_grades.application.grades import GradeAttempt
-from modules.requirements.grad_checker_requirements.application import evaluation_models
+from modules.grades.grad_checker_grades.application.dto.grades import GradeAttempt
+from modules.requirements.grad_checker_requirements.application.dto import (
+    evaluation as evaluation_models,
+)
+from modules.requirements.grad_checker_requirements.application.dto.seed import (
+    RequirementSeed,
+)
 from modules.requirements.grad_checker_requirements.application.errors import (
     evaluation as evaluation_errors,
 )
-from modules.requirements.grad_checker_requirements.application.evaluation import (
-    evaluate_graduation,
+from modules.requirements.grad_checker_requirements.application.services import (
+    evaluation as evaluation_services,
 )
-from modules.requirements.grad_checker_requirements.application.seed import (
-    RequirementSeed,
-)
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from modules.subjects.grad_checker_subjects.application.dto.subject_data import (
     SubjectDataSeed,
 )
 from modules.subjects.grad_checker_subjects.domain import curriculum_verification_status
@@ -177,14 +179,14 @@ def conditions(result):
 
 def assert_error(snapshot, code):
     with pytest.raises(evaluation_errors.EvaluationError) as caught:
-        evaluate_graduation(snapshot)
+        evaluation_services.evaluate_graduation(snapshot)
     assert caught.value.code == code
     assert caught.value.reason
     return caught.value
 
 
 def test_empty_grades_are_normal_failure(snapshot):
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.result == "fail"
     assert result.total.model_dump() == {
         "required_credits": 10,
@@ -200,7 +202,7 @@ def test_empty_grades_are_normal_failure(snapshot):
 @pytest.mark.parametrize("code", ["S", "A", "B", "C", "D", "X", None])
 def test_grade_statuses(snapshot, code):
     snapshot.grades = [grade(uid(10), code)]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     earned = code in {"S", "A", "B", "C"}
     assert result.total.earned_credits == (2 if earned else 0)
     assert result.courses[0].status == (
@@ -213,7 +215,7 @@ def test_retake_uses_latest_attempt_and_never_counts_twice(snapshot):
         grade(uid(10), "B", 2, 2026, "second"),
         grade(uid(10), "D", 1, 2025, "first"),
     ]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.total.earned_credits == 2
     assert result.courses[0].latest_attempt == snapshot.grades[0]
 
@@ -239,7 +241,7 @@ def test_invalid_attempts_are_errors(snapshot, grades):
 def test_all_conditions_pass_and_overflow_does_not_create_credits(snapshot):
     snapshot.grades = [grade(uid(i)) for i in range(10, 16)]
     before = snapshot.model_dump_json()
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     rows = conditions(result)
     assert result.result == "pass"
     assert result.total.earned_credits == result.total.credited_credits == 14
@@ -255,17 +257,17 @@ def test_all_conditions_pass_and_overflow_does_not_create_credits(snapshot):
     assert snapshot.model_dump_json() == before
     snapshot.grades.reverse()
     snapshot.requirements.graduation_requirements.reverse()
-    assert evaluate_graduation(snapshot) == result
+    assert evaluation_services.evaluate_graduation(snapshot) == result
 
 
 def test_exact_threshold_and_overflow_boundary(snapshot):
     snapshot.grades = [grade(uid(i)) for i in (10, 11, 13, 15)]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.result == "pass"
     assert result.total.earned_credits == 10
     assert result.allocations == []
     snapshot.grades = [grade(uid(i)) for i in (10, 11, 13, 14)]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.total.shortage == 2
     assert conditions(result)["r26"].shortage == 2
 
@@ -273,7 +275,7 @@ def test_exact_threshold_and_overflow_boundary(snapshot):
 @pytest.mark.parametrize("missing", [10, 13])
 def test_total_surplus_does_not_cover_required_or_other_group(snapshot, missing):
     snapshot.grades = [grade(uid(i)) for i in range(10, 16) if i != missing]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.total.shortage == 0
     assert result.total.result == "pass"
     assert result.result == "fail"
@@ -282,7 +284,7 @@ def test_total_surplus_does_not_cover_required_or_other_group(snapshot, missing)
 
 def test_subminimum_is_independent_even_when_group_and_total_pass(snapshot):
     snapshot.grades = [grade(uid(i)) for i in (10, 12, 13, 14, 15)]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.total.shortage == 0
     assert conditions(result)["r23"].result == "pass"
     assert conditions(result)["r24"].shortage == 2
@@ -294,7 +296,7 @@ def test_unverified_overflow_only_blocks_dependent_cases(snapshot):
     rule.verification_status = VerificationStatus.UNVERIFIED
     rule.unresolved_reason = "Q02の内訳配分を確認中"
     snapshot.grades = [grade(uid(11))]
-    assert evaluate_graduation(snapshot).result == "fail"
+    assert evaluation_services.evaluate_graduation(snapshot).result == "fail"
     snapshot.grades.append(grade(uid(12)))
     error = assert_error(snapshot, "unverified_credit_rule")
     assert error.rule_id == rule.id and error.reason == rule.unresolved_reason
@@ -309,7 +311,7 @@ def test_missing_overflow_mapping_is_not_silently_discarded(snapshot):
 def test_overflow_with_missing_subminimum_is_normal_failure(snapshot):
     snapshot.subjects.courses[2].credits = 4
     snapshot.grades = [grade(uid(12))]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.result == "fail"
     assert result.allocations[0].transferred_credits == 2
     assert conditions(result)["r24"].shortage == 2
@@ -371,7 +373,7 @@ def test_external_earned_courses_are_not_ignored(snapshot):
     )
     snapshot.subjects.courses.append(external)
     snapshot.grades = [grade(uid(99), "D")]
-    assert evaluate_graduation(snapshot).total.earned_credits == 0
+    assert evaluation_services.evaluate_graduation(snapshot).total.earned_credits == 0
     snapshot.grades = [grade(uid(99))]
     assert_error(snapshot, "unsupported_external_credits")
 
@@ -446,7 +448,7 @@ def test_cs_seed_calculates_without_changing_admission_year_confirmation(index):
         requirements=requirements,
         grades=[],
     )
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.result == "fail"
     assert result.curriculum.verification_status == VerificationStatus.UNVERIFIED
     assert result.curriculum.admission_year_from is None
@@ -464,7 +466,7 @@ def test_cs_seed_calculates_without_changing_admission_year_confirmation(index):
         c.credits for c in subjects.courses if c.id == required.course_id
     )
     snapshot.grades = [grade(required.course_id)]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert (
         result.total.earned_credits == result.total.credited_credits == course_credits
     )
@@ -478,7 +480,7 @@ def test_cs_seed_calculates_without_changing_admission_year_confirmation(index):
         for row in subjects.curriculum_courses
         if row.curriculum_id == curriculum.id
     ]
-    result = evaluate_graduation(snapshot)
+    result = evaluation_services.evaluate_graduation(snapshot)
     assert result.result == "pass"
     assert result.total.earned_credits == result.total.credited_credits
     assert result.total.shortage == 0

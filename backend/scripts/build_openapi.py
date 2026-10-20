@@ -7,24 +7,22 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
-from modules.accounts.grad_checker_accounts.application.profile import (
+from modules.accounts.grad_checker_accounts.application.dto.profile import (
     Profile,
     ProgramOption,
 )
-from modules.grades.grad_checker_grades.application.grades import StudentGrades
-from modules.requirements.grad_checker_requirements.application.check_results import (
-    CheckList,
-    SavedCheck,
+from modules.grades.grad_checker_grades.application.dto.grades import StudentGrades
+from modules.requirements.grad_checker_requirements.application.dto import (
+    check_results as check_results_dto,
 )
-from modules.requirements.grad_checker_requirements.application.student_evaluation import (  # noqa: E501
-    StudentDashboard,
-    StudentEvaluation,
+from modules.requirements.grad_checker_requirements.application.dto import (
+    student_evaluation as student_evaluation_dto,
 )
-from modules.subjects.grad_checker_subjects.application.course_catalog import (
+from modules.subjects.grad_checker_subjects.application.dto.course_catalog import (
     CategoryList,
     CourseList,
 )
-from modules.subjects.grad_checker_subjects.application.subject_list import (
+from modules.subjects.grad_checker_subjects.application.dto.subject_list import (
     SubjectList,
     SubjectListProgram,
 )
@@ -73,10 +71,10 @@ def build_document() -> dict:  # noqa: PLR0915
         Profile,
         ProgramOption,
         StudentGrades,
-        StudentEvaluation,
-        StudentDashboard,
-        SavedCheck,
-        CheckList,
+        student_evaluation_dto.StudentEvaluation,
+        student_evaluation_dto.StudentDashboard,
+        check_results_dto.SavedCheck,
+        check_results_dto.CheckList,
         CourseList,
         CategoryList,
         SubjectList,

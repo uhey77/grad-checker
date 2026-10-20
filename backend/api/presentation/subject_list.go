@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 )
 
-func NewSubjectListHandler(reader application.SubjectListReader, preview bool) http.Handler {
+func NewSubjectListHandler(reader ports.SubjectListReader, preview bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		const prefix = "/api/dev/subject-list/"
 		path := r.URL.Path
@@ -52,7 +52,7 @@ func NewSubjectListHandler(reader application.SubjectListReader, preview bool) h
 }
 
 func writeSubjectListError(w http.ResponseWriter, err error) {
-	var business *application.SubjectListError
+	var business *ports.SubjectListError
 	if errors.As(err, &business) {
 		switch business.Code {
 		case "curriculum_not_found":
@@ -69,11 +69,11 @@ func writeSubjectListError(w http.ResponseWriter, err error) {
 			return
 		}
 	}
-	if errors.Is(err, application.ErrTimeout) {
+	if errors.Is(err, ports.ErrTimeout) {
 		writeError(w, 504, "Pythonサービスの応答がタイムアウトしました。")
 		return
 	}
-	if errors.Is(err, application.ErrUnavailable) {
+	if errors.Is(err, ports.ErrUnavailable) {
 		writeError(w, 502, "Pythonサービスに接続できません。起動状態を確認してください。")
 		return
 	}

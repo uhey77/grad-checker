@@ -4,13 +4,13 @@ import (
 	"errors"
 	"net/http"
 
-	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/application/ports"
 )
 
 const selectionDetail = "所属・カリキュラム・更新版を正しい形式で指定してください。"
 
 // 本人IDを外部入力から受け取らず、セッション原値をPythonサービスで検証する。
-func NewProfileHandler(gateway application.ProfileGateway, origin string, fallback http.Handler) http.Handler {
+func NewProfileHandler(gateway ports.ProfileGateway, origin string, fallback http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		operation, method := "", http.MethodGet
 		switch r.URL.Path {
@@ -32,7 +32,7 @@ func NewProfileHandler(gateway application.ProfileGateway, origin string, fallba
 		if !ok || rejectQuery(w, r) {
 			return
 		}
-		call := application.ProfileCall{Operation: operation, Token: token}
+		call := ports.ProfileCall{Operation: operation, Token: token}
 		if operation == "save_program" {
 			csrf, ok := writeToken(w, r, origin)
 			if !ok {
@@ -63,7 +63,7 @@ func NewProfileHandler(gateway application.ProfileGateway, origin string, fallba
 }
 
 func writeProfileError(w http.ResponseWriter, err error) {
-	var business *application.AuthError
+	var business *ports.AuthError
 	if !errors.As(err, &business) {
 		writeError(w, 502, "所属サービスに接続できません。時間をおいて再試行してください。")
 		return
@@ -78,12 +78,12 @@ func writeProfileError(w http.ResponseWriter, err error) {
 	writeError(w, 502, "所属サービスの応答を読み込めません。")
 }
 
-func decodeSelection(body []byte) (*application.ProgramSelection, bool) {
+func decodeSelection(body []byte) (*ports.ProgramSelection, bool) {
 	fields, ok := strictObject(body, "program_id", "curriculum_id", "expected_revision")
 	if !ok {
 		return nil, false
 	}
-	var selection application.ProgramSelection
+	var selection ports.ProgramSelection
 	if selection.ProgramID, ok = decodeUUID(fields["program_id"]); !ok {
 		return nil, false
 	}

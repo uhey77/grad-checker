@@ -1,12 +1,7 @@
 """モジュール外へ公開する業務契約。DB実装と組み立ては公開しない。"""
 
-from modules.subjects.grad_checker_subjects.application.course_catalog import (
-    CourseFilters,
-)
-from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
-    SeedError,
-)
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from .application.dto.course_catalog import CourseFilters
+from .application.dto.subject_data import (
     ClassificationData,
     CurriculumData,
     NonemptyText,
@@ -15,12 +10,10 @@ from modules.subjects.grad_checker_subjects.application.subject_data_validation 
     SeedRecord,
     SubjectDataSeed,
     SubjectOfferingData,
-    validate_subject_data,
 )
-from modules.subjects.grad_checker_subjects.application.subject_list import (
-    SubjectListUnitOfWork,
-)
-
+from .application.errors.subject_data import SeedError
+from .application.ports.subject_list import SubjectListUnitOfWork
+from .application.services.subject_data_validation import validate_subject_data
 from .application.use_cases.get_subject_list import GetSubjectListUseCase
 from .application.use_cases.import_subject_data import ImportSubjectDataUseCase
 from .application.use_cases.list_categories import ListCategoriesUseCase

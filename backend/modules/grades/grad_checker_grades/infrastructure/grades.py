@@ -7,23 +7,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
 from modules.accounts.grad_checker_accounts.infrastructure.models import Student
-from modules.grades.grad_checker_grades.application.errors.grades import GradeError
-from modules.grades.grad_checker_grades.application.grades import (
-    GradeAttempt,
-    GradeRepository,
-    GradeSet,
-    GradeUnitOfWork,
-    StudentGrades,
-)
-from modules.grades.grad_checker_grades.infrastructure.models import (
-    GradeAttemptRecord,
-)
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
-from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
-    Subject,
-)
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
+from modules.subjects.grad_checker_subjects.infrastructure.subject_models import Subject
+
+from ..application.dto.grades import GradeAttempt, GradeSet, StudentGrades
+from ..application.errors.grades import GradeError
+from ..application.ports.grades import GradeRepository, GradeUnitOfWork
+from .models import GradeAttemptRecord
 
 VALUE_FIELDS = ("result_status", "grade_code", "academic_year", "term_code")
 

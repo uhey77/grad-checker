@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 	"grad-checker/backend/modules/subjects/infrastructure"
 )
 
@@ -57,11 +57,11 @@ func TestBridgeProtocol(t *testing.T) {
 			continue
 		}
 		if tc.code != "" {
-			var business *application.SubjectListError
+			var business *ports.SubjectListError
 			if !errors.As(err, &business) || business.Code != tc.code {
 				t.Fatalf("unexpected error %v", err)
 			}
-		} else if !errors.Is(err, application.ErrProtocol) {
+		} else if !errors.Is(err, ports.ErrProtocol) {
 			t.Fatalf("expected protocol error, got %v", err)
 		}
 	}
@@ -78,7 +78,7 @@ func TestBridgeTimeoutAndCancellation(t *testing.T) {
 	defer python.Close()
 	client, _ := infrastructure.NewPythonSubjectListClient(python.URL, 20*time.Millisecond)
 	_, err := client.ListPrograms(context.Background())
-	if !errors.Is(err, application.ErrTimeout) {
+	if !errors.Is(err, ports.ErrTimeout) {
 		t.Fatalf("got %v", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -93,7 +93,7 @@ func TestBridgeTimeoutAndCancellation(t *testing.T) {
 func TestBridgeConnectionFailure(t *testing.T) {
 	client, _ := infrastructure.NewPythonSubjectListClient("http://127.0.0.1:1", time.Second)
 	_, err := client.ListPrograms(context.Background())
-	if !errors.Is(err, application.ErrUnavailable) {
+	if !errors.Is(err, ports.ErrUnavailable) {
 		t.Fatalf("got %v", err)
 	}
 }

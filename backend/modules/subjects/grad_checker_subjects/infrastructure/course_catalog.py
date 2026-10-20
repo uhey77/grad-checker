@@ -6,10 +6,9 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
-from modules.subjects.grad_checker_subjects.application.course_catalog import (
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
+
+from ..application.dto.course_catalog import (
     CatalogCategory,
     CatalogClassification,
     CatalogCourse,
@@ -17,27 +16,22 @@ from modules.subjects.grad_checker_subjects.application.course_catalog import (
     CatalogOffering,
     CatalogPlacement,
     CourseCatalog,
+)
+from ..application.errors.course_catalog import CourseCatalogError
+from ..application.ports.course_catalog import (
     CourseCatalogRepository,
     CourseCatalogUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.application.errors.course_catalog import (
-    CourseCatalogError,
-)
-from modules.subjects.grad_checker_subjects.domain.subject_type import SubjectType
-from modules.subjects.grad_checker_subjects.infrastructure.classification_path import (
-    classification_path,
-)
-from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
+from ..domain.curriculum_verification_status import VerificationStatus
+from ..domain.subject_type import SubjectType
+from .classification_path import classification_path
+from .subject_models import (
     AcademicProgram,
     Classification,
     Curriculum,
     CurriculumSubject,
     Subject,
     SubjectOffering,
-)
-
-from ..domain.curriculum_verification_status import (
-    VerificationStatus,
 )
 
 

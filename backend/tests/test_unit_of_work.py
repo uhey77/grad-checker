@@ -6,10 +6,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy import Engine, text
 
-from modules.shared.grad_checker_shared.application.errors import BusinessError
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
+from modules.shared.grad_checker_shared.application.errors.business import BusinessError
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
 )

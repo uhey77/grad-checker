@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/application/ports"
 	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
@@ -19,45 +19,45 @@ func NewPythonAuthClient(origin string) (*PythonAuthClient, error) {
 	}
 	return &PythonAuthClient{client}, nil
 }
-func (c *PythonAuthClient) Call(ctx context.Context, call application.AuthCall) (application.AuthResult, error) {
-	var empty application.AuthResult
+func (c *PythonAuthClient) Call(ctx context.Context, call ports.AuthCall) (ports.AuthResult, error) {
+	var empty ports.AuthResult
 	raw, err := c.client.Call(ctx, call)
 	if err != nil {
 		return empty, accountError(err)
 	}
-	var data application.AuthResult
+	var data ports.AuthResult
 	if pythonbridge.DecodeData(raw, &data) != nil {
-		return empty, application.ErrBackend
+		return empty, ports.ErrBackend
 	}
 	switch call.Operation {
 	case "config":
 		if data.Policy == nil || data.Policy.PasswordMinLength < 12 || data.Policy.PasswordMaxLength < data.Policy.PasswordMinLength {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 	case "register":
 		if !data.Registered || len(data.RecoveryCode) != 43 {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 	case "recover":
 		if !data.Recovered || len(data.RecoveryCode) != 43 {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 	case "login", "session":
 		if !data.Authenticated || data.Student == nil || data.Student.ID == "" || data.Student.LoginName == "" || len(data.CSRFToken) != 64 {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 		if _, err := time.Parse(time.RFC3339, data.ExpiresAt); err != nil {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 		if call.Operation == "login" && len(data.SessionToken) != 43 {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 	case "logout":
 		if data.Authenticated {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 	default:
-		return empty, application.ErrBackend
+		return empty, ports.ErrBackend
 	}
 	return data, nil
 }

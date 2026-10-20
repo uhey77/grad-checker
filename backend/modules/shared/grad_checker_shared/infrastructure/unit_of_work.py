@@ -7,8 +7,8 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
-from modules.shared.grad_checker_shared.application.errors import BusinessError
-from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
+from ..application.errors.business import BusinessError
+from ..application.ports.unit_of_work import UnitOfWork
 
 type TranslateError = Callable[[SQLAlchemyError], BusinessError]
 

@@ -12,7 +12,7 @@
 | `modules/subjects/grad_checker_subjects/domain/` | Pythonの業務上の概念・区分・ルール | 科目区分、授業種別、課程の確認状態 |
 | `modules/subjects/grad_checker_subjects/application/` | Pythonのユースケース・取得契約・業務エラー | 科目一覧の取得契約、シードデータの整合性検証 |
 | `modules/subjects/grad_checker_subjects/infrastructure/` | PythonのDB・ファイルアクセス | SQLModel、リポジトリ |
-| `modules/subjects/application/`・`infrastructure/` | Goの取得契約とブリッジ通信の実装 | PythonへのHTTPクライアント |
+| `modules/subjects/application/ports/`・`infrastructure/` | Goの取得契約とブリッジ通信の実装 | PythonへのHTTPクライアント |
 | `api/presentation/`・`api/api_service/presentation/` | Goの外部HTTP、Pythonのブリッジアダプター | 入力検証、業務エラー変換、注入されたユースケースの呼出し |
 | `modules/shared/pythonbridge/` | GoからPythonサービスを呼ぶ共通処理 | ブリッジ通信の包絡形式、タイムアウト・接続失敗・形式違反の区別 |
 | `api/presentation/http.go` | Goの外部HTTPで共通の検証と応答 | メソッド・セッション・CSRF・JSON本文の検証、共通の業務エラー変換 |
@@ -52,6 +52,7 @@
 
 ## 実装ルール
 
+- PythonのApplication直下は`__init__.py`だけにし、入出力を`dto/`、ABCのRepository・UoW・外部機能を`ports/`、共有する手順と検証・DTO組立てを`services/`、エラーを`errors/`へ整理する。DTOとPortからUseCase・サービスへ逆依存させない。使わない役割の空ディレクトリや旧パスの互換用再exportは作らない。GoのGateway契約は`application/ports/`（package ports）にまとめる。
 - 公開操作は `application/use_cases/<操作>.py` の1操作1クラスの`*UseCase`にし、公開実行メソッドを`execute`に統一する。処理本体とトランザクション境界をそのUseCaseへ置き、複数操作を持つServiceで代用したり、そのServiceへの委譲だけのUseCaseを増やしたりしない。UseCase同士の直接呼出しを避け、共有する段取りはApplication Serviceへ切り出す。API・CLIは公開窓口のUseCaseを呼ぶ。
 - ユースケースの手順と取得・保存契約は `application` に置く。業務上の不変条件・計算・判断は `domain`、DB処理は `infrastructure` に置く。DomainのエラーはApplicationで公開用の業務エラーへ変換する。
 - Pythonの`application`の取得・保存契約（リポジトリ・Unit of Work・外部処理）はABCの抽象メソッドで定義する。`infrastructure`の実装とテストのFakeは契約を継承し、実装する契約を明示する。

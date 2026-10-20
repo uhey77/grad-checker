@@ -7,27 +7,26 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
-from modules.subjects.grad_checker_subjects.application.errors.subject_list import (
-    SubjectListIntegrityError,
-    SubjectListNotFoundError,
-    SubjectListUnavailableError,
-)
-from modules.subjects.grad_checker_subjects.application.subject_list import (
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
+
+from ..application.dto.subject_list import (
     SubjectList,
     SubjectListClassification,
     SubjectListItem,
     SubjectListOffering,
     SubjectListProgram,
+)
+from ..application.errors.subject_list import (
+    SubjectListIntegrityError,
+    SubjectListNotFoundError,
+    SubjectListUnavailableError,
+)
+from ..application.ports.subject_list import (
     SubjectListRepository,
     SubjectListUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.infrastructure.classification_path import (
-    classification_path,
-)
-from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
+from .classification_path import classification_path
+from .subject_models import (
     AcademicProgram,
     Classification,
     Curriculum,

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"grad-checker/backend/modules/requirements/application"
+	"grad-checker/backend/modules/requirements/application/ports"
 	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
@@ -21,18 +21,18 @@ func NewPythonCheckClient(origin string) (*PythonCheckClient, error) {
 }
 
 // 判定と保存はPythonに限定し、Goは保存済み履歴の形と要求との対応だけを検証する。
-func (c *PythonCheckClient) Call(ctx context.Context, call application.CheckCall) (json.RawMessage, error) {
+func (c *PythonCheckClient) Call(ctx context.Context, call ports.CheckCall) (json.RawMessage, error) {
 	data, err := c.client.Call(ctx, call)
 	if err != nil {
 		var failure *pythonbridge.BusinessError
 		if errors.As(err, &failure) {
-			return nil, &application.EvaluationError{Code: failure.Code}
+			return nil, &ports.EvaluationError{Code: failure.Code}
 		}
-		return nil, application.ErrBackend
+		return nil, ports.ErrBackend
 	}
 	if call.Operation == "list" {
 		if call.Page == nil || !validCheckList(data, *call.Page) {
-			return nil, application.ErrBackend
+			return nil, ports.ErrBackend
 		}
 		return data, nil
 	}
@@ -50,31 +50,31 @@ func (c *PythonCheckClient) Call(ctx context.Context, call application.CheckCall
 		DataRevision int64 `json:"data_revision"`
 	}
 	if json.Unmarshal(data, &shape) != nil || len(shape.ID) != 36 || json.Unmarshal(shape.Input, &input) != nil || input.DataRevision == nil || input.Grades == nil || !validEvaluationResult(shape.Result, call.Operation == "get") {
-		return nil, application.ErrBackend
+		return nil, ports.ErrBackend
 	}
 	// 入力と結果は同じ成績版のスナップショットから作られている。
 	if json.Unmarshal(shape.Result, &result) != nil || result.DataRevision != *input.DataRevision {
-		return nil, application.ErrBackend
+		return nil, ports.ErrBackend
 	}
 	if _, err := time.Parse(time.RFC3339Nano, shape.CreatedAt); err != nil {
-		return nil, application.ErrBackend
+		return nil, ports.ErrBackend
 	}
 	switch call.Operation {
 	case "create":
 		// 保存した履歴は要求した成績版で判定したものに限る。
 		if call.Request == nil || *input.DataRevision != call.Request.ExpectedRevision {
-			return nil, application.ErrBackend
+			return nil, ports.ErrBackend
 		}
 	case "get":
 		if shape.ID != call.CheckID {
-			return nil, application.ErrBackend
+			return nil, ports.ErrBackend
 		}
 	}
 	return data, nil
 }
 
 // validCheckListは履歴一覧の要約と、要求した範囲・件数との対応を検証する。
-func validCheckList(data json.RawMessage, page application.CheckPage) bool {
+func validCheckList(data json.RawMessage, page ports.CheckPage) bool {
 	var shape struct {
 		Checks *[]struct {
 			ID           string `json:"id"`

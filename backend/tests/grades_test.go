@@ -9,18 +9,18 @@ import (
 	"testing"
 
 	"grad-checker/backend/api/presentation"
-	"grad-checker/backend/modules/grades/application"
+	"grad-checker/backend/modules/grades/application/ports"
 	"grad-checker/backend/modules/grades/infrastructure"
 )
 
 type fakeGrades struct {
-	calls []application.GradeCall
+	calls []ports.GradeCall
 	err   error
 }
 
-func (f *fakeGrades) Call(_ context.Context, call application.GradeCall) (application.StudentGrades, error) {
+func (f *fakeGrades) Call(_ context.Context, call ports.GradeCall) (ports.StudentGrades, error) {
 	f.calls = append(f.calls, call)
-	return application.StudentGrades{Grades: []application.GradeAttempt{}}, f.err
+	return ports.StudentGrades{Grades: []ports.GradeAttempt{}}, f.err
 }
 
 const validAttempt = `{"course_id":"00000000-0000-4000-8000-000000000001","attempt_no":1,"result_status":"finalized","grade_code":"A","academic_year":2026,"term_code":"first"}`
@@ -133,7 +133,7 @@ func TestGradesMapBusinessErrors(t *testing.T) {
 		"duplicate_attempt": 422, "invalid_attempt_sequence": 422, "revision_conflict": 409,
 		"grades_unavailable": 503, "unexpected": 502,
 	} {
-		fake := &fakeGrades{err: &application.GradeError{Code: code}}
+		fake := &fakeGrades{err: &ports.GradeError{Code: code}}
 		recorder := httptest.NewRecorder()
 		presentation.NewGradeHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler()).ServeHTTP(recorder, gradeRequest("PUT", validGradeSet, "application/json"))
 		if recorder.Code != status || !strings.Contains(recorder.Body.String(), `"detail"`) {
@@ -156,7 +156,7 @@ func TestGradeClientValidatesBridgeResponse(t *testing.T) {
 		`{"data":{"grades":[],"data_revision":1},"error":{"code":"x"}}`:                       false,
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var call application.GradeCall
+			var call ports.GradeCall
 			if r.URL.Path != "/bridge/grades" || json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != "save" || call.GradeSet == nil {
 				t.Error("invalid call")
 			}
@@ -166,8 +166,8 @@ func TestGradeClientValidatesBridgeResponse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		set := &application.GradeSet{Grades: []application.GradeAttempt{{CourseID: "c", AttemptNo: 1, ResultStatus: "pending"}}}
-		_, err = client.Call(context.Background(), application.GradeCall{Operation: "save", Token: strings.Repeat("s", 43), CSRF: strings.Repeat("c", 64), GradeSet: set})
+		set := &ports.GradeSet{Grades: []ports.GradeAttempt{{CourseID: "c", AttemptNo: 1, ResultStatus: "pending"}}}
+		_, err = client.Call(context.Background(), ports.GradeCall{Operation: "save", Token: strings.Repeat("s", 43), CSRF: strings.Repeat("c", 64), GradeSet: set})
 		if (err == nil) != ok {
 			t.Fatalf("%s: %v", body, err)
 		}

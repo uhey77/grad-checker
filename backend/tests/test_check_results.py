@@ -9,7 +9,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from test_auth import login, register
-from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
+from test_requirement_evaluation import (
+    grade,
+    snapshot,  # noqa: F401 -- pytest fixture or shared test data
+    uid,
+)
 
 from api.api_service.main import create_app
 from config.settings import Settings

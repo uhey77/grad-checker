@@ -9,10 +9,8 @@ const { HttpProfileRepository } = await import(
     join(directory, "modules/profiles/infrastructure/HttpProfileRepository.js"),
   )
 );
-const { ProfileUseCases } = await import(
-  pathToFileURL(
-    join(directory, "modules/profiles/application/ProfileUseCases.js"),
-  )
+const { createProfilesModule } = await import(
+  pathToFileURL(join(directory, "modules/profiles/composition.js"))
 );
 const { toPrograms, toProfile } = await import(
   pathToFileURL(join(directory, "modules/profiles/infrastructure/mappers.js"))
@@ -59,14 +57,14 @@ test("所属APIのDTO変換・本人Cookie・CSRF・更新版の契約", async (
           : initial,
     );
   });
-  const useCases = new ProfileUseCases(new HttpProfileRepository("/api"));
-  const options = await useCases.listPrograms(controller.signal);
+  const useCases = createProfilesModule("/api");
+  const options = await useCases.listPrograms.execute(controller.signal);
   assert.equal(options[0].verificationStatus, "unverified");
   assert.equal(options[0].admissionYearFrom, null);
   assert.equal(options[0].courseName, "人工知能");
-  const profile = await useCases.getProfile(controller.signal);
+  const profile = await useCases.getProfile.execute(controller.signal);
   assert.equal(profile.curriculumId, null);
-  const saved = await useCases.saveProgram(
+  const saved = await useCases.saveProgram.execute(
     {
       programId: "program",
       curriculumId: "curriculum",

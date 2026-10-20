@@ -1,8 +1,14 @@
 """追加シードからGo公開APIと本人専用の修了判定履歴までを実プロセスで検証する。"""
 
 from sqlalchemy import text
-from test_auth_http import PASSWORD, auth_services  # noqa: F401
-from test_university_curricula import masters, snapshot_for  # noqa: F401
+from test_auth_http import (
+    PASSWORD,
+    auth_services,  # noqa: F401 -- pytest fixture or shared test data
+)
+from test_university_curricula import (
+    masters,  # noqa: F401 -- pytest fixture or shared test data
+    snapshot_for,
+)
 
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,

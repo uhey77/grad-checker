@@ -3,7 +3,7 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
-from modules.accounts.grad_checker_accounts.application.auth import Passwords
+from ..application.ports.auth import Passwords
 
 
 class ArgonPasswords(Passwords):

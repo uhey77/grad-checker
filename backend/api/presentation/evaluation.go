@@ -4,18 +4,18 @@ import (
 	"errors"
 	"net/http"
 
-	"grad-checker/backend/modules/requirements/application"
+	"grad-checker/backend/modules/requirements/application/ports"
 )
 
-func NewEvaluationHandler(gateway application.EvaluationGateway, fallback http.Handler) http.Handler {
+func NewEvaluationHandler(gateway ports.EvaluationGateway, fallback http.Handler) http.Handler {
 	return newEvaluationHandler("/api/me/graduation-requirements", gateway, fallback)
 }
 
-func NewDashboardHandler(gateway application.EvaluationGateway, fallback http.Handler) http.Handler {
+func NewDashboardHandler(gateway ports.EvaluationGateway, fallback http.Handler) http.Handler {
 	return newEvaluationHandler("/api/me/dashboard", gateway, fallback)
 }
 
-func newEvaluationHandler(path string, gateway application.EvaluationGateway, fallback http.Handler) http.Handler {
+func newEvaluationHandler(path string, gateway ports.EvaluationGateway, fallback http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != path {
 			fallback.ServeHTTP(w, r)
@@ -29,7 +29,7 @@ func newEvaluationHandler(path string, gateway application.EvaluationGateway, fa
 		if !ok || rejectQuery(w, r) {
 			return
 		}
-		result, err := gateway.Call(r.Context(), application.EvaluationCall{Token: token})
+		result, err := gateway.Call(r.Context(), ports.EvaluationCall{Token: token})
 		if err != nil {
 			writeEvaluationError(w, err)
 			return
@@ -39,7 +39,7 @@ func newEvaluationHandler(path string, gateway application.EvaluationGateway, fa
 }
 
 func writeEvaluationError(w http.ResponseWriter, err error) {
-	var failure *application.EvaluationError
+	var failure *ports.EvaluationError
 	if !errors.As(err, &failure) {
 		writeError(w, 502, "卒業要件の判定サービスに接続できません。時間をおいて再試行してください。")
 		return

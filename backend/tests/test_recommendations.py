@@ -1,21 +1,27 @@
 """推薦の優先順、実際の算入効果、未確認事項と保存互換を検証する。"""
 
 # ruff: noqa: F811
-
 import pytest
-from test_external_allocation import add_external, external_snapshot  # noqa: F401
-from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
-
-from modules.requirements.grad_checker_requirements.application.evaluation import (
-    evaluate_graduation,
+from test_external_allocation import (
+    add_external,
+    external_snapshot,  # noqa: F401 -- pytest fixture or shared test data
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from test_requirement_evaluation import (
+    grade,
+    snapshot,  # noqa: F401 -- pytest fixture or shared test data
+    uid,
+)
+
+from modules.requirements.grad_checker_requirements.application.services import (
+    evaluation as evaluation_services,
+)
+from modules.subjects.grad_checker_subjects.application.dto.subject_data import (
     SubjectOfferingData,
 )
 
 
 def recommendations(sample):
-    rows = evaluate_graduation(sample).recommendations
+    rows = evaluation_services.evaluate_graduation(sample).recommendations
     assert rows is not None
     return rows
 

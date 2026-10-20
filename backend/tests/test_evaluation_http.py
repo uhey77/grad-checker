@@ -1,9 +1,20 @@
 """Go → Python → SQLiteで本人の保存済み成績を判定する。実DBは変更しない。"""
 
 from sqlalchemy import text
-from test_auth_http import PASSWORD, auth_services  # noqa: F401
-from test_external_allocation import add_external, external_snapshot  # noqa: F401
-from test_requirement_evaluation import BACKEND, grade, snapshot, uid  # noqa: F401
+from test_auth_http import (
+    PASSWORD,
+    auth_services,  # noqa: F401 -- pytest fixture or shared test data
+)
+from test_external_allocation import (
+    add_external,
+    external_snapshot,  # noqa: F401 -- pytest fixture or shared test data
+)
+from test_requirement_evaluation import (
+    BACKEND,
+    grade,
+    snapshot,  # noqa: F401 -- pytest fixture or shared test data
+    uid,
+)
 
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,

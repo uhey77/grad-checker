@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"grad-checker/backend/modules/shared/pythonbridge"
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 )
 
 // subjectErrorはブリッジ通信の失敗を科目モジュールの取得契約のエラーへ変換する。
@@ -15,10 +15,10 @@ func subjectError(err error, business func(code string) error) error {
 	case errors.As(err, &failure):
 		return business(failure.Code)
 	case errors.Is(err, pythonbridge.ErrTimeout):
-		return application.ErrTimeout
+		return ports.ErrTimeout
 	case errors.Is(err, pythonbridge.ErrUnavailable):
-		return application.ErrUnavailable
+		return ports.ErrUnavailable
 	default:
-		return application.ErrProtocol
+		return ports.ErrProtocol
 	}
 }

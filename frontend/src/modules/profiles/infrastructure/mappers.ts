@@ -1,5 +1,5 @@
 import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
-import { ProfileError } from "../application/ProfileUseCases.ts";
+import { ProfileError } from "../application/errors/ProfileError.ts";
 import type {
   CompletionPolicy,
   Profile,

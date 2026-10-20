@@ -1,6 +1,6 @@
 """要件マスタの投入エラー。CLIで理由を表示する。"""
 
-from modules.shared.grad_checker_shared.application.errors import BusinessError
+from modules.shared.grad_checker_shared.application.errors.business import BusinessError
 
 
 class RequirementSeedError(BusinessError):

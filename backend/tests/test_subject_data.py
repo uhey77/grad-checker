@@ -12,15 +12,14 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from modules.subjects.grad_checker_subjects.application.dto.subject_data import (
+    SubjectDataSeed,
+)
 from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
     SeedError,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_import import (
-    SubjectDataStore,
-    SubjectDataUnitOfWork,
-)
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
-    SubjectDataSeed,
+from modules.subjects.grad_checker_subjects.application.ports import (
+    subject_data_import as subject_data_import_ports,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
@@ -52,7 +51,7 @@ def engine(tmp_path):
         database.dispose()
 
 
-class FakeSubjectDataStore(SubjectDataStore):
+class FakeSubjectDataStore(subject_data_import_ports.SubjectDataStore):
     def __init__(self, uow: FakeUnitOfWork, existing: SubjectDataSeed) -> None:
         self.uow = uow
         self.existing = existing
@@ -67,7 +66,9 @@ class FakeSubjectDataStore(SubjectDataStore):
         self.inserted.append(additions)
 
 
-class FakeSubjectDataUnitOfWork(FakeUnitOfWork, SubjectDataUnitOfWork):
+class FakeSubjectDataUnitOfWork(
+    FakeUnitOfWork, subject_data_import_ports.SubjectDataUnitOfWork
+):
     def __init__(self, existing: SubjectDataSeed) -> None:
         super().__init__()
         self.store = FakeSubjectDataStore(self, existing)

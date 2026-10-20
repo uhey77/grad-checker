@@ -2,10 +2,8 @@ import {
   requestJson,
   type JsonRequest,
 } from "../../../shared/infrastructure/http.ts";
-import {
-  GradeError,
-  type GradeRepository,
-} from "../application/GradeUseCases.ts";
+import { GradeError } from "../application/errors/GradeError.ts";
+import { type GradeRepository } from "../application/ports/GradeRepository.ts";
 import type { GradeSet } from "../domain/models.ts";
 import { toGradeSetDto, toStudentGrades } from "./mappers.ts";
 

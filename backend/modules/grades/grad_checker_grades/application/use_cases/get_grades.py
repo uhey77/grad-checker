@@ -1,6 +1,7 @@
 """GetGradesUseCaseの処理手順とトランザクション境界。"""
 
-from ..grades import GradeUnitOfWork, StudentGrades
+from ..dto.grades import StudentGrades
+from ..ports.grades import GradeUnitOfWork
 
 
 class GetGradesUseCase:

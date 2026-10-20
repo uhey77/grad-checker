@@ -1,6 +1,6 @@
 """科目一覧の取得で発生する業務エラー。コードはブリッジ通信でGoへ返す。"""
 
-from modules.shared.grad_checker_shared.application.errors import BusinessError
+from modules.shared.grad_checker_shared.application.errors.business import BusinessError
 
 
 class SubjectListNotFoundError(BusinessError):

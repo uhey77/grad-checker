@@ -12,12 +12,14 @@ from test_profile import selection
 
 from api.api_service.main import create_app
 from config.settings import Settings
-from modules.grades.grad_checker_grades.application.errors.grades import GradeError
-from modules.grades.grad_checker_grades.application.grades import (
-    GradeRepository,
+from modules.grades.grad_checker_grades.application.dto.grades import (
     GradeSet,
-    GradeUnitOfWork,
     StudentGrades,
+)
+from modules.grades.grad_checker_grades.application.errors.grades import GradeError
+from modules.grades.grad_checker_grades.application.ports.grades import (
+    GradeRepository,
+    GradeUnitOfWork,
 )
 from modules.grades.grad_checker_grades.domain.grade import (
     GradeCode,

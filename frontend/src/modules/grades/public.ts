@@ -16,7 +16,8 @@ export {
   minAcademicYear,
   type CourseStatus,
 } from "./domain/attempts.ts";
-export { GradeUseCases, GradeError } from "./application/GradeUseCases.ts";
+export type { GradeUseCases } from "./application/ports/GradeUseCases.ts";
+export { GradeError } from "./application/errors/GradeError.ts";
 export {
   addRetake,
   attemptsOf,
@@ -32,4 +33,7 @@ export {
   type GradeChoice,
   type GradeFilters,
   type GradeDraftProblem,
-} from "./application/gradeDraft.ts";
+} from "./application/services/gradeDraft.ts";
+
+export { GetGradesUseCase } from "./application/use_cases/GetGradesUseCase.ts";
+export { SaveGradesUseCase } from "./application/use_cases/SaveGradesUseCase.ts";

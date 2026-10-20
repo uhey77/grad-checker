@@ -9,16 +9,16 @@ import (
 	"testing"
 
 	"grad-checker/backend/api/presentation"
-	"grad-checker/backend/modules/requirements/application"
+	"grad-checker/backend/modules/requirements/application/ports"
 	"grad-checker/backend/modules/requirements/infrastructure"
 )
 
 type fakeEvaluation struct {
-	calls []application.EvaluationCall
+	calls []ports.EvaluationCall
 	err   error
 }
 
-func (f *fakeEvaluation) Call(_ context.Context, call application.EvaluationCall) (json.RawMessage, error) {
+func (f *fakeEvaluation) Call(_ context.Context, call ports.EvaluationCall) (json.RawMessage, error) {
 	f.calls = append(f.calls, call)
 	return json.RawMessage(`{"result":"fail"}`), f.err
 }
@@ -32,7 +32,7 @@ func evaluationRequest(method, path string, authenticated bool) *http.Request {
 }
 
 func TestEvaluationHandlerAuthorizationAndErrors(t *testing.T) {
-	for endpoint, newHandler := range map[string]func(application.EvaluationGateway, http.Handler) http.Handler{
+	for endpoint, newHandler := range map[string]func(ports.EvaluationGateway, http.Handler) http.Handler{
 		"/api/me/graduation-requirements": presentation.NewEvaluationHandler,
 		"/api/me/dashboard":               presentation.NewDashboardHandler,
 	} {
@@ -58,7 +58,7 @@ func TestEvaluationHandlerAuthorizationAndErrors(t *testing.T) {
 		} {
 			fake := &fakeEvaluation{}
 			if tc.code != "" {
-				fake.err = &application.EvaluationError{Code: tc.code}
+				fake.err = &ports.EvaluationError{Code: tc.code}
 			}
 			recorder := httptest.NewRecorder()
 			newHandler(fake, http.NotFoundHandler()).ServeHTTP(recorder, evaluationRequest(tc.method, tc.path, tc.auth))
@@ -111,7 +111,7 @@ func TestEvaluationClientEnvelopeAndInvalidResponses(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		data, err := client.Call(context.Background(), application.EvaluationCall{Token: "token"})
+		data, err := client.Call(context.Background(), ports.EvaluationCall{Token: "token"})
 		server.Close()
 		if (err == nil) != tc.good {
 			t.Fatalf("%s: %v", tc.response, err)
@@ -146,7 +146,7 @@ func TestDashboardClientRejectsInvalidSummary(t *testing.T) {
 			if r.Method != "POST" || r.URL.Path != "/bridge/dashboard" {
 				t.Error(r.Method, r.URL.Path)
 			}
-			var call application.EvaluationCall
+			var call ports.EvaluationCall
 			if json.NewDecoder(r.Body).Decode(&call) != nil || call.Token != "token" {
 				t.Error("missing identity")
 			}
@@ -156,7 +156,7 @@ func TestDashboardClientRejectsInvalidSummary(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := client.Call(context.Background(), application.EvaluationCall{Token: "token"})
+		result, err := client.Call(context.Background(), ports.EvaluationCall{Token: "token"})
 		server.Close()
 		if (err == nil) != tc.good {
 			t.Fatalf("%s: %v", tc.body, err)

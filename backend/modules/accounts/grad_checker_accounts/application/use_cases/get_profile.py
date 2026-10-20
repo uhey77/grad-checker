@@ -1,6 +1,7 @@
 """GetProfileUseCaseの処理手順とトランザクション境界。"""
 
-from ..profile import Profile, ProfileUnitOfWork
+from ..dto.profile import Profile
+from ..ports.profile import ProfileUnitOfWork
 
 
 class GetProfileUseCase:

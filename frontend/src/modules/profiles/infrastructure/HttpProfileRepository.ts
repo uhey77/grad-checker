@@ -2,10 +2,8 @@ import {
   requestJson,
   type JsonRequest,
 } from "../../../shared/infrastructure/http.ts";
-import {
-  ProfileError,
-  type ProfileRepository,
-} from "../application/ProfileUseCases.ts";
+import { ProfileError } from "../application/errors/ProfileError.ts";
+import { type ProfileRepository } from "../application/ports/ProfileRepository.ts";
 import type { ProgramSelection } from "../domain/models.ts";
 import { toProfile, toPrograms } from "./mappers.ts";
 

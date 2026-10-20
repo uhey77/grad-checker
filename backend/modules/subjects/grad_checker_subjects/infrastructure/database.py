@@ -7,9 +7,7 @@ from sqlalchemy import Engine, event
 from sqlalchemy.engine import make_url
 from sqlmodel import SQLModel, create_engine
 
-from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
-    SUBJECT_TABLES,
-)
+from .subject_models import SUBJECT_TABLES
 
 
 def create_database_engine(database_url: str) -> Engine:

@@ -9,8 +9,8 @@ const { HttpAuthRepository } = await import(
     join(directory, "modules/accounts/infrastructure/HttpAuthRepository.js"),
   )
 );
-const { AuthUseCases } = await import(
-  pathToFileURL(join(directory, "modules/accounts/application/AuthUseCases.js"))
+const { createAccountsModule } = await import(
+  pathToFileURL(join(directory, "modules/accounts/composition.js"))
 );
 
 test("認証のDTO変換とCookie・CSRFの送信契約", async (context) => {
@@ -39,24 +39,31 @@ test("認証のDTO変換とCookie・CSRFの送信契約", async (context) => {
       expires_at: "2026-10-12T00:00:00+00:00",
     });
   });
-  const service = new AuthUseCases(new HttpAuthRepository("/api/auth"));
-  assert.deepEqual(await service.config(), {
+  const service = createAccountsModule("/api/auth");
+  assert.deepEqual(await service.config.execute(), {
     passwordMinLength: 12,
     passwordMaxLength: 128,
   });
   assert.equal(
-    await service.register("student_01", "application-password"),
+    await service.register.execute("student_01", "application-password"),
     "r".repeat(43),
   );
   assert.equal(
-    await service.recover("student_01", "r".repeat(43), "new-password-123"),
+    await service.recover.execute(
+      "student_01",
+      "r".repeat(43),
+      "new-password-123",
+    ),
     "n".repeat(43),
   );
-  const session = await service.login("student_01", "application-password");
+  const session = await service.login.execute(
+    "student_01",
+    "application-password",
+  );
   assert.equal(session.student.loginName, "student_01");
   assert.equal(session.csrfToken, "csrf");
-  assert.deepEqual(await service.session(), session);
-  await service.logout(session.csrfToken);
+  assert.deepEqual(await service.session.execute(), session);
+  await service.logout.execute(session.csrfToken);
   for (const request of requests) {
     assert.equal(request.options.credentials, "same-origin");
     assert.equal(request.options.cache, "no-store");

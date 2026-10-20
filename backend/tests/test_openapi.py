@@ -6,8 +6,12 @@ import re
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 from openapi_spec_validator import validate
-from test_auth_http import BACKEND, PASSWORD, auth_services  # noqa: F401
-from test_requirement_evaluation import snapshot  # noqa: F401
+from test_auth_http import (
+    BACKEND,
+    PASSWORD,
+    auth_services,  # noqa: F401 -- pytest fixture or shared test data
+)
+from test_requirement_evaluation import snapshot  # noqa: F401 -- pytest fixture or shared test data
 
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,

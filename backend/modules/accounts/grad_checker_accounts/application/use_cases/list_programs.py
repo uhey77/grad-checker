@@ -1,6 +1,7 @@
 """ListProgramsUseCaseの処理手順とトランザクション境界。"""
 
-from ..profile import ProfileUnitOfWork, ProgramOption
+from ..dto.profile import ProgramOption
+from ..ports.profile import ProfileUnitOfWork
 
 
 class ListProgramsUseCase:

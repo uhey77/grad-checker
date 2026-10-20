@@ -8,25 +8,27 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from modules.grades.grad_checker_grades.application.grades import GradeAttempt
-from modules.requirements.grad_checker_requirements.application import (
+from modules.grades.grad_checker_grades.application.dto.grades import GradeAttempt
+from modules.requirements.grad_checker_requirements.application.dto import (
+    check_results as check_results_dto,
+)
+from modules.requirements.grad_checker_requirements.application.dto import (
     completion_policy,
-    evaluation_models,
 )
-from modules.requirements.grad_checker_requirements.application.check_results import (
-    CheckRequest,
+from modules.requirements.grad_checker_requirements.application.dto import (
+    evaluation as evaluation_models,
 )
-from modules.requirements.grad_checker_requirements.application.errors import evaluation
-from modules.requirements.grad_checker_requirements.application.evaluation import (
-    evaluate_graduation,
-)
-from modules.requirements.grad_checker_requirements.application.seed import (
+from modules.requirements.grad_checker_requirements.application.dto.seed import (
     RequirementSeed,
 )
-from modules.requirements.grad_checker_requirements.application.validation import (
-    validate_requirements,
+from modules.requirements.grad_checker_requirements.application.errors import evaluation
+from modules.requirements.grad_checker_requirements.application.services import (
+    evaluation as evaluation_services,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from modules.requirements.grad_checker_requirements.application.services import (
+    validation as validation_services,
+)
+from modules.subjects.grad_checker_subjects.application.dto.subject_data import (
     SubjectDataSeed,
 )
 
@@ -59,7 +61,7 @@ def masters():
             for k in RequirementSeed.model_fields
         }
     )
-    validate_requirements(requirements, subjects)
+    validation_services.validate_requirements(requirements, subjects)
     return subjects, requirements
 
 
@@ -154,9 +156,14 @@ def test_every_ready_bachelor_can_evaluate_empty_and_full_grades(masters):
             continue
         curriculum = next(c for c in subjects.curricula if c.id == policy.curriculum_id)
         code = curriculum.code.removesuffix("-HANDBOOK-2026")
-        assert evaluate_graduation(snapshot_for(masters, code)).result == "fail", code
         assert (
-            evaluate_graduation(snapshot_for(masters, code, earned=True)).result
+            evaluation_services.evaluate_graduation(snapshot_for(masters, code)).result
+            == "fail"
+        ), code
+        assert (
+            evaluation_services.evaluate_graduation(
+                snapshot_for(masters, code, earned=True)
+            ).result
             == "pass"
         ), code
 
@@ -165,37 +172,42 @@ def test_every_ready_bachelor_can_evaluate_empty_and_full_grades(masters):
     "code", ["GR-BIO-M", "GR-CS-M", "GR-MS-M", "GR-ES-M", "GR-DS-M", "GR-MT-M"]
 )
 def test_masters_require_credits_and_self_reported_noncredit_conditions(masters, code):
-    pending = evaluate_graduation(snapshot_for(masters, code, earned=True))
+    pending = evaluation_services.evaluate_graduation(
+        snapshot_for(masters, code, earned=True)
+    )
     assert pending.result == "pending"
     assert pending.total.result == "pass"
     assert pending.total.required_credits == 30
     assert all(c.status == "unknown" for c in pending.completion_conditions)
     assert (
-        evaluate_graduation(
+        evaluation_services.evaluate_graduation(
             snapshot_for(masters, code, earned=True, answers=True)
         ).result
         == "pass"
     )
     assert (
-        evaluate_graduation(snapshot_for(masters, code, answers=True)).result == "fail"
+        evaluation_services.evaluate_graduation(
+            snapshot_for(masters, code, answers=True)
+        ).result
+        == "fail"
     )
     s = snapshot_for(masters, code, earned=True, answers=True)
     s.completion_answers[0].status = "not_met"
-    assert evaluate_graduation(s).result == "fail"
+    assert evaluation_services.evaluate_graduation(s).result == "fail"
 
 
 def test_generic_skill_surplus_is_free_but_engineering_surplus_transfers(masters):
     for code, expected in [("GR-CS-M", 2), ("GR-ES-M", 4)]:
-        result = evaluate_graduation(
+        result = evaluation_services.evaluate_graduation(
             snapshot_for(masters, code, earned=True, answers=True)
         )
         group = next(r for r in result.categories if r.required_credits == expected)
         assert group.earned_credits > group.credited_credits
         assert group.credited_credits == expected
-    bio = evaluate_graduation(
+    bio = evaluation_services.evaluate_graduation(
         snapshot_for(masters, "GR-CS-M", earned=True, answers=True)
     )
-    es = evaluate_graduation(
+    es = evaluation_services.evaluate_graduation(
         snapshot_for(masters, "GR-ES-M", earned=True, answers=True)
     )
     assert bio.total.earned_credits - bio.total.credited_credits == 3
@@ -234,7 +246,7 @@ def test_missing_required_research_cannot_be_replaced_by_electives(masters):
     s.grades = [
         g for g in s.grades if g.course_id != str(research.required_course_ids[0])
     ]
-    result = evaluate_graduation(s)
+    result = evaluation_services.evaluate_graduation(s)
     assert result.total.result == "pass"
     assert result.result == "fail"
     assert result.missing_required_courses
@@ -251,7 +263,7 @@ def test_incomplete_graduate_master_is_a_configuration_error(masters):
     )
     policy.credit_groups.pop()
     with pytest.raises(evaluation.EvaluationError, match="invalid_evaluation_master"):
-        evaluate_graduation(s)
+        evaluation_services.evaluate_graduation(s)
 
 
 @pytest.mark.parametrize(
@@ -273,7 +285,9 @@ def test_unverified_programs_stop_with_reason(masters, code):
     with pytest.raises(
         evaluation.EvaluationError, match="unverified_completion_policy"
     ):
-        evaluate_graduation(snapshot_for(masters, code, earned=True, answers=True))
+        evaluation_services.evaluate_graduation(
+            snapshot_for(masters, code, earned=True, answers=True)
+        )
 
 
 def test_speech_therapy_joint_electives_are_one_independent_minimum(masters):
@@ -299,7 +313,7 @@ def test_speech_therapy_joint_electives_are_one_independent_minimum(masters):
     s.grades = [
         g for g in s.grades if g.course_id not in {str(c) for c in minimum.course_ids}
     ]
-    result = evaluate_graduation(s)
+    result = evaluation_services.evaluate_graduation(s)
     assert result.total.result == "pass"
     assert result.result == "fail"
     condition = next(r for r in result.requirements if r.code == minimum.code)
@@ -310,16 +324,16 @@ def test_speech_therapy_joint_electives_are_one_independent_minimum(masters):
         str(c) for c in minimum.course_ids if names[c] in {"生命倫理", "生活環境福祉学"}
     }
     s.grades += [g for g in full.grades if g.course_id in selected]
-    assert evaluate_graduation(s).result == "pass"
+    assert evaluation_services.evaluate_graduation(s).result == "pass"
 
 
 def test_foreign_or_duplicate_attestations_are_rejected(masters):
     s = snapshot_for(masters, "GR-CS-M", earned=True, answers=True)
     s.completion_answers.append(s.completion_answers[0])
     with pytest.raises(evaluation.EvaluationError, match="invalid_completion_answers"):
-        evaluate_graduation(s)
+        evaluation_services.evaluate_graduation(s)
     with pytest.raises(ValidationError):
-        CheckRequest.model_validate(
+        check_results_dto.CheckRequest.model_validate(
             {
                 "expected_revision": 1,
                 "completion_answers": [{"code": "thesis", "status": True}],

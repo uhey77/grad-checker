@@ -6,7 +6,7 @@ from sqlalchemy import Engine
 
 from api.api_service.presentation import dependencies
 from config.settings import Settings
-from modules.accounts.grad_checker_accounts.application.authentication import (
+from modules.accounts.grad_checker_accounts.application.services.authentication import (
     SessionAuthentication,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.profile import (

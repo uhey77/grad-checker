@@ -1,21 +1,10 @@
 """ImportRequirementsUseCaseの処理手順とトランザクション境界。"""
 
-from modules.requirements.grad_checker_requirements.application.errors.seed import (
-    RequirementSeedError,
-)
-from modules.requirements.grad_checker_requirements.application.seed import (
-    RequirementSeed,
-)
-from modules.requirements.grad_checker_requirements.application.validation import (
-    unique,
-    validate_requirements,
-)
-
-from ..seed_import import (
-    TABLES,
-    RequirementUnitOfWork,
-    record_key,
-)
+from ..dto.seed import RequirementSeed
+from ..errors.seed import RequirementSeedError
+from ..ports.seed_import import RequirementUnitOfWork
+from ..services.seed_import import TABLES, record_key
+from ..services.validation import unique, validate_requirements
 
 
 class ImportRequirementsUseCase:

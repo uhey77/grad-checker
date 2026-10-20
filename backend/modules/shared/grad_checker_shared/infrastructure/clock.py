@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from ..application.clock import Clock
+from ..application.ports.clock import Clock
 
 
 class SystemClock(Clock):

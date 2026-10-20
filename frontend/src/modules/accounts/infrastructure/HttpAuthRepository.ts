@@ -3,7 +3,8 @@ import {
   requestJson,
   type JsonRequest,
 } from "../../../shared/infrastructure/http.ts";
-import { AuthError, type AuthRepository } from "../application/AuthUseCases.ts";
+import { AuthError } from "../application/errors/AuthError.ts";
+import { type AuthRepository } from "../application/ports/AuthRepository.ts";
 import type { AuthSession, AuthPolicy } from "../domain/models.ts";
 
 const recoveryCodePattern = /^[A-Za-z0-9_-]{43}$/;

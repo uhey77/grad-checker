@@ -2,7 +2,8 @@
 
 from uuid import UUID
 
-from ..subject_list import SubjectList, SubjectListUnitOfWork
+from ..dto.subject_list import SubjectList
+from ..ports.subject_list import SubjectListUnitOfWork
 
 
 class GetSubjectListUseCase:

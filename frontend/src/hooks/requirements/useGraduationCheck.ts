@@ -33,7 +33,7 @@ export function useGraduationCheck(
     if (!active || blocked || running()) return;
     setState(null);
     await run(
-      (signal) => useCases.createCheck(revision, csrf, signal, answers),
+      (signal) => useCases.createCheck.execute(revision, csrf, signal, answers),
       {
         onSuccess: (check) => {
           // 履歴には保存されているため、表示中の課程と異なっても一覧は更新する。

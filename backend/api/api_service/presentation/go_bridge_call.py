@@ -6,7 +6,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from modules.shared.grad_checker_shared.application.errors import BusinessError
+from modules.shared.grad_checker_shared.application.errors.business import BusinessError
 
 logger = logging.getLogger(__name__)
 

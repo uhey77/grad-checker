@@ -1,6 +1,6 @@
 """画面で利用する認証ポリシーを取得する。"""
 
-from ..auth import AuthPolicy
+from ..dto.auth import AuthPolicy
 
 
 class GetAuthPolicyUseCase:

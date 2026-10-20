@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/application/ports"
 	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
@@ -21,32 +21,32 @@ func NewPythonProfileClient(origin string) (*PythonProfileClient, error) {
 	return &PythonProfileClient{client}, nil
 }
 
-func (c *PythonProfileClient) Call(ctx context.Context, call application.ProfileCall) (application.ProfileResult, error) {
-	var empty application.ProfileResult
+func (c *PythonProfileClient) Call(ctx context.Context, call ports.ProfileCall) (ports.ProfileResult, error) {
+	var empty ports.ProfileResult
 	raw, err := c.client.Call(ctx, call)
 	if err != nil {
 		return empty, accountError(err)
 	}
-	var data application.ProfileResult
+	var data ports.ProfileResult
 	if pythonbridge.DecodeData(raw, &data) != nil {
-		return empty, application.ErrBackend
+		return empty, ports.ErrBackend
 	}
 	if call.Operation == "programs" {
 		if data.Programs == nil || data.Profile != nil {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 		for _, p := range *data.Programs {
 			if p.ProgramID == "" || p.CurriculumID == "" || p.FacultyName == "" || p.CurriculumName == "" || p.Revision < 1 || (p.VerificationStatus != "verified" && p.VerificationStatus != "unverified") || p.SourceDocument == "" || p.SourcePages == "" || !validCompletionPolicy(p.CompletionPolicy) {
-				return empty, application.ErrBackend
+				return empty, ports.ErrBackend
 			}
 		}
 	} else {
 		p := data.Profile
 		if p == nil || data.Programs != nil || p.StudentID == "" || p.LoginName == "" || p.DataRevision < 0 || (p.ProgramID == nil) != (p.CurriculumID == nil) {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 		if call.Operation == "save_program" && (call.Selection == nil || p.ProgramID == nil || *p.ProgramID != call.Selection.ProgramID || *p.CurriculumID != call.Selection.CurriculumID || p.DataRevision != call.Selection.ExpectedRevision+1) {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 	}
 	return data, nil

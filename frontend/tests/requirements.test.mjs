@@ -8,14 +8,14 @@ const load = (path) =>
 const { HttpGraduationRepository } = await load(
   "modules/requirements/infrastructure/HttpGraduationRepository.js",
 );
-const { GraduationUseCases } = await load(
-  "modules/requirements/application/GraduationUseCases.js",
+const { createRequirementsModule } = await load(
+  "modules/requirements/composition.js",
 );
 const { toGraduationResult, toCheckPage, toSavedCheck } = await load(
   "modules/requirements/infrastructure/mappers.js",
 );
 const { filterRequirements } = await load(
-  "modules/requirements/application/filterRequirements.js",
+  "modules/requirements/application/services/filterRequirements.js",
 );
 
 test("区分で絞ると子孫条件を含み、他区分と総単位を含まない", () => {
@@ -175,8 +175,8 @@ test("判定は本人の保存済みデータをGETし、Cookie・キャンセ�
     return Response.json(fixture());
   });
   const controller = new AbortController();
-  const service = new GraduationUseCases(new HttpGraduationRepository("/api"));
-  const result = await service.evaluate(controller.signal);
+  const service = createRequirementsModule("/api");
+  const result = await service.evaluate.execute(controller.signal);
   assert.equal(result.result, "fail");
   assert.equal(result.total.shortage, 2);
   assert.equal(result.dataRevision, 2);
@@ -356,8 +356,8 @@ test("チェックは保存済みの成績版とCSRFをPOSTし、保存した判
     calls.push({ url, options });
     return Response.json(savedCheck(), { status: 201 });
   });
-  const service = new GraduationUseCases(new HttpGraduationRepository("/api"));
-  const check = await service.createCheck(2, "c".repeat(64));
+  const service = createRequirementsModule("/api");
+  const check = await service.createCheck.execute(2, "c".repeat(64));
   assert.equal(check.id, checkId);
   assert.equal(check.input.dataRevision, 2);
   assert.equal(check.result.total.shortage, 2);
@@ -376,7 +376,7 @@ test("チェックは保存済みの成績版とCSRFをPOSTし、保存した判
   assert.equal(options.headers["X-CSRF-Token"], "c".repeat(64));
   assert.equal(options.cache, "no-store");
   await assert.rejects(
-    service.createCheck(3, "c".repeat(64)),
+    service.createCheck.execute(3, "c".repeat(64)),
     (error) => error.status === 502,
   );
 });
@@ -391,9 +391,9 @@ test("履歴一覧は範囲を指定してGETし、保存時の要約を返す",
       return Response.json(checkPage());
     },
   );
-  const service = new GraduationUseCases(new HttpGraduationRepository("/api"));
+  const service = createRequirementsModule("/api");
   const controller = new AbortController();
-  const page = await service.listChecks(
+  const page = await service.listChecks.execute(
     { limit: 20, offset: 20 },
     controller.signal,
   );
@@ -406,14 +406,14 @@ test("履歴一覧は範囲を指定してGETし、保存時の要約を返す",
   assert.equal(page.checks[0].total.requiredCredits, 10);
   // 要求と異なる範囲の応答は表示しない。
   await assert.rejects(
-    service.listChecks({ limit: 20, offset: 0 }),
+    service.listChecks.execute({ limit: 20, offset: 0 }),
     (error) => error.status === 502,
   );
   fetch.mock.mockImplementation(async () =>
     Response.json({ detail: "ログインしてください。" }, { status: 401 }),
   );
   await assert.rejects(
-    service.listChecks({ limit: 20, offset: 0 }),
+    service.listChecks.execute({ limit: 20, offset: 0 }),
     (error) =>
       error.status === 401 && error.message === "ログインしてください。",
   );
@@ -425,21 +425,21 @@ test("過去の判定は本人のIDでGETし、別IDの応答や404を表示し�
     calls.push(url);
     return Response.json(savedCheck());
   });
-  const service = new GraduationUseCases(new HttpGraduationRepository("/api"));
+  const service = createRequirementsModule("/api");
   assert.equal(
-    (await service.getCheck(checkId)).createdAt,
+    (await service.getCheck.execute(checkId)).createdAt,
     "2026-10-16T00:00:00Z",
   );
   assert.equal(calls[0], `/api/checks/${checkId}`);
   await assert.rejects(
-    service.getCheck("00000000-0000-4000-8000-000000000002"),
+    service.getCheck.execute("00000000-0000-4000-8000-000000000002"),
     (error) => error.status === 502,
   );
   fetch.mock.mockImplementation(async () =>
     Response.json({ detail: "判定履歴が見つかりません。" }, { status: 404 }),
   );
   await assert.rejects(
-    service.getCheck(checkId),
+    service.getCheck.execute(checkId),
     (error) =>
       error.status === 404 && error.message === "判定履歴が見つかりません。",
   );
@@ -517,9 +517,9 @@ test("ダッシュボードはGETで保存済みの概要を取得し、履歴�
     calls.push({ url, options });
     return Response.json(dashboardFixture());
   });
-  const service = new GraduationUseCases(new HttpGraduationRepository("/api"));
+  const service = createRequirementsModule("/api");
   const controller = new AbortController();
-  const result = await service.dashboard(controller.signal);
+  const result = await service.dashboard.execute(controller.signal);
   assert.equal(result.dataRevision, 2);
   assert.equal(result.curriculumRevision, 1);
   assert.equal(result.gradeCount, 3);

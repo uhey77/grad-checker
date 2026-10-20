@@ -1,12 +1,21 @@
-import { createSubjectListUseCases } from "./application/subject-list/SubjectListUseCases";
-import { createCourseCatalogUseCases } from "./application/course-catalog/CourseCatalogUseCases";
-import { HttpSubjectListRepository } from "./infrastructure/subject-list/HttpSubjectListRepository";
-import { HttpCourseCatalogRepository } from "./infrastructure/course-catalog/HttpCourseCatalogRepository";
-
-export function createSubjectsModule(baseUrl: string) {
-  return createSubjectListUseCases(new HttpSubjectListRepository(baseUrl));
+import { ListSubjectProgramsUseCase } from "./application/use_cases/ListSubjectProgramsUseCase.ts";
+import { GetSubjectListUseCase } from "./application/use_cases/GetSubjectListUseCase.ts";
+import { GetCourseCatalogUseCase } from "./application/use_cases/GetCourseCatalogUseCase.ts";
+import type { SubjectListUseCases } from "./application/ports/SubjectListUseCases.ts";
+import type { CourseCatalogUseCases } from "./application/ports/CourseCatalogUseCases.ts";
+import { HttpSubjectListRepository } from "./infrastructure/subject-list/HttpSubjectListRepository.ts";
+import { HttpCourseCatalogRepository } from "./infrastructure/course-catalog/HttpCourseCatalogRepository.ts";
+export function createSubjectsModule(base: string): SubjectListUseCases {
+  const repository = new HttpSubjectListRepository(base);
+  return {
+    listPrograms: new ListSubjectProgramsUseCase(repository),
+    getSubjectList: new GetSubjectListUseCase(repository),
+  };
 }
-
-export function createCourseCatalogModule(baseUrl: string) {
-  return createCourseCatalogUseCases(new HttpCourseCatalogRepository(baseUrl));
+export function createCourseCatalogModule(base: string): CourseCatalogUseCases {
+  return {
+    getCatalog: new GetCourseCatalogUseCase(
+      new HttpCourseCatalogRepository(base),
+    ),
+  };
 }

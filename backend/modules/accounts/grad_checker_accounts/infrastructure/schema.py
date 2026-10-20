@@ -3,7 +3,7 @@
 from sqlalchemy import Engine, inspect, text
 from sqlmodel import SQLModel
 
-from modules.accounts.grad_checker_accounts.infrastructure.models import ACCOUNT_TABLES
+from .models import ACCOUNT_TABLES
 
 
 def create_account_schema(engine: Engine) -> None:

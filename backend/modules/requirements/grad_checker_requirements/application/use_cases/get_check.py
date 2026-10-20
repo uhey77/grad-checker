@@ -2,8 +2,9 @@
 
 from uuid import UUID
 
-from ..check_results import CheckUnitOfWork, SavedCheck
+from ..dto.check_results import SavedCheck
 from ..errors.evaluation import EvaluationError
+from ..ports.check_results import CheckUnitOfWork
 
 
 class GetCheckUseCase:

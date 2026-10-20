@@ -1,13 +1,10 @@
 """EvaluateGraduationUseCaseの処理手順とトランザクション境界。"""
 
-from modules.shared.grad_checker_shared.application.clock import Clock
+from modules.shared.grad_checker_shared.application.ports.clock import Clock
 
-from ..student_evaluation import (
-    EvaluationUnitOfWork,
-    StudentEvaluation,
-    evaluate_student,
-    read_snapshot,
-)
+from ..dto.student_evaluation import StudentEvaluation
+from ..ports.student_evaluation import EvaluationUnitOfWork
+from ..services.student_evaluation import evaluate_student, read_snapshot
 
 
 class EvaluateGraduationUseCase:

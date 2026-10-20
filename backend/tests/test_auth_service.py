@@ -4,19 +4,21 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from modules.accounts.grad_checker_accounts.application.auth import (
+from modules.accounts.grad_checker_accounts.application.dto.auth import (
     Account,
-    AccountRepository,
-    AccountUnitOfWork,
     AuthPolicy,
-    Passwords,
     StoredSession,
-    digest,
-)
-from modules.accounts.grad_checker_accounts.application.authentication import (
-    SessionAuthentication,
 )
 from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
+from modules.accounts.grad_checker_accounts.application.ports.auth import (
+    AccountRepository,
+    AccountUnitOfWork,
+    Passwords,
+)
+from modules.accounts.grad_checker_accounts.application.services.auth import digest
+from modules.accounts.grad_checker_accounts.application.services.authentication import (
+    SessionAuthentication,
+)
 from modules.accounts.grad_checker_accounts.public import (
     AuthenticateSessionUseCase,
     LoginUseCase,

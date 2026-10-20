@@ -8,9 +8,7 @@ from sqlmodel import Session, col, select
 from modules.accounts.grad_checker_accounts.infrastructure.models import Student
 from modules.grades.grad_checker_grades.infrastructure.grades import attempt_data
 from modules.grades.grad_checker_grades.infrastructure.models import GradeAttemptRecord
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     TABLE_MAPPING as SUBJECT_MAPPING,
 )
@@ -18,9 +16,12 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_models import
     CurriculumSubject,
 )
 
+from ..application.dto.evaluation import EvaluationSnapshot
 from ..application.errors.evaluation import EvaluationError
-from ..application.evaluation_models import EvaluationSnapshot
-from ..application.student_evaluation import EvaluationRepository, EvaluationUnitOfWork
+from ..application.ports.student_evaluation import (
+    EvaluationRepository,
+    EvaluationUnitOfWork,
+)
 from .models import CreditRule, CreditRuleCourse
 from .seed import TABLE_MAPPING
 

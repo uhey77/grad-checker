@@ -7,23 +7,13 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from modules.accounts.grad_checker_accounts.application.auth import (
-    Account,
-    AccountRepository,
-    AccountUnitOfWork,
-    StoredSession,
-    digest,
-)
-from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
-from modules.accounts.grad_checker_accounts.infrastructure.models import (
-    AuthAttempt,
-    AuthSession,
-    Credential,
-    Student,
-)
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
+
+from ..application.dto.auth import Account, StoredSession
+from ..application.errors.auth import AuthError
+from ..application.ports.auth import AccountRepository, AccountUnitOfWork
+from ..application.services.auth import digest
+from .models import AuthAttempt, AuthSession, Credential, Student
 
 
 def auth_failure(error: SQLAlchemyError) -> AuthError:

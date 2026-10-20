@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"grad-checker/backend/modules/grades/application"
+	"grad-checker/backend/modules/grades/application/ports"
 	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
@@ -22,30 +22,30 @@ func NewPythonGradeClient(origin string) (*PythonGradeClient, error) {
 	return &PythonGradeClient{client}, nil
 }
 
-func (c *PythonGradeClient) Call(ctx context.Context, call application.GradeCall) (application.StudentGrades, error) {
-	var empty application.StudentGrades
+func (c *PythonGradeClient) Call(ctx context.Context, call ports.GradeCall) (ports.StudentGrades, error) {
+	var empty ports.StudentGrades
 	raw, err := c.client.Call(ctx, call)
 	if err != nil {
 		var failure *pythonbridge.BusinessError
 		if errors.As(err, &failure) {
-			return empty, &application.GradeError{Code: failure.Code}
+			return empty, &ports.GradeError{Code: failure.Code}
 		}
-		return empty, application.ErrBackend
+		return empty, ports.ErrBackend
 	}
-	var data application.StudentGrades
+	var data ports.StudentGrades
 	if pythonbridge.DecodeData(raw, &data) != nil {
-		return empty, application.ErrBackend
+		return empty, ports.ErrBackend
 	}
 	if data.Grades == nil || data.DataRevision < 0 {
-		return empty, application.ErrBackend
+		return empty, ports.ErrBackend
 	}
 	for _, g := range data.Grades {
 		if g.CourseID == "" || g.AttemptNo < 1 || (g.ResultStatus == "finalized") != (g.GradeCode != nil) || (g.ResultStatus != "finalized" && g.ResultStatus != "pending") {
-			return empty, application.ErrBackend
+			return empty, ports.ErrBackend
 		}
 	}
 	if call.Operation == "save" && (call.GradeSet == nil || data.DataRevision != call.GradeSet.ExpectedRevision+1 || len(data.Grades) != len(call.GradeSet.Grades)) {
-		return empty, application.ErrBackend
+		return empty, ports.ErrBackend
 	}
 	return data, nil
 }

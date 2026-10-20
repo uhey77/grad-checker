@@ -19,7 +19,7 @@ export function useDashboard(
     active && curriculumId ? `${curriculumId}:${revision}:${attempt}` : null;
   const load = useCallback(
     async (signal: AbortSignal) => {
-      const result = await useCases.dashboard(signal);
+      const result = await useCases.dashboard.execute(signal);
       // 他タブの所属変更や古い応答を現在の課程の結果と取り違えない。
       if (
         result.curriculum.id !== curriculumId ||
@@ -37,7 +37,7 @@ export function useDashboard(
   const current = summary.status === "ready" ? summary.data : null;
   const loadDetail = useCallback(
     async (signal: AbortSignal) => {
-      const result = await useCases.evaluate(signal);
+      const result = await useCases.evaluate.execute(signal);
       if (
         !current ||
         result.curriculum.id !== current.curriculum.id ||

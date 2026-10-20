@@ -31,8 +31,8 @@ export function useProfile(
   useEffect(() => {
     const controller = new AbortController();
     void Promise.all([
-      useCases.getProfile(controller.signal),
-      useCases.listPrograms(controller.signal),
+      useCases.getProfile.execute(controller.signal),
+      useCases.listPrograms.execute(controller.signal),
     ]).then(
       ([profile, programs]) => {
         if (!controller.signal.aborted) {
@@ -78,7 +78,7 @@ export function useProfile(
     setNotice("");
     await run(
       (signal) =>
-        useCases.saveProgram(
+        useCases.saveProgram.execute(
           {
             programId: selected.programId,
             curriculumId: selected.curriculumId,

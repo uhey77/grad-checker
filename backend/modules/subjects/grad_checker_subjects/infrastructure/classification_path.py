@@ -1,8 +1,6 @@
 """科目分類を上位へ辿り、最上位から並べた経路を作る。"""
 
-from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
-    Classification,
-)
+from .subject_models import Classification
 
 
 def classification_path(

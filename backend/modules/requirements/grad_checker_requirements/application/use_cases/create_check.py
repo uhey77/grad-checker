@@ -2,13 +2,12 @@
 
 from uuid import uuid4
 
-from modules.shared.grad_checker_shared.application.clock import Clock
+from modules.shared.grad_checker_shared.application.ports.clock import Clock
 
-from ..check_results import CheckInput, CheckRequest, CheckUnitOfWork, SavedCheck
+from ..dto.check_results import CheckInput, CheckRequest, SavedCheck
 from ..errors.evaluation import EvaluationError
-from ..student_evaluation import (
-    evaluate_student,
-)
+from ..ports.check_results import CheckUnitOfWork
+from ..services.student_evaluation import evaluate_student
 
 
 class CreateCheckUseCase:

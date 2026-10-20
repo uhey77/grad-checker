@@ -1,5 +1,5 @@
 import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
-import { GradeError } from "../application/GradeUseCases.ts";
+import { GradeError } from "../application/errors/GradeError.ts";
 import { gradeCodes } from "../domain/attempts.ts";
 import type {
   GradeAttempt,

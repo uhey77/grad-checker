@@ -1,11 +1,18 @@
 """架空の照合済み科目で取得順・同時期の配分と不足時期の入力要求を検証する。"""
 
 import pytest
-from test_requirement_evaluation import assert_error, grade, snapshot, uid  # noqa: F401
+from test_requirement_evaluation import (
+    assert_error,
+    grade,
+    snapshot,  # noqa: F401 -- pytest fixture or shared test data
+    uid,
+)
 
-from modules.requirements.grad_checker_requirements.application import evaluation_models
-from modules.requirements.grad_checker_requirements.application.evaluation import (
-    evaluate_graduation,
+from modules.requirements.grad_checker_requirements.application.dto import (
+    evaluation as evaluation_models,
+)
+from modules.requirements.grad_checker_requirements.application.services import (
+    evaluation as evaluation_services,
 )
 
 
@@ -117,7 +124,7 @@ def test_same_period_can_meet_all_conditions_without_double_counting(external_sn
     sample = external_snapshot
     add_external(sample)
     before = sample.model_dump_json()
-    result = evaluate_graduation(sample)
+    result = evaluation_services.evaluate_graduation(sample)
     assert result.result == "pass"
     assert allocations(result) == {uid(3): 2, uid(4): 4}
     assert result.total.earned_credits == 16
@@ -127,13 +134,13 @@ def test_same_period_can_meet_all_conditions_without_double_counting(external_sn
     assert sample.model_dump_json() == before
     sample.grades.reverse()
     sample.requirements.credit_rule_courses.reverse()
-    assert evaluate_graduation(sample) == result
+    assert evaluation_services.evaluate_graduation(sample) == result
 
 
 def test_chronology_precedes_optimization(external_snapshot):
     add_external(external_snapshot, (100, 101), 2025, "second")
     add_external(external_snapshot, (102, 103), 2026, "first")
-    result = evaluate_graduation(external_snapshot)
+    result = evaluation_services.evaluate_graduation(external_snapshot)
     assert allocations(result) == {uid(3): 4, uid(4): 2}
     assert result.result == "fail"
     assert result.total.shortage == 0  # 総単位が足りても区分不足を隠さない。
@@ -149,7 +156,7 @@ def test_missing_period_is_required_only_when_allocation_can_change(
 
 def test_within_cap_requires_no_period_and_has_no_warning(external_snapshot):
     add_external(external_snapshot, (100, 102, 103), None, None)
-    result = evaluate_graduation(external_snapshot)
+    result = evaluation_services.evaluate_graduation(external_snapshot)
     assert result.result == "pass"
     assert result.warnings == []
     assert sum(row.free_credits for row in result.external_allocations) == 0
@@ -160,7 +167,7 @@ def test_one_destination_needs_no_period_even_over_cap(external_snapshot):
         if row.rule_id == uid(31):
             row.target_classification_id = uid(3)
     add_external(external_snapshot, year=None, term=None)
-    result = evaluate_graduation(external_snapshot)
+    result = evaluation_services.evaluate_graduation(external_snapshot)
     assert allocations(result) == {uid(3): 6}
     assert result.warnings == []
 
@@ -168,7 +175,7 @@ def test_one_destination_needs_no_period_even_over_cap(external_snapshot):
 def test_missing_term_after_cap_cannot_change_result(external_snapshot):
     add_external(external_snapshot, (100, 102, 103), 2025, "second")
     add_external(external_snapshot, (101,), 2026, None)
-    result = evaluate_graduation(external_snapshot)
+    result = evaluation_services.evaluate_graduation(external_snapshot)
     assert result.result == "pass"
     assert allocations(result) == {uid(3): 2, uid(4): 4}
 
@@ -176,7 +183,7 @@ def test_missing_term_after_cap_cannot_change_result(external_snapshot):
 def test_missing_term_before_cap_cannot_change_result(external_snapshot):
     add_external(external_snapshot, (100,), 2025, None)
     add_external(external_snapshot, (101, 102, 103), 2026, "first")
-    assert evaluate_graduation(external_snapshot).result == "pass"
+    assert evaluation_services.evaluate_graduation(external_snapshot).result == "pass"
 
 
 def test_unmapped_courses_and_unadopted_policy_are_not_guessed(external_snapshot):

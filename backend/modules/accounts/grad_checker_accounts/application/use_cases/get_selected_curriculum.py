@@ -1,10 +1,7 @@
 """GetSelectedCurriculumUseCaseの処理手順とトランザクション境界。"""
 
-from modules.accounts.grad_checker_accounts.application.errors.profile import (
-    ProfileError,
-)
-
-from ..profile import ProfileUnitOfWork
+from ..errors.profile import ProfileError
+from ..ports.profile import ProfileUnitOfWork
 
 
 class GetSelectedCurriculumUseCase:

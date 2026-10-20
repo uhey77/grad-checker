@@ -11,18 +11,14 @@ from sqlalchemy import text
 from api.api_service.composition import build_dependencies
 from api.api_service.presentation.go_bridge_auth import router as bridge_auth_router
 from api.api_service.presentation.go_bridge_call import failure
-from api.api_service.presentation.go_bridge_checks import (
-    router as bridge_checks_router,
-)
+from api.api_service.presentation.go_bridge_checks import router as bridge_checks_router
 from api.api_service.presentation.go_bridge_courses import (
     router as bridge_courses_router,
 )
 from api.api_service.presentation.go_bridge_evaluation import (
     router as bridge_evaluation_router,
 )
-from api.api_service.presentation.go_bridge_grades import (
-    router as bridge_grades_router,
-)
+from api.api_service.presentation.go_bridge_grades import router as bridge_grades_router
 from api.api_service.presentation.go_bridge_profile import (
     router as bridge_profile_router,
 )
@@ -36,9 +32,7 @@ from modules.accounts.grad_checker_accounts.infrastructure.passwords import (
 from modules.accounts.grad_checker_accounts.infrastructure.schema import (
     create_account_schema,
 )
-from modules.grades.grad_checker_grades.infrastructure.schema import (
-    create_grade_schema,
-)
+from modules.grades.grad_checker_grades.infrastructure.schema import create_grade_schema
 from modules.requirements.grad_checker_requirements.infrastructure.schema import (
     create_requirement_schema,
 )

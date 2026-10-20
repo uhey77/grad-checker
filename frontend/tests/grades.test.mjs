@@ -8,13 +8,11 @@ const load = (path) => import(pathToFileURL(join(directory, path)));
 const { HttpGradeRepository } = await load(
   "modules/grades/infrastructure/HttpGradeRepository.js",
 );
-const { GradeUseCases } = await load(
-  "modules/grades/application/GradeUseCases.js",
-);
+const { createGradesModule } = await load("modules/grades/composition.js");
 const { toStudentGrades } = await load(
   "modules/grades/infrastructure/mappers.js",
 );
-const draft = await load("modules/grades/application/gradeDraft.js");
+const draft = await load("modules/grades/application/services/gradeDraft.js");
 const { gradeDraftProblemMessage } = await load("hooks/grades/errors.js");
 const { courseStatus, isValidAttemptSequence } = await load(
   "modules/grades/domain/attempts.js",
@@ -61,11 +59,11 @@ test("成績APIのDTO変換・全集合のPUT・Cookie・CSRF・更新版の契�
           },
     );
   });
-  const useCases = new GradeUseCases(new HttpGradeRepository("/api"));
-  const saved = await useCases.getGrades(controller.signal);
+  const useCases = createGradesModule("/api");
+  const saved = await useCases.getGrades.execute(controller.signal);
   assert.equal(saved.dataRevision, 3);
   assert.deepEqual(saved.grades[1], attempt("c1", 2, null, null, null));
-  const result = await useCases.saveGrades(
+  const result = await useCases.saveGrades.execute(
     { expectedRevision: 3, grades: [attempt("c2", 1, "X", null, "second")] },
     "csrf",
     controller.signal,

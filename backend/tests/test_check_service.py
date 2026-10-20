@@ -4,19 +4,20 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from modules.requirements.grad_checker_requirements.application import (
-    evaluation_models,
-    student_evaluation,
+from modules.requirements.grad_checker_requirements.application.dto import (
+    check_results as check_results_dto,
 )
-from modules.requirements.grad_checker_requirements.application.check_results import (
-    CheckPage,
-    CheckRepository,
-    CheckRequest,
-    CheckUnitOfWork,
-    SavedCheck,
+from modules.requirements.grad_checker_requirements.application.dto import (
+    evaluation as evaluation_models,
 )
 from modules.requirements.grad_checker_requirements.application.errors import (
     evaluation as evaluation_errors,
+)
+from modules.requirements.grad_checker_requirements.application.ports import (
+    check_results as check_results_ports,
+)
+from modules.requirements.grad_checker_requirements.application.ports import (
+    student_evaluation as student_evaluation_ports,
 )
 from modules.requirements.grad_checker_requirements.public import (
     CreateCheckUseCase,
@@ -27,7 +28,7 @@ from modules.requirements.grad_checker_requirements.public import (
 from tests.fakes import FakeUnitOfWork, FixedClock
 
 
-class FakeEvaluationRepository(student_evaluation.EvaluationRepository):
+class FakeEvaluationRepository(student_evaluation_ports.EvaluationRepository):
     def __init__(self, uow: FakeUnitOfWork, data_revision: int) -> None:
         self.uow = uow
         self.snapshot = evaluation_models.EvaluationSnapshot.model_construct(
@@ -39,16 +40,18 @@ class FakeEvaluationRepository(student_evaluation.EvaluationRepository):
         return self.snapshot
 
 
-class FakeCheckRepository(CheckRepository):
+class FakeCheckRepository(check_results_ports.CheckRepository):
     def __init__(self, uow: FakeUnitOfWork) -> None:
         self.uow = uow
-        self.added: list[SavedCheck] = []
+        self.added: list[check_results_dto.SavedCheck] = []
 
-    def add(self, student_id: str, check: SavedCheck) -> None:
+    def add(self, student_id: str, check: check_results_dto.SavedCheck) -> None:
         self.uow.require_block()
         self.added.append(check)
 
-    def get(self, student_id: str, check_id: UUID) -> SavedCheck | None:
+    def get(
+        self, student_id: str, check_id: UUID
+    ) -> check_results_dto.SavedCheck | None:
         self.uow.require_block()
         return None
 
@@ -56,12 +59,12 @@ class FakeCheckRepository(CheckRepository):
         self.uow.require_block()
         return 0
 
-    def list_page(self, student_id: str, page: CheckPage) -> list:
+    def list_page(self, student_id: str, page: check_results_dto.CheckPage) -> list:
         self.uow.require_block()
         return []
 
 
-class FakeCheckUnitOfWork(FakeUnitOfWork, CheckUnitOfWork):
+class FakeCheckUnitOfWork(FakeUnitOfWork, check_results_ports.CheckUnitOfWork):
     def __init__(self, data_revision: int = 1) -> None:
         super().__init__()
         self.evaluations = FakeEvaluationRepository(self, data_revision)
@@ -76,7 +79,9 @@ class FakeCheckUnitOfWork(FakeUnitOfWork, CheckUnitOfWork):
         return self.saved
 
 
-class FakeEvaluationUnitOfWork(FakeUnitOfWork, student_evaluation.EvaluationUnitOfWork):
+class FakeEvaluationUnitOfWork(
+    FakeUnitOfWork, student_evaluation_ports.EvaluationUnitOfWork
+):
     def __init__(self) -> None:
         super().__init__()
         self.evaluations = FakeEvaluationRepository(self, data_revision=1)
@@ -90,7 +95,7 @@ def test_stale_revision_rolls_back_without_saving_a_check():
     uow = FakeCheckUnitOfWork(data_revision=2)
     with pytest.raises(evaluation_errors.EvaluationError, match="revision_conflict"):
         CreateCheckUseCase(uow, FixedClock()).execute(
-            "student", CheckRequest(expected_revision=1)
+            "student", check_results_dto.CheckRequest(expected_revision=1)
         )
     assert uow.events == ["write", "rollback"]
     assert uow.saved.added == []
@@ -105,7 +110,9 @@ def test_missing_check_is_read_without_writing():
 
 def test_check_list_counts_and_reads_in_one_read_block():
     uow = FakeCheckUnitOfWork()
-    page = ListChecksUseCase(uow).execute("student", CheckPage(limit=5, offset=10))
+    page = ListChecksUseCase(uow).execute(
+        "student", check_results_dto.CheckPage(limit=5, offset=10)
+    )
     assert (page.checks, page.limit, page.offset, page.total_count) == ([], 5, 10, 0)
     assert uow.events == ["read"]
 

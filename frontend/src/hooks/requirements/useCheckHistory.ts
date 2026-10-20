@@ -20,13 +20,13 @@ export function useCheckHistory(
   const [detailAttempt, setDetailAttempt] = useState(0);
   const loadPage = useCallback(
     (signal: AbortSignal) =>
-      useCases.listChecks({ limit: CHECK_PAGE_SIZE, offset }, signal),
+      useCases.listChecks.execute({ limit: CHECK_PAGE_SIZE, offset }, signal),
     [useCases, offset],
   );
   const loadDetail = useCallback(
     (signal: AbortSignal) =>
       selectedId
-        ? useCases.getCheck(selectedId, signal)
+        ? useCases.getCheck.execute(selectedId, signal)
         : Promise.reject(new Error("判定履歴が選択されていません。")),
     [useCases, selectedId],
   );

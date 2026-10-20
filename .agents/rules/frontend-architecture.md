@@ -11,7 +11,7 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 | 場所（frontend/src 以下） | 責務 | 配置例 |
 | --- | --- | --- |
 | `modules/<業務領域>/domain/` | UI・通信形式に依存しない業務モデル | 課程、科目、分類経路、開講時期の型 |
-| `modules/<業務領域>/application/` | ユースケース、取得先の契約、検索・並べ替え処理 | `SubjectListRepository`、`SubjectListUseCases`、科目の絞り込み |
+| `modules/<業務領域>/application/` | ユースケース、取得先の契約、検索・並べ替え処理 | `use_cases/`、`dto/`、`ports/`、`services/`、`errors/`で役割別に配置 |
 | `modules/<業務領域>/infrastructure/` | HTTP通信、APIのDTO、ドメインモデルへの変換 | `HttpSubjectListRepository`、`dto.ts`、`mappers.ts` |
 | `pages/<業務領域>/` | 画面構成 | `SubjectListPage` |
 | `components/<業務領域>/` | 表示部品・表示ラベル・ユーザー操作 | `SubjectTable`、`SubjectFilters`、`ProgramSelector`、`SubjectSummary` |
@@ -42,11 +42,13 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 
 - 新しい業務領域は `modules/<業務領域>/` に配置し、その内部にdomain・application・infrastructureと操作別のディレクトリを設ける。UIはsrc直下の対応するディレクトリに配置する。既存の科目一覧の構成を参考にする。
 - 依存定義・ロック・型設定は `frontend/` 直下に統一し、モジュールごとに重複させない。
+- 公開操作は`application/use_cases/<操作>UseCase.ts`の1操作1クラスとし、実行メソッドを`execute`に統一する。複数操作を持つUseCaseクラスは置かない。`AuthUseCases`などの集合型は`ports/`のreadonlyな注入用契約だけに使い、実装は持たせない。Compositionで操作ごとのインスタンスを作り、Hookから各`execute`を呼ぶ。
+- Application直下へファイルを並べず、入出力は`dto/`、Repository・注入型は`ports/`、検索・並べ替え・編集の共通処理は`services/`、エラーは`errors/`に分ける。未使用の役割の空ディレクトリや旧パスの互換用ファイルは残さない。
 - 単純な委譲でもユースケース境界を維持する。Pageは画面構成、画面用Hookは状態・操作・取得の連携、表示部品は個別の表示と操作を担当する。
 - applicationで取得失敗のエラー契約を定義し、infrastructureでHTTP・通信エラーから変換する。presentationで日本語detailとコードから表示を決める。キャンセルは変換せず、共通の非同期Hookに業務固有の文言を置かない。
 - コンポーネントやHookから直接 `fetch` しない。ユースケースと取得先の契約を通して取得する。
 - APIの `snake_case` と画面で使用するモデルの変換は `infrastructure` のmapperに集約する。コンポーネント内でDTOを変換しない。
-- 再利用する検索・並べ替え処理は `application` に置く。選択値や検索文字列など、ユーザー操作に伴う状態は `presentation` で管理する。
+- 再利用する検索・並べ替え処理は `application/services/` に置く。選択値や検索文字列など、ユーザー操作に伴う状態は `presentation` で管理する。
 - 表示ラベル・React固有の状態を `domain` へ入れない。業務ルールをJSX内へ埋め込まない。成績の連番・再履修はDomainで判定し、編集入力の問題はApplicationがコードで返し、hooksで日本語の表示文言へ変換する。
 - ロード中・成功・失敗を明示的に扱い、再試行できるようにする。課程切替や画面離脱時には不要な通信をキャンセルし、古いレスポンスで現在の画面を上書きしない。
 - 課程ごとの分類・必修区分、複数の開講時期、出典の注記、適用入学年度の未確認状態を保持する。未確認の情報を確認済みとして表示しない。

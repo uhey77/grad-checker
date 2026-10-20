@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"grad-checker/backend/modules/requirements/application"
+	"grad-checker/backend/modules/requirements/application/ports"
 	"grad-checker/backend/modules/shared/pythonbridge"
 )
 
@@ -32,17 +32,17 @@ func NewPythonDashboardClient(origin string) (*PythonEvaluationClient, error) {
 }
 
 // 単位計算はPythonに限定し、Goは応答契約の形だけを検証する。
-func (c *PythonEvaluationClient) Call(ctx context.Context, call application.EvaluationCall) (json.RawMessage, error) {
+func (c *PythonEvaluationClient) Call(ctx context.Context, call ports.EvaluationCall) (json.RawMessage, error) {
 	data, err := c.client.Call(ctx, call)
 	if err != nil {
 		var failure *pythonbridge.BusinessError
 		if errors.As(err, &failure) {
-			return nil, &application.EvaluationError{Code: failure.Code}
+			return nil, &ports.EvaluationError{Code: failure.Code}
 		}
-		return nil, application.ErrBackend
+		return nil, ports.ErrBackend
 	}
 	if !c.valid(data) {
-		return nil, application.ErrBackend
+		return nil, ports.ErrBackend
 	}
 	return data, nil
 }

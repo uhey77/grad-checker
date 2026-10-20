@@ -3,18 +3,12 @@
 import secrets
 from datetime import timedelta
 
-from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
-from modules.shared.grad_checker_shared.application.clock import Clock
+from modules.shared.grad_checker_shared.application.ports.clock import Clock
 
-from ..auth import (
-    AccountUnitOfWork,
-    AuthPolicy,
-    Passwords,
-    SessionIdentity,
-    digest,
-    normalize_login_name,
-    record_attempt,
-)
+from ..dto.auth import AuthPolicy, SessionIdentity
+from ..errors.auth import AuthError
+from ..ports.auth import AccountUnitOfWork, Passwords
+from ..services.auth import digest, normalize_login_name, record_attempt
 
 
 class LoginUseCase:

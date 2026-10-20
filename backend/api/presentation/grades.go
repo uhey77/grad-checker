@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"grad-checker/backend/modules/grades/application"
+	"grad-checker/backend/modules/grades/application/ports"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 var gradeCodes = map[string]bool{"S": true, "A": true, "B": true, "C": true, "D": true, "X": true}
 
 // 本人成績の全集合を取得・置換する。回次の業務ルールはPythonで判定する。
-func NewGradeHandler(gateway application.GradeGateway, origin string, fallback http.Handler) http.Handler {
+func NewGradeHandler(gateway ports.GradeGateway, origin string, fallback http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/me/grades" {
 			fallback.ServeHTTP(w, r)
@@ -34,7 +34,7 @@ func NewGradeHandler(gateway application.GradeGateway, origin string, fallback h
 		if !ok || rejectQuery(w, r) {
 			return
 		}
-		call := application.GradeCall{Operation: "get", Token: token}
+		call := ports.GradeCall{Operation: "get", Token: token}
 		if r.Method == http.MethodPut {
 			csrf, ok := writeToken(w, r, origin)
 			if !ok {
@@ -61,7 +61,7 @@ func NewGradeHandler(gateway application.GradeGateway, origin string, fallback h
 }
 
 func writeGradeError(w http.ResponseWriter, err error) {
-	var business *application.GradeError
+	var business *ports.GradeError
 	if !errors.As(err, &business) {
 		writeError(w, 502, "成績サービスに接続できません。時間をおいて再試行してください。")
 		return
@@ -81,7 +81,7 @@ func writeGradeError(w http.ResponseWriter, err error) {
 	}
 }
 
-func decodeGradeSet(body []byte) (*application.GradeSet, string) {
+func decodeGradeSet(body []byte) (*ports.GradeSet, string) {
 	fields, ok := strictObject(body, "expected_revision", "grades")
 	if !ok {
 		return nil, "成績の送信形式が不正です。expected_revisionとgradesだけを指定してください。"
@@ -94,7 +94,7 @@ func decodeGradeSet(body []byte) (*application.GradeSet, string) {
 	if len(items) > maxGrades {
 		return nil, "一度に保存できる成績の件数を超えています。"
 	}
-	grades := make([]application.GradeAttempt, 0, len(items))
+	grades := make([]ports.GradeAttempt, 0, len(items))
 	for _, item := range items {
 		grade, ok := decodeGradeAttempt(item)
 		if !ok {
@@ -102,11 +102,11 @@ func decodeGradeSet(body []byte) (*application.GradeSet, string) {
 		}
 		grades = append(grades, grade)
 	}
-	return &application.GradeSet{ExpectedRevision: revision, Grades: grades}, ""
+	return &ports.GradeSet{ExpectedRevision: revision, Grades: grades}, ""
 }
 
-func decodeGradeAttempt(item json.RawMessage) (application.GradeAttempt, bool) {
-	var grade application.GradeAttempt
+func decodeGradeAttempt(item json.RawMessage) (ports.GradeAttempt, bool) {
+	var grade ports.GradeAttempt
 	fields, ok := strictObject(item, "course_id", "attempt_no", "result_status", "grade_code", "academic_year", "term_code")
 	if !ok {
 		return grade, false

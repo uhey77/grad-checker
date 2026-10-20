@@ -8,11 +8,11 @@ const load = (path) => import(pathToFileURL(join(directory, path)));
 const { HttpCourseCatalogRepository } = await load(
   "modules/subjects/infrastructure/course-catalog/HttpCourseCatalogRepository.js",
 );
-const { createCourseCatalogUseCases } = await load(
-  "modules/subjects/application/course-catalog/CourseCatalogUseCases.js",
+const { GetCourseCatalogUseCase } = await load(
+  "modules/subjects/application/use_cases/GetCourseCatalogUseCase.js",
 );
 const catalog = await load(
-  "modules/subjects/application/course-catalog/filterCatalogCourses.js",
+  "modules/subjects/application/services/filterCatalogCourses.js",
 );
 
 const curriculum = {
@@ -87,10 +87,10 @@ test("科目一覧と分類を同じ課程として取得し、課程外の科�
     }),
   ]);
   const controller = new AbortController();
-  const useCases = createCourseCatalogUseCases(
+  const useCase = new GetCourseCatalogUseCase(
     new HttpCourseCatalogRepository("/api"),
   );
-  const result = await useCases.getCatalog(controller.signal);
+  const result = await useCase.execute(controller.signal);
   assert.deepEqual(requests.map((r) => r.url).sort(), [
     "/api/categories",
     "/api/courses",

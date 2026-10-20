@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"grad-checker/backend/modules/shared/pythonbridge"
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 )
 
 // PythonCourseCatalogClientは学生向け科目一覧・分類の取得契約をブリッジHTTPで実装する。
@@ -22,10 +22,10 @@ func NewPythonCourseCatalogClient(origin string, timeout time.Duration) (*Python
 	return &PythonCourseCatalogClient{client}, nil
 }
 
-func (c *PythonCourseCatalogClient) Call(ctx context.Context, call application.CourseCatalogCall) (json.RawMessage, error) {
+func (c *PythonCourseCatalogClient) Call(ctx context.Context, call ports.CourseCatalogCall) (json.RawMessage, error) {
 	data, err := c.client.Call(ctx, call)
 	if err != nil {
-		return nil, subjectError(err, func(code string) error { return &application.CourseCatalogError{Code: code} })
+		return nil, subjectError(err, func(code string) error { return &ports.CourseCatalogError{Code: code} })
 	}
 	// 課程情報と、操作に対応する配列だけを持つ応答を受け付ける。
 	var shape struct {
@@ -36,10 +36,10 @@ func (c *PythonCourseCatalogClient) Call(ctx context.Context, call application.C
 		Categories *[]json.RawMessage `json:"categories"`
 	}
 	if json.Unmarshal(data, &shape) != nil || shape.Curriculum == nil || shape.Curriculum.CurriculumID == "" {
-		return nil, application.ErrProtocol
+		return nil, ports.ErrProtocol
 	}
 	if (call.Operation == "courses" && (shape.Courses == nil || shape.Categories != nil)) || (call.Operation == "categories" && (shape.Categories == nil || shape.Courses != nil)) {
-		return nil, application.ErrProtocol
+		return nil, ports.ErrProtocol
 	}
 	return data, nil
 }

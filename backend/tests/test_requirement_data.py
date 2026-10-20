@@ -16,14 +16,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.schema import CreateTable
 from sqlmodel import Session, SQLModel, select
 
+from modules.requirements.grad_checker_requirements.application.dto.seed import (
+    RequirementSeed,
+)
 from modules.requirements.grad_checker_requirements.application.errors.seed import (
     RequirementSeedError,
 )
-from modules.requirements.grad_checker_requirements.application.seed import (
-    RequirementSeed,
-)
-from modules.requirements.grad_checker_requirements.application.validation import (
-    validate_requirements,
+from modules.requirements.grad_checker_requirements.application.services import (
+    validation as validation_services,
 )
 from modules.requirements.grad_checker_requirements.infrastructure import (
     cs_2026_revision,
@@ -129,7 +129,7 @@ def test_four_curricula_match_page_94(seed, subjects):
             assert rows[code].required_credits == value
         assert curriculum.verification_status == "unverified"
         assert curriculum.admission_year_from is None
-    validate_requirements(seed, subjects)
+    validation_services.validate_requirements(seed, subjects)
 
 
 def test_source_subtotals_and_required_group_cells_match_subjects(subjects):

@@ -1,6 +1,7 @@
 """ListSubjectProgramsUseCaseの処理手順とトランザクション境界。"""
 
-from ..subject_list import SubjectListProgram, SubjectListUnitOfWork
+from ..dto.subject_list import SubjectListProgram
+from ..ports.subject_list import SubjectListUnitOfWork
 
 
 class ListSubjectProgramsUseCase:

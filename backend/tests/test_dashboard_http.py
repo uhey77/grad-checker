@@ -4,8 +4,15 @@ from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 from sqlalchemy import text
-from test_auth_http import PASSWORD, auth_services  # noqa: F401
-from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
+from test_auth_http import (
+    PASSWORD,
+    auth_services,  # noqa: F401 -- pytest fixture or shared test data
+)
+from test_requirement_evaluation import (
+    grade,
+    snapshot,  # noqa: F401 -- pytest fixture or shared test data
+    uid,
+)
 
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,

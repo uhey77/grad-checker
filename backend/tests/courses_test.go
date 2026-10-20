@@ -10,16 +10,16 @@ import (
 	"time"
 
 	"grad-checker/backend/api/presentation"
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 	"grad-checker/backend/modules/subjects/infrastructure"
 )
 
 type fakeCatalog struct {
-	calls []application.CourseCatalogCall
+	calls []ports.CourseCatalogCall
 	err   error
 }
 
-func (f *fakeCatalog) Call(_ context.Context, call application.CourseCatalogCall) (json.RawMessage, error) {
+func (f *fakeCatalog) Call(_ context.Context, call ports.CourseCatalogCall) (json.RawMessage, error) {
 	f.calls = append(f.calls, call)
 	return json.RawMessage(`{"curriculum":{"curriculum_id":"c"},"courses":[]}`), f.err
 }
@@ -71,7 +71,7 @@ func TestCoursesForwardFilters(t *testing.T) {
 	if recorder.Code != 200 || recorder.Header().Get("Cache-Control") != "no-store" || len(fake.calls) != 1 {
 		t.Fatal(recorder.Code, recorder.Body.String())
 	}
-	want := application.CourseFilters{CategoryID: "00000000-0000-4000-8000-00000000000a", Faculty: "学部", Department: "d", Semester: "first", Q: "AI"}
+	want := ports.CourseFilters{CategoryID: "00000000-0000-4000-8000-00000000000a", Faculty: "学部", Department: "d", Semester: "first", Q: "AI"}
 	if call := fake.calls[0]; call.Operation != "courses" || call.Token != strings.Repeat("s", 43) || *call.Filters != want {
 		t.Fatalf("%+v", call)
 	}
@@ -87,14 +87,14 @@ func TestCoursesMapBusinessErrors(t *testing.T) {
 		"invalid_credentials": 401, "profile_not_found": 401, "program_not_selected": 409, "unknown_category": 422,
 		"curriculum_not_found": 409, "classification_inconsistent": 409, "catalog_unavailable": 503, "unexpected": 502,
 	} {
-		fake := &fakeCatalog{err: &application.CourseCatalogError{Code: code}}
+		fake := &fakeCatalog{err: &ports.CourseCatalogError{Code: code}}
 		recorder := httptest.NewRecorder()
 		presentation.NewCourseHandler(fake, http.NotFoundHandler()).ServeHTTP(recorder, courseRequest("/api/courses"))
 		if recorder.Code != status || !strings.Contains(recorder.Body.String(), `"detail"`) {
 			t.Fatal(code, recorder.Code, recorder.Body.String())
 		}
 	}
-	fake := &fakeCatalog{err: application.ErrTimeout}
+	fake := &fakeCatalog{err: ports.ErrTimeout}
 	recorder := httptest.NewRecorder()
 	presentation.NewCourseHandler(fake, http.NotFoundHandler()).ServeHTTP(recorder, courseRequest("/api/categories"))
 	if recorder.Code != 504 {
@@ -117,7 +117,7 @@ func TestCourseCatalogClientValidatesBridgeResponse(t *testing.T) {
 		{"courses", `{"error":{"code":""}}`, false},
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var call application.CourseCatalogCall
+			var call ports.CourseCatalogCall
 			if r.URL.Path != "/bridge/courses" || json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != tc.operation {
 				t.Error("invalid call")
 			}
@@ -127,7 +127,7 @@ func TestCourseCatalogClientValidatesBridgeResponse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = client.Call(context.Background(), application.CourseCatalogCall{Operation: tc.operation, Token: strings.Repeat("s", 43)})
+		_, err = client.Call(context.Background(), ports.CourseCatalogCall{Operation: tc.operation, Token: strings.Repeat("s", 43)})
 		if (err == nil) != tc.ok {
 			t.Fatalf("%s %s: %v", tc.operation, tc.body, err)
 		}

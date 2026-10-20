@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"grad-checker/backend/modules/requirements/application"
+	"grad-checker/backend/modules/requirements/application/ports"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 
 // 本人の判定を保存し（POST /api/checks）、本人の履歴を一覧し（GET /api/checks）、
 // 保存済みの履歴を本人に限って返す（GET /api/checks/{id}）。
-func NewCheckHandler(gateway application.CheckGateway, origin string, fallback http.Handler) http.Handler {
+func NewCheckHandler(gateway ports.CheckGateway, origin string, fallback http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		if path != checksPath && !strings.HasPrefix(path, checksPath+"/") {
@@ -43,7 +43,7 @@ func NewCheckHandler(gateway application.CheckGateway, origin string, fallback h
 		if !ok {
 			return
 		}
-		call, status := application.CheckCall{Token: token}, 200
+		call, status := ports.CheckCall{Token: token}, 200
 		switch {
 		case r.Method == http.MethodPost:
 			if rejectQuery(w, r) {
@@ -76,7 +76,7 @@ func NewCheckHandler(gateway application.CheckGateway, origin string, fallback h
 				writeError(w, 422, checkBodyDetail)
 				return
 			}
-			call.Request = &application.CheckRequest{ExpectedRevision: revision, CompletionAnswers: answers}
+			call.Request = &ports.CheckRequest{ExpectedRevision: revision, CompletionAnswers: answers}
 		case collection:
 			page, ok := parseCheckPage(r.URL.RawQuery)
 			if !ok {
@@ -106,12 +106,12 @@ func NewCheckHandler(gateway application.CheckGateway, origin string, fallback h
 }
 
 // parseCheckPageは一覧のlimit（既定20、1〜100）とoffset（既定0）を10進数の整数で受け付ける。
-func parseCheckPage(rawQuery string) (*application.CheckPage, bool) {
+func parseCheckPage(rawQuery string) (*ports.CheckPage, bool) {
 	query, err := url.ParseQuery(rawQuery)
 	if err != nil {
 		return nil, false
 	}
-	page := &application.CheckPage{Limit: defaultCheckPage}
+	page := &ports.CheckPage{Limit: defaultCheckPage}
 	for key, values := range query {
 		if len(values) != 1 {
 			return nil, false
@@ -140,7 +140,7 @@ func parseDecimal(value string, minimum, maximum int64) (int64, bool) {
 }
 
 func writeCheckError(w http.ResponseWriter, err error) {
-	var failure *application.EvaluationError
+	var failure *ports.EvaluationError
 	if errors.As(err, &failure) {
 		if writeSharedError(w, failure.Code, "判定履歴") {
 			return
@@ -153,7 +153,7 @@ func writeCheckError(w http.ResponseWriter, err error) {
 	writeEvaluationError(w, err)
 }
 
-func parseCompletionAnswers(raw json.RawMessage) ([]application.CompletionAnswer, bool) {
+func parseCompletionAnswers(raw json.RawMessage) ([]ports.CompletionAnswer, bool) {
 	if len(raw) == 0 {
 		return nil, true
 	}
@@ -161,7 +161,7 @@ func parseCompletionAnswers(raw json.RawMessage) ([]application.CompletionAnswer
 	if string(raw) == "null" || json.Unmarshal(raw, &rows) != nil || len(rows) > 50 {
 		return nil, false
 	}
-	answers := []application.CompletionAnswer{}
+	answers := []ports.CompletionAnswer{}
 	seen := map[string]bool{}
 	for _, row := range rows {
 		fields, ok := strictObject(row, "code", "status")
@@ -173,7 +173,7 @@ func parseCompletionAnswers(raw json.RawMessage) ([]application.CompletionAnswer
 			return nil, false
 		}
 		seen[code] = true
-		answers = append(answers, application.CompletionAnswer{Code: code, Status: status})
+		answers = append(answers, ports.CompletionAnswer{Code: code, Status: status})
 	}
 	return answers, true
 }

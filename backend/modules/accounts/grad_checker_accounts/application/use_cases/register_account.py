@@ -2,17 +2,11 @@
 
 import secrets
 
-from modules.shared.grad_checker_shared.application.clock import Clock
+from modules.shared.grad_checker_shared.application.ports.clock import Clock
 
-from ..auth import (
-    AccountUnitOfWork,
-    AuthPolicy,
-    Passwords,
-    check_password,
-    digest,
-    normalize_login_name,
-    record_attempt,
-)
+from ..dto.auth import AuthPolicy
+from ..ports.auth import AccountUnitOfWork, Passwords
+from ..services.auth import check_password, digest, normalize_login_name, record_attempt
 
 
 class RegisterAccountUseCase:

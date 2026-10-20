@@ -66,8 +66,8 @@ export function useGradeEntry(
   useEffect(() => {
     const controller = new AbortController();
     void Promise.all([
-      catalogUseCases.getCatalog(controller.signal),
-      gradeUseCases.getGrades(controller.signal),
+      catalogUseCases.getCatalog.execute(controller.signal),
+      gradeUseCases.getGrades.execute(controller.signal),
     ]).then(
       ([catalog, saved]) => {
         if (controller.signal.aborted) return;
@@ -167,7 +167,7 @@ export function useGradeEntry(
     setConfirmClear(false);
     await run(
       (signal) =>
-        gradeUseCases.saveGrades(
+        gradeUseCases.saveGrades.execute(
           { expectedRevision: data.saved.dataRevision, grades: draft },
           csrf,
           signal,

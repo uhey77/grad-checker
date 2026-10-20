@@ -10,11 +10,11 @@ from test_auth import login, register
 
 from api.api_service.main import create_app
 from config.settings import Settings
+from modules.accounts.grad_checker_accounts.application.dto.profile import (
+    ProgramSelection,
+)
 from modules.accounts.grad_checker_accounts.application.errors.profile import (
     ProfileError,
-)
-from modules.accounts.grad_checker_accounts.application.profile import (
-    ProgramSelection,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.profile import (
     SqliteProfileUnitOfWork,

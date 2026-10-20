@@ -5,18 +5,18 @@ Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/c
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
 現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。Pythonの卒業単位判定関数・判定API・結果画面まで実装済み。他学部の配分は明示的な科目対応表と合意した方針がある場合に対応する。判定履歴の保存と本人の履歴一覧・過去結果取得、履歴を増やさないダッシュボード概要も実装済み。対象他学部科目の転記・推薦は未完了。
 
-卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類と単位の充足・同時期の他学部単位の配分規則、applicationはPydanticの投入契約・集合検証と追加投入のユースケース（`use_cases/import_requirements.py`）。`seed_import.py`は投入契約とキーの定義、infrastructureは5テーブルと投入済みデータの読取り・追加を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIは以下の読取り専用経路を使用する。
+卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類と単位の充足・同時期の他学部単位の配分規則、applicationはPydanticの投入契約・集合検証と追加投入のユースケース（`use_cases/import_requirements.py`）。`ports/seed_import.py`・`services/seed_import.py`は投入契約とキーの定義、infrastructureは5テーブルと投入済みデータの読取り・追加を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIは以下の読取り専用経路を使用する。
 
-判定も同モジュールのapplicationに置く。`evaluation_models.py`が入力スナップショットと結果の
-Pydantic契約、`evaluation_context.py`がマスタ・所属・成績の検証と対象集合の展開、
-`evaluation.py`が単位計算と全条件判定を担当する。科目・成績モジュールのapplication/domainを
+判定も同モジュールのapplicationに置く。`dto/evaluation.py`が入力スナップショットと結果の
+Pydantic契約、`services/evaluation_context.py`がマスタ・所属・成績の検証と対象集合の展開、
+`services/evaluation.py`が単位計算と全条件判定を担当する。科目・成績モジュールのapplication/domainを
 参照できるが、DB・HTTP・設定を参照せず、既存モジュールから判定へ逆依存させない。
 `EvaluateGraduationUseCase`がUnit of Workの`read`で`SqliteEvaluationRepository`から入力を取得し、トランザクションを閉じてから判定と日時の付与を行う。
 Goの`/api/me/graduation-requirements`からPythonの`/bridge/graduation-requirements`を呼び、本人はセッションからのみ決定する。概要は`GET /api/me/dashboard` → `POST /bridge/dashboard` → `GetDashboardUseCase.execute`。同じ取得・判定処理を使い、Pythonで総単位・区分合計・版・成績件数を要約する。Goは`EvaluationGateway`の契約と共通のHTTP検証・エラー変換を使い、概要の単位計算を持たない。
-判定履歴は同モジュールの`application/check_results.py`（履歴のDTO・取得保存契約）と`application/use_cases/create_check.py`（成績版の照合と履歴の組立て）と`infrastructure/check_results.py`・`check_models.py`（`check_results`テーブル）に置く。`CreateCheckUseCase`がUnit of Workの一つの`write`で、`SqliteEvaluationRepository`からの入力取得、成績版の照合、判定、`SqliteCheckRepository`への保存を行う。一覧は`ListChecksUseCase.execute`が一つの`read`で件数とページを読み、`SqliteCheckRepository`は結果JSONから要約の項目だけを取り出す。Goの`POST /api/checks`・`GET /api/checks`・`GET /api/checks/{id}`（`api/presentation/checks.go`）からPythonの`/bridge/checks`（`operation: create`とCSRF・`expected_revision`、`operation: list`と`page`の`limit`・`offset`、`operation: get`と`check_id`）を呼ぶ。
+判定履歴は同モジュールの`application/dto/check_results.py`と`application/ports/check_results.py`（履歴のDTO・取得保存契約）と`application/use_cases/create_check.py`（成績版の照合と履歴の組立て）と`infrastructure/check_results.py`・`check_models.py`（`check_results`テーブル）に置く。`CreateCheckUseCase`がUnit of Workの一つの`write`で、`SqliteEvaluationRepository`からの入力取得、成績版の照合、判定、`SqliteCheckRepository`への保存を行う。一覧は`ListChecksUseCase.execute`が一つの`read`で件数とページを読み、`SqliteCheckRepository`は結果JSONから要約の項目だけを取り出す。Goの`POST /api/checks`・`GET /api/checks`・`GET /api/checks/{id}`（`api/presentation/checks.go`）からPythonの`/bridge/checks`（`operation: create`とCSRF・`expected_revision`、`operation: list`と`page`の`limit`・`offset`、`operation: get`と`check_id`）を呼ぶ。
 具体的な対応範囲と未確認規則の扱いは[判定ロジック](graduation_requirement_logic.md)を参照。
 
-おすすめ科目は `application/recommendations.py` で候補・寄与条件・理由・開講期を組み立てる。`evaluation.py` は同じ計算処理で1科目修得時の算入を試算し、未確認規則や暫定配分に依存する候補を除く。DB・外部HTTPには依存しない。推薦は `EvaluationResult` の一部として履歴JSONに保存し、取得時には再生成しない。Goは推薦応答の形だけを検証する。
+おすすめ科目は `application/services/recommendations.py` で候補・寄与条件・理由・開講期を組み立てる。`services/evaluation.py` は同じ計算処理で1科目修得時の算入を試算し、未確認規則や暫定配分に依存する候補を除く。DB・外部HTTPには依存しない。推薦は `EvaluationResult` の一部として履歴JSONに保存し、取得時には再生成しない。Goは推薦応答の形だけを検証する。
 
 ```text
 React / Vite :5173
@@ -53,12 +53,12 @@ backend/
 ├── config/settings.py                # 共有設定。独立パッケージにはしない
 ├── modules/
 │   └── subjects/
-│       ├── application/subject_list.go
+│       ├── application/ports/subject_list.go
 │       ├── infrastructure/subject_list_client.go
 │       └── grad_checker_subjects/
 │           ├── public.py              # 他モジュールとAPIへの業務契約
 │           ├── domain/                # 科目区分など
-│           ├── application/           # ユースケース・取得契約・業務エラー
+│           ├── application/           # use_cases・dto・ports・services・errors
 │           └── infrastructure/        # DB・JSON読み込み
 ├── scripts/seed_subjects.py           # 設定と科目モジュールを使うCLI
 ├── seeds/                            # 便覧データ
@@ -197,13 +197,13 @@ Pythonサービスのプロセスは引き続き必要。言語を分けたこ�
 
 ## アカウント認証の追加（2026-10-11）
 
-認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
+認証モジュールは `modules/accounts/`。バックエンドは `application/ports/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
 
 再現手順と認証設定は[認証の開発手順](auth_development.md)を参照する。
 
 ## 本人所属の保存
 
-`accounts` のapplication/profile.pyにPydantic契約・リポジトリ契約・ユースケースを置き、infrastructure/profile.pyで既存students列と課程マスタを扱う。DB例外はapplication/errors/profile.pyの業務エラーへ変換する。
+`accounts` のapplication/dto/profile.py・application/ports/profile.pyにPydantic契約・リポジトリ契約を分け、application/use_cases/に操作を置き、infrastructure/profile.pyで既存students列と課程マスタを扱う。DB例外はapplication/errors/profile.pyの業務エラーへ変換する。
 Python `/bridge/profile` は認証サービスでセッションを検証し、そこから得た本人IDだけをユースケースへ渡す。更新はCSRFを検証した上で、BEGIN IMMEDIATEによる組合せ検証とrevision付きUPDATEを一つのトランザクションで行う。
 Goのpresentation/profile.goが学生向け `/api/programs`・`/api/me`・`/api/me/program` の入力・Origin・HTTP応答を担当し、accounts/applicationの契約を通してブリッジクライアントを呼ぶ。ブリッジのprofile包絡は外部応答で取り除く。
 
@@ -216,9 +216,9 @@ Goのpresentation/profile.goが学生向け `/api/programs`・`/api/me`・`/api/
 | `GET /api/me/grades` | `POST /bridge/grades`、`operation: get` |
 | `PUT /api/me/grades` | 同上、`operation: save`とCSRF・成績の全集合 |
 
-科目一覧は`modules/subjects`に操作を追加した。application/course_catalog.pyが本人課程から見た科目・分類の契約と絞り込み、infrastructure/course_catalog.pyが一つの読取スナップショットでの取得を担う。科目モジュールはaccounts・gradesを参照せず、`go_bridge_courses.py`がセッションと本人所属から課程IDを決めて渡す。所属未設定は`program_not_selected`。
+科目一覧は`modules/subjects`に操作を追加した。application/dto/course_catalog.py・application/ports/course_catalog.py・application/services/course_catalog.pyが本人課程から見た科目・分類の契約と絞り込み、infrastructure/course_catalog.pyが一つの読取スナップショットでの取得を担う。科目モジュールはaccounts・gradesを参照せず、`go_bridge_courses.py`がセッションと本人所属から課程IDを決めて渡す。所属未設定は`program_not_selected`。
 
-成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と科目ごとのDomainへの変換、infrastructureが`grade_attempts`の版確認・差分置換・`students.data_revision`の加算を担う。`SaveGradesUseCase`が回次を検証してから、これらをUnit of WorkのBEGIN IMMEDIATEによる一つの書込みで行う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
+成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/ports/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と科目ごとのDomainへの変換、infrastructureが`grade_attempts`の版確認・差分置換・`students.data_revision`の加算を担う。`SaveGradesUseCase`が回次を検証してから、これらをUnit of WorkのBEGIN IMMEDIATEによる一つの書込みで行う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
 
 Goのpresentation/courses.goとgrades.goが外部入力（クエリ・重複キー・未知フィールド・型・範囲・記号と状態の整合）を検証し、不正ならPythonを呼ばず422等を返す。回次の重複・連番・再履修の条件はPythonの業務ルールで判定し、業務エラーコードをGoが日本語detailへ変換する。
 
@@ -236,7 +236,7 @@ Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` 
 
 | 場所 | 責務 |
 | --- | --- |
-| `grad_checker_shared/application/unit_of_work.py` | `UnitOfWork`契約。`read()`は一つの読取スナップショットで変更を残さず、`write()`は正常終了でcommit・例外でロールバックする |
+| `grad_checker_shared/application/ports/unit_of_work.py` | `UnitOfWork`契約。`read()`は一つの読取スナップショットで変更を残さず、`write()`は正常終了でcommit・例外でロールバックする |
 | `grad_checker_shared/infrastructure/unit_of_work.py` | `SqlUnitOfWork`。ブロックごとにSessionを開閉し、`read`は`BEGIN`、`write`は`BEGIN IMMEDIATE`で始める。DB例外は各モジュールが渡す関数で業務エラーへ変換する。ブロックの外でのリポジトリ利用と入れ子は`RuntimeError`にする |
 | 各モジュールの`application` | `UnitOfWork`（ABC）を継承した契約で、使うリポジトリを抽象プロパティとして宣言する。ユースケースが`with uow.read():`・`with uow.write():`で範囲を決める |
 | 各モジュールの`infrastructure` | `SqlUnitOfWork`と自モジュールの契約を継承し、ブロック中のSessionからリポジトリを生成する。リポジトリも契約（ABC）を継承し、commit・ロールバックを行わない |
@@ -252,7 +252,7 @@ Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` 
 
 ## 2026年10月19日の全課程・修了判定拡張
 
-2026年度全課程の修了規則はrequirementsモジュールのapplication/completion_policy.py、大学院判定はapplication/graduate_evaluation.pyで定義する。DBモデルとJSON列はinfrastructure/models.py、本人課程へ絞るSQL読取はinfrastructure/evaluation.pyに置く。Goは回答形式・応答形・エラー変換を担当し、単位・本人申告の業務判定はPythonに保持する。出典・整備状況は[2026年度対応表](curriculum_coverage_2026.md)。
+2026年度全課程の修了規則はrequirementsモジュールのapplication/dto/completion_policy.py、大学院判定はapplication/services/graduate_evaluation.pyで定義する。DBモデルとJSON列はinfrastructure/models.py、本人課程へ絞るSQL読取はinfrastructure/evaluation.pyに置く。Goは回答形式・応答形・エラー変換を担当し、単位・本人申告の業務判定はPythonに保持する。出典・整備状況は[2026年度対応表](curriculum_coverage_2026.md)。
 
 ## Composition Root・公開契約・業務規則
 
@@ -264,7 +264,7 @@ Engine・設定・パスワードハッシュ実装・Clockはアプリ単位で
 
 成績の `domain/grade.py` にある不変の `CourseAttempts` は、一科目の回次の重複・連番・再履修条件を保証する。Applicationの `check_attempts` はPydantic DTOからDomainへの変換と業務エラーコードへの変換を行う。DomainにはHTTP・DB・Applicationへの依存を置かない。
 
-卒業要件の `domain/credits.py` は単位条件の充足と不足量、同時期の他学部単位の最良配分を所有する。配分は達成条件数、残る不足単位、分類コード順の順に評価する。`application/credit_summary.py` がDomainの判定を公開DTOへ変換し、学部・大学院で同じ不足量の定義を使う。未確認規則の扱い、読取スナップショットの取得、推薦・履歴の組み立ては既存のApplicationで調整する。
+卒業要件の `domain/credits.py` は単位条件の充足と不足量、同時期の他学部単位の最良配分を所有する。配分は達成条件数、残る不足単位、分類コード順の順に評価する。`application/services/credit_summary.py` がDomainの判定を公開DTOへ変換し、学部・大学院で同じ不足量の定義を使う。未確認規則の扱い、読取スナップショットの取得、推薦・履歴の組み立ては既存のApplicationで調整する。
 
 認証の有効期限・試行時刻、卒業判定・履歴の日時は共通ABC `Clock` をコンストラクタで受け取る。Composition RootはUTCの `SystemClock` を渡し、テストは固定時刻を渡す。
 
@@ -288,3 +288,19 @@ Engine・設定・パスワードハッシュ実装・Clockはアプリ単位で
 Domainを含む業務モジュールでは `dataclass` を使用しない。`CourseAttempts`・`CreditRequirement`・`AllocationTarget` はPydanticの `BaseModel` と `ConfigDict(strict=True, frozen=True, extra="forbid")` で定義する。コレクションはtupleにし、文字列・真偽値から整数への暗黙変換や構築後の直接変更を許さない。Domain内で完結する型・値の制約と不変条件をモデルに置き、DB参照・認可・複数の取得保存を伴う手順はvalidatorに入れない。API DTO・Domainモデル・SQLModelは役割を分ける。
 
 この使い分けは[neoAIの記事：parseと不変条件を分けてValue Objectを書く](https://zenn.dev/neoai/articles/z-20260625-8f3a63fc3b5a61)を参考にした。DomainでPydanticを利用しても、FastAPI・HTTP・SQLModelには依存させない。
+
+## Application内の役割別ディレクトリ
+
+PythonのApplication直下には `__init__.py` だけを置き、コードを次の責務へ分ける。モジュールで使わない役割の空ディレクトリは作らない。旧ファイルへの互換用再exportは残さず、利用側・テスト・シードCLIの参照を実体へ更新する。
+
+| ディレクトリ | 所有するもの |
+| --- | --- |
+| `use_cases/` | 1操作1クラスの公開実行手順と `execute`、トランザクション境界 |
+| `dto/` | Pydanticの入出力・検索条件・取得スナップショット・シード投入モデル |
+| `ports/` | ABCのRepository・Unit of Work・Clock・Passwordsなどの依存契約 |
+| `services/` | UseCase間で共有する検証、判定、DTO組立て、セッション照合、投入キーの処理 |
+| `errors/` | Applicationのエラー契約と共通のBusinessError |
+
+たとえば `grades` は `dto/grades.py` に `GradeSet`、`ports/grades.py` にRepository・UoW、`services/grade_validation.py` にDTOからDomainへの変換を置く。`SaveGradesUseCase` はこれらを使って書込みの範囲を決める。DTOとPortがサービスやUseCaseへ逆依存しないことも境界テストで確認する。
+
+GoのApplicationにはPython側へ接続するGateway契約だけがあり、`modules/<業務>/application/ports/` に集約する。パッケージ名も `ports` とする。GoへPythonのユースケースやDB処理を複製しない。

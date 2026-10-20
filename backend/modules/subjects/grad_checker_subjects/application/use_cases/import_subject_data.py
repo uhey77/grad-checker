@@ -1,14 +1,10 @@
 """ImportSubjectDataUseCaseの処理手順とトランザクション境界。"""
 
-from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
-    SeedError,
-)
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
-    SubjectDataSeed,
-    validate_subject_data,
-)
-
-from ..subject_data_import import TABLES, SubjectDataUnitOfWork, record_key
+from ..dto.subject_data import SubjectDataSeed
+from ..errors.subject_data import SeedError
+from ..ports.subject_data_import import SubjectDataUnitOfWork
+from ..services.subject_data_import import TABLES, record_key
+from ..services.subject_data_validation import validate_subject_data
 
 
 class ImportSubjectDataUseCase:

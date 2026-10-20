@@ -11,18 +11,18 @@ import (
 	"strings"
 	"time"
 
-	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/application/ports"
 )
 
 const sessionCookie = "grad_checker_session"
 
 type AuthHandler struct {
-	gateway application.AuthGateway
+	gateway ports.AuthGateway
 	origin  string
 	secure  bool
 }
 
-func NewAuthHandler(gateway application.AuthGateway, origin string, fallback http.Handler) (http.Handler, error) {
+func NewAuthHandler(gateway ports.AuthGateway, origin string, fallback http.Handler) (http.Handler, error) {
 	u, err := url.Parse(origin)
 	if err != nil || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || (u.Scheme != "https" && u.Scheme != "http") {
 		return nil, errors.New("public-originにはhttp/httpsオリジンを指定してください。")
@@ -62,7 +62,7 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 403, "アクセス元を確認できません。画面を再読み込みしてください。")
 		return
 	}
-	call := application.AuthCall{Operation: operation}
+	call := ports.AuthCall{Operation: operation}
 	if operation == "register" || operation == "recover" || operation == "login" {
 		media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if err != nil || media != "application/json" {
@@ -150,7 +150,7 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.gateway.Call(r.Context(), call)
 	if err != nil {
-		var business *application.AuthError
+		var business *ports.AuthError
 		if errors.As(err, &business) {
 			if business.Code == "invalid_credentials" && (operation == "session" || operation == "config") {
 				h.cookie(w, "", time.Time{}, -1)

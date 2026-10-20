@@ -1,0 +1,107 @@
+"""科目マスタの重複と参照先の整合性を検証する。"""
+
+from uuid import UUID
+
+from ...domain.curriculum_verification_status import VerificationStatus
+from ..dto.subject_data import ClassificationData, SubjectDataSeed
+from ..errors.subject_data import SeedError
+
+
+def _unique_records(records: list, key, label: str) -> dict:
+    result = {}
+    for record in records:
+        identity = key(record)
+        if identity in result:
+            raise SeedError(f"{label}が重複しています。")
+        result[identity] = record
+    return result
+
+
+def validate_subject_data(seed: SubjectDataSeed) -> list[ClassificationData]:
+    """DB既存分と投入分を合わせて検証し、分類を親から順に返す。"""
+
+    programs = _unique_records(seed.academic_programs, lambda x: x.id, "課程ID")
+    curricula = _unique_records(seed.curricula, lambda x: x.id, "カリキュラムID")
+    classifications = _unique_records(seed.classifications, lambda x: x.id, "分類ID")
+    courses = _unique_records(seed.courses, lambda x: x.id, "科目ID")
+    for records, label in (
+        (seed.academic_programs, "課程コード"),
+        (seed.curricula, "カリキュラムコード"),
+        (seed.courses, "科目コード"),
+    ):
+        _unique_records(records, lambda x: x.code, label)
+    _unique_records(
+        seed.classifications, lambda x: (x.curriculum_id, x.code), "課程内の分類コード"
+    )
+    _unique_records(
+        seed.course_offerings,
+        lambda x: (x.course_id, x.term_code, x.semester_order, x.academic_year),
+        "科目の開講期",
+    )
+    _unique_records(
+        seed.curriculum_courses, lambda x: (x.curriculum_id, x.course_id), "課程別科目"
+    )
+
+    for curriculum in curricula.values():
+        if curriculum.program_id not in programs:
+            raise SeedError("カリキュラムの所属課程が存在しません。")
+        start, end = curriculum.admission_year_from, curriculum.admission_year_to
+        if start is not None and end is not None and start > end:
+            raise SeedError("適用入学年度の開始が終了を超えています。")
+        if (
+            curriculum.verification_status == VerificationStatus.VERIFIED
+            and start is None
+        ):
+            raise SeedError("確認済みカリキュラムには適用入学年度の開始が必要です。")
+
+    # 親を先に確定する。親が全て存在していても進まなければ循環。
+    ordered: list[ClassificationData] = []
+    remaining = dict(classifications)
+    visited: set[UUID] = set()
+    for classification in classifications.values():
+        if classification.curriculum_id not in curricula:
+            raise SeedError("分類のカリキュラムが存在しません。")
+        parent = classifications.get(classification.parent_id)
+        if classification.parent_id is not None:
+            if parent is None or parent.curriculum_id != classification.curriculum_id:
+                raise SeedError("親分類は同じカリキュラム内の分類を指定してください。")
+        elif classification.level != 0:
+            raise SeedError("最上位の分類のlevelは0にしてください。")
+    while remaining:
+        ready = [
+            x
+            for x in remaining.values()
+            if x.parent_id is None or x.parent_id in visited
+        ]
+        if not ready:
+            raise SeedError("分類の親子関係が循環しています。")
+        for classification in ready:
+            if classification.parent_id is not None:
+                parent = classifications[classification.parent_id]
+                if classification.level != parent.level + 1:
+                    raise SeedError(
+                        "子分類のlevelは親分類のlevelに1を加えた値にしてください。"
+                    )
+            ordered.append(classification)
+            visited.add(classification.id)
+            del remaining[classification.id]
+
+    for course in courses.values():
+        if course.offering_program_id not in programs:
+            raise SeedError("科目の開講元課程が存在しません。")
+    for offering in seed.course_offerings:
+        if offering.course_id not in courses:
+            raise SeedError("開講期の科目が存在しません。")
+    for association in seed.curriculum_courses:
+        classification = classifications.get(association.classification_id)
+        if (
+            association.curriculum_id not in curricula
+            or association.course_id not in courses
+        ):
+            raise SeedError("課程別科目のカリキュラムまたは科目が存在しません。")
+        if (
+            classification is None
+            or classification.curriculum_id != association.curriculum_id
+        ):
+            raise SeedError("課程別科目の分類は同じカリキュラム内で指定してください。")
+    return ordered

@@ -28,8 +28,8 @@ from modules.accounts.grad_checker_accounts.infrastructure.schema import (
     create_account_schema,
 )
 from modules.grades.grad_checker_grades.infrastructure.schema import create_grade_schema
-from modules.requirements.grad_checker_requirements.application import (
-    student_evaluation,
+from modules.requirements.grad_checker_requirements.application.services import (
+    student_evaluation as student_evaluation_services,
 )
 from modules.requirements.grad_checker_requirements.infrastructure.evaluation import (
     SqliteEvaluationUnitOfWork,
@@ -44,7 +44,7 @@ from modules.requirements.grad_checker_requirements.infrastructure.seed import (
 from modules.requirements.grad_checker_requirements.public import (
     ImportRequirementsUseCase,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from modules.subjects.grad_checker_subjects.application.dto.subject_data import (
     SubjectDataSeed,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
@@ -348,8 +348,10 @@ def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
                         value, data = timed(read_snapshot)
                         times["db_snapshot"].append(value)
                         value, data = timed(
-                            lambda snapshot=data: student_evaluation.evaluate_student(
-                                snapshot, datetime.now(UTC)
+                            lambda snapshot=data: (
+                                student_evaluation_services.evaluate_student(
+                                    snapshot, datetime.now(UTC)
+                                )
                             )
                         )
                         assert data.data_revision == revision

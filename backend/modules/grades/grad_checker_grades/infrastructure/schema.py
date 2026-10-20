@@ -3,7 +3,7 @@
 from sqlalchemy import Engine
 from sqlmodel import SQLModel
 
-from modules.grades.grad_checker_grades.infrastructure.models import GRADE_TABLES
+from .models import GRADE_TABLES
 
 
 def create_grade_schema(engine: Engine) -> None:

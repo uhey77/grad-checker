@@ -5,29 +5,25 @@ from sqlalchemy import Engine, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
-from modules.accounts.grad_checker_accounts.application.errors.profile import (
-    ProfileError,
-)
-from modules.accounts.grad_checker_accounts.application.profile import (
-    Profile,
-    ProfileRepository,
-    ProfileUnitOfWork,
-    ProgramOption,
-    ProgramSelection,
-    VerificationStatus,
-)
-from modules.accounts.grad_checker_accounts.infrastructure.models import Student
 from modules.requirements.grad_checker_requirements.infrastructure.models import (
     CompletionPolicy,
 )
 from modules.requirements.grad_checker_requirements.public import CompletionPolicyData
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
 from modules.subjects.grad_checker_subjects.infrastructure.subject_models import (
     AcademicProgram,
     Curriculum,
 )
+
+from ..application.dto.profile import (
+    Profile,
+    ProgramOption,
+    ProgramSelection,
+    VerificationStatus,
+)
+from ..application.errors.profile import ProfileError
+from ..application.ports.profile import ProfileRepository, ProfileUnitOfWork
+from .models import Student
 
 
 def unavailable(_error: SQLAlchemyError) -> ProfileError:

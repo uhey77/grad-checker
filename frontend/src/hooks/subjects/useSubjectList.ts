@@ -17,11 +17,11 @@ export function useSubjectList(useCases: SubjectListUseCases) {
   const [chosenId, setChosenId] = useState("");
   const [filters, setFilters] = useState(emptyFilters);
   const [sortOrder, setSortOrder] = useState<SubjectSortOrder>("handbook");
-  const programState = useRemote(
-    "programs",
-    useCases.listPrograms,
-    programAttempt,
+  const loadPrograms = useCallback(
+    (signal: AbortSignal) => useCases.listPrograms.execute(signal),
+    [useCases],
   );
+  const programState = useRemote("programs", loadPrograms, programAttempt);
   const programs = programState.status === "ready" ? programState.data : [];
   const curriculumId =
     programs.find((program) => program.curriculumId === chosenId)
@@ -29,7 +29,8 @@ export function useSubjectList(useCases: SubjectListUseCases) {
     programs[0]?.curriculumId ||
     "";
   const loadSubjectList = useCallback(
-    (signal: AbortSignal) => useCases.getSubjectList(curriculumId, signal),
+    (signal: AbortSignal) =>
+      useCases.getSubjectList.execute(curriculumId, signal),
     [useCases, curriculumId],
   );
   const subjectListState = useRemote(

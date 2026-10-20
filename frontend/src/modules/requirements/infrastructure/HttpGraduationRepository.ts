@@ -3,11 +3,9 @@ import {
   requestJson,
   type JsonRequest,
 } from "../../../shared/infrastructure/http.ts";
-import {
-  GraduationError,
-  type CheckPageRequest,
-  type GraduationRepository,
-} from "../application/GraduationUseCases.ts";
+import { GraduationError } from "../application/errors/GraduationError.ts";
+import { type CheckPageRequest } from "../application/dto/CheckPageRequest.ts";
+import { type GraduationRepository } from "../application/ports/GraduationRepository.ts";
 import {
   toCheckPage,
   toDashboardResult,

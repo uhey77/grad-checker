@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"grad-checker/backend/modules/shared/pythonbridge"
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 )
 
 type PythonSubjectListClient struct {
@@ -36,10 +36,10 @@ func (c *PythonSubjectListClient) call(ctx context.Context, operation, id string
 		CurriculumID string `json:"curriculum_id,omitempty"`
 	}{operation, id})
 	if err != nil {
-		return nil, subjectError(err, func(code string) error { return &application.SubjectListError{Code: code} })
+		return nil, subjectError(err, func(code string) error { return &ports.SubjectListError{Code: code} })
 	}
 	if (operation == "list_programs" && data[0] != '[') || (operation == "get_subject_list" && data[0] != '{') {
-		return nil, application.ErrProtocol
+		return nil, ports.ErrProtocol
 	}
 	return data, nil
 }

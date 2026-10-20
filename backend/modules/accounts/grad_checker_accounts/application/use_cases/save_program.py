@@ -1,6 +1,7 @@
 """SaveProgramUseCaseの処理手順とトランザクション境界。"""
 
-from ..profile import Profile, ProfileUnitOfWork, ProgramSelection
+from ..dto.profile import Profile, ProgramSelection
+from ..ports.profile import ProfileUnitOfWork
 
 
 class SaveProgramUseCase:

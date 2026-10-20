@@ -9,18 +9,18 @@ import (
 	"testing"
 
 	"grad-checker/backend/api/presentation"
-	"grad-checker/backend/modules/accounts/application"
+	"grad-checker/backend/modules/accounts/application/ports"
 	"grad-checker/backend/modules/accounts/infrastructure"
 )
 
 type fakeProfile struct {
-	calls []application.ProfileCall
+	calls []ports.ProfileCall
 	err   error
 }
 
-func (f *fakeProfile) Call(_ context.Context, call application.ProfileCall) (application.ProfileResult, error) {
+func (f *fakeProfile) Call(_ context.Context, call ports.ProfileCall) (ports.ProfileResult, error) {
 	f.calls = append(f.calls, call)
-	return application.ProfileResult{Profile: &application.Profile{StudentID: "own", LoginName: "owner"}}, f.err
+	return ports.ProfileResult{Profile: &ports.Profile{StudentID: "own", LoginName: "owner"}}, f.err
 }
 
 const validSelection = `{"program_id":"00000000-0000-4000-8000-000000000001","curriculum_id":"00000000-0000-4000-8000-000000000002","expected_revision":0}`
@@ -73,7 +73,7 @@ func TestProfileRejectsInvalidCallsBeforeBackend(t *testing.T) {
 
 func TestProfileMapsBusinessErrors(t *testing.T) {
 	for code, status := range map[string]int{"invalid_credentials": 401, "invalid_csrf": 403, "invalid_program": 422, "revision_conflict": 409, "profile_unavailable": 503} {
-		fake := &fakeProfile{err: &application.AuthError{Code: code}}
+		fake := &fakeProfile{err: &ports.AuthError{Code: code}}
 		handler := presentation.NewProfileHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler())
 		req := httptest.NewRequest("GET", "/api/me", nil)
 		req.AddCookie(&http.Cookie{Name: "grad_checker_session", Value: strings.Repeat("s", 43)})
@@ -99,7 +99,7 @@ func TestProfileClientValidatesBridgeResponse(t *testing.T) {
 			if r.URL.Path != "/bridge/profile" {
 				t.Error(r.URL.Path)
 			}
-			var call application.ProfileCall
+			var call ports.ProfileCall
 			if json.NewDecoder(r.Body).Decode(&call) != nil || call.Operation != "me" {
 				t.Error("invalid call")
 			}
@@ -109,7 +109,7 @@ func TestProfileClientValidatesBridgeResponse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = client.Call(context.Background(), application.ProfileCall{Operation: "me", Token: strings.Repeat("s", 43)})
+		_, err = client.Call(context.Background(), ports.ProfileCall{Operation: "me", Token: strings.Repeat("s", 43)})
 		if (err == nil) != strings.Contains(body, `"data_revision":0`) {
 			t.Fatalf("%s: %v", body, err)
 		}
@@ -137,7 +137,7 @@ func TestProfileRejectsNonJSONContentType(t *testing.T) {
 // 成績・所属・科目で同じ業務エラーコードは同じHTTPステータスに変換する。
 func TestSharedBusinessErrorsMapConsistently(t *testing.T) {
 	for code, status := range map[string]int{"profile_not_found": 401, "revision_conflict": 409, "profile_unavailable": 503} {
-		fake := &fakeProfile{err: &application.AuthError{Code: code}}
+		fake := &fakeProfile{err: &ports.AuthError{Code: code}}
 		handler := presentation.NewProfileHandler(fake, "http://127.0.0.1:5173", http.NotFoundHandler())
 		req := httptest.NewRequest("GET", "/api/me", nil)
 		req.AddCookie(&http.Cookie{Name: "grad_checker_session", Value: strings.Repeat("s", 43)})

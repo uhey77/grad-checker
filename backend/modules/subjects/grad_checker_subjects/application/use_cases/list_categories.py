@@ -1,6 +1,7 @@
 """ListCategoriesUseCaseの処理手順とトランザクション境界。"""
 
-from ..course_catalog import CategoryList, CourseCatalogUnitOfWork
+from ..dto.course_catalog import CategoryList
+from ..ports.course_catalog import CourseCatalogUnitOfWork
 
 
 class ListCategoriesUseCase:

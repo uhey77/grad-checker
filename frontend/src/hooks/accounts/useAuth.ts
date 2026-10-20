@@ -42,8 +42,8 @@ export function useAuth(useCases: AuthUseCases) {
   useEffect(() => {
     const controller = new AbortController();
     void Promise.all([
-      useCases.session(controller.signal),
-      useCases.config(controller.signal),
+      useCases.session.execute(controller.signal),
+      useCases.config.execute(controller.signal),
     ]).then(
       ([session, policy]) => {
         if (!controller.signal.aborted)
@@ -89,8 +89,8 @@ export function useAuth(useCases: AuthUseCases) {
       if (checking || running()) return;
       const controller = new AbortController();
       checking = controller;
-      void useCases
-        .session(controller.signal)
+      void useCases.session
+        .execute(controller.signal)
         .then(
           (current) => {
             if (controller.signal.aborted || running()) return;
@@ -154,7 +154,7 @@ export function useAuth(useCases: AuthUseCases) {
     },
     login: (loginName: string, password: string) =>
       run(
-        (signal) => useCases.login(loginName, password, signal),
+        (signal) => useCases.login.execute(loginName, password, signal),
         (session) =>
           setState((previous) => ({
             ...previous,
@@ -167,7 +167,11 @@ export function useAuth(useCases: AuthUseCases) {
       loginName: string,
       password: string,
       done: (code: string) => void,
-    ) => run((signal) => useCases.register(loginName, password, signal), done),
+    ) =>
+      run(
+        (signal) => useCases.register.execute(loginName, password, signal),
+        done,
+      ),
     recover: (
       loginName: string,
       code: string,
@@ -175,7 +179,7 @@ export function useAuth(useCases: AuthUseCases) {
       done: (code: string) => void,
     ) =>
       run(
-        (signal) => useCases.recover(loginName, code, password, signal),
+        (signal) => useCases.recover.execute(loginName, code, password, signal),
         (result) => {
           channel.current?.postMessage("logout");
           done(result);
@@ -184,7 +188,7 @@ export function useAuth(useCases: AuthUseCases) {
     logout: () => {
       if (state.session)
         void run(
-          (signal) => useCases.logout(state.session!.csrfToken, signal),
+          (signal) => useCases.logout.execute(state.session!.csrfToken, signal),
           () => {
             channel.current?.postMessage("logout");
             setState((previous) => ({

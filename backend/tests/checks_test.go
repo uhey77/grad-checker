@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"grad-checker/backend/api/presentation"
-	"grad-checker/backend/modules/requirements/application"
+	"grad-checker/backend/modules/requirements/application/ports"
 	"grad-checker/backend/modules/requirements/infrastructure"
 )
 
@@ -20,11 +20,11 @@ const (
 )
 
 type fakeChecks struct {
-	calls []application.CheckCall
+	calls []ports.CheckCall
 	err   error
 }
 
-func (f *fakeChecks) Call(_ context.Context, call application.CheckCall) (json.RawMessage, error) {
+func (f *fakeChecks) Call(_ context.Context, call ports.CheckCall) (json.RawMessage, error) {
 	f.calls = append(f.calls, call)
 	return json.RawMessage(`{"id":"` + checkID + `"}`), f.err
 }
@@ -80,7 +80,7 @@ func TestCheckHandlerValidationAuthorizationAndErrors(t *testing.T) {
 	} {
 		fake := &fakeChecks{}
 		if tc.code != "" {
-			fake.err = &application.EvaluationError{Code: tc.code}
+			fake.err = &ports.EvaluationError{Code: tc.code}
 		}
 		recorder := httptest.NewRecorder()
 		presentation.NewCheckHandler(fake, checkOrigin, http.NotFoundHandler()).ServeHTTP(recorder, checkRequest(tc.method, tc.path, tc.body, tc.auth, tc.csrf))
@@ -161,20 +161,20 @@ func checkList(items string, limit, offset, total int) string {
 }
 
 func TestCheckClientEnvelopeAndInvalidResponses(t *testing.T) {
-	create := application.CheckCall{Operation: "create", Token: "token", CSRF: strings.Repeat("c", 64), Request: &application.CheckRequest{ExpectedRevision: 1}}
-	get := application.CheckCall{Operation: "get", Token: "token", CheckID: checkID}
-	list := application.CheckCall{Operation: "list", Token: "token", Page: &application.CheckPage{Limit: 1, Offset: 2}}
+	create := ports.CheckCall{Operation: "create", Token: "token", CSRF: strings.Repeat("c", 64), Request: &ports.CheckRequest{ExpectedRevision: 1}}
+	get := ports.CheckCall{Operation: "get", Token: "token", CheckID: checkID}
+	list := ports.CheckCall{Operation: "list", Token: "token", Page: &ports.CheckPage{Limit: 1, Offset: 2}}
 	for _, tc := range []struct {
 		name     string
-		call     application.CheckCall
+		call     ports.CheckCall
 		response string
 		good     bool
 	}{
 		{"保存", create, `{"data":` + checkData + `}`, true},
 		{"取得", get, `{"data":` + checkData + `}`, true},
 		{"推薦導入前の履歴取得", get, `{"data":` + strings.Replace(checkData, `"recommendations":[],`, ``, 1) + `}`, true},
-		{"要求と異なる版", application.CheckCall{Operation: "create", Token: "token", CSRF: strings.Repeat("c", 64), Request: &application.CheckRequest{ExpectedRevision: 2}}, `{"data":` + checkData + `}`, false},
-		{"要求と異なるID", application.CheckCall{Operation: "get", Token: "token", CheckID: "00000000-0000-4000-8000-000000000002"}, `{"data":` + checkData + `}`, false},
+		{"要求と異なる版", ports.CheckCall{Operation: "create", Token: "token", CSRF: strings.Repeat("c", 64), Request: &ports.CheckRequest{ExpectedRevision: 2}}, `{"data":` + checkData + `}`, false},
+		{"要求と異なるID", ports.CheckCall{Operation: "get", Token: "token", CheckID: "00000000-0000-4000-8000-000000000002"}, `{"data":` + checkData + `}`, false},
 		{"入力と結果の版の不一致", get, `{"data":` + strings.Replace(checkData, `"data_revision":1,"grades"`, `"data_revision":2,"grades"`, 1) + `}`, false},
 		{"結果の欠落", get, `{"data":` + strings.Replace(checkData, `"result":`+evaluationData, `"result":{}`, 1) + `}`, false},
 		{"作成日時の不正", get, `{"data":` + strings.Replace(checkData, `2026-10-16T00:00:00Z","input"`, `yesterday","input"`, 1) + `}`, false},

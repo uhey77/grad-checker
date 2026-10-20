@@ -1,5 +1,5 @@
 import { createDtoReader } from "../../../shared/infrastructure/dtoReader.ts";
-import { GraduationError } from "../application/GraduationUseCases.ts";
+import { GraduationError } from "../application/errors/GraduationError.ts";
 import type {
   CheckPage,
   CompletionCondition,

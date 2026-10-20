@@ -1,12 +1,8 @@
 """モジュール外へ公開する業務契約。DB実装と組み立ては公開しない。"""
 
-from modules.accounts.grad_checker_accounts.application.auth import (
-    AuthPolicy,
-    Passwords,
-    SessionIdentity,
-)
-from modules.accounts.grad_checker_accounts.application.profile import ProgramSelection
-
+from .application.dto.auth import AuthPolicy, SessionIdentity
+from .application.dto.profile import ProgramSelection
+from .application.ports.auth import Passwords
 from .application.use_cases.authenticate_session import AuthenticateSessionUseCase
 from .application.use_cases.get_auth_policy import GetAuthPolicyUseCase
 from .application.use_cases.get_profile import GetProfileUseCase

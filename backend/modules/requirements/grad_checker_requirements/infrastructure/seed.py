@@ -7,10 +7,14 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
-from modules.requirements.grad_checker_requirements.application.errors.seed import (
-    RequirementSeedError,
+from modules.shared.grad_checker_shared.infrastructure.unit_of_work import SqlUnitOfWork
+from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
+    SqliteSubjectDataStore,
 )
-from modules.requirements.grad_checker_requirements.application.seed import (
+from modules.subjects.grad_checker_subjects.public import SubjectDataSeed
+
+from ..application.dto.completion_policy import CompletionPolicyData
+from ..application.dto.seed import (
     CreditRuleCourseData,
     CreditRuleData,
     CreditRuleLimitData,
@@ -18,27 +22,16 @@ from modules.requirements.grad_checker_requirements.application.seed import (
     RequirementScopeData,
     RequirementSeed,
 )
-from modules.requirements.grad_checker_requirements.application.seed_import import (
-    RequirementDataStore,
-    RequirementUnitOfWork,
-)
-from modules.requirements.grad_checker_requirements.infrastructure.models import (
+from ..application.errors.seed import RequirementSeedError
+from ..application.ports.seed_import import RequirementDataStore, RequirementUnitOfWork
+from .models import (
+    CompletionPolicy,
     CreditRule,
     CreditRuleCourse,
     CreditRuleLimit,
     GraduationRequirement,
     RequirementScope,
 )
-from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
-    SqlUnitOfWork,
-)
-from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
-    SqliteSubjectDataStore,
-)
-from modules.subjects.grad_checker_subjects.public import SubjectDataSeed
-
-from ..application.completion_policy import CompletionPolicyData
-from .models import CompletionPolicy
 
 TABLE_MAPPING = (
     ("graduation_requirements", GraduationRequirement, RequirementData),

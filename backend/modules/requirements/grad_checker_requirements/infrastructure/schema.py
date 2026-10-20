@@ -3,12 +3,9 @@
 from sqlalchemy import Engine, inspect, text
 from sqlmodel import SQLModel
 
-from modules.requirements.grad_checker_requirements.infrastructure.models import (
-    REQUIREMENT_TABLES,
-)
-
 from .check_models import CHECK_TABLES, IMMUTABLE_TRIGGER
 from .cs_2026_revision import revise_cs_2026
+from .models import REQUIREMENT_TABLES
 
 
 def create_requirement_schema(engine: Engine) -> None:

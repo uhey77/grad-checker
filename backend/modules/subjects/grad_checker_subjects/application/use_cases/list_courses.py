@@ -1,10 +1,9 @@
 """ListCoursesUseCaseの処理手順とトランザクション境界。"""
 
-from modules.subjects.grad_checker_subjects.application.errors.course_catalog import (
-    CourseCatalogError,
-)
-
-from ..course_catalog import CourseCatalogUnitOfWork, CourseFilters, CourseList, matches
+from ..dto.course_catalog import CourseFilters, CourseList
+from ..errors.course_catalog import CourseCatalogError
+from ..ports.course_catalog import CourseCatalogUnitOfWork
+from ..services.course_catalog import matches
 
 
 class ListCoursesUseCase:

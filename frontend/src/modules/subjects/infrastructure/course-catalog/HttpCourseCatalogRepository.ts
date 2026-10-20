@@ -1,6 +1,6 @@
 import { requestJson } from "../../../../shared/infrastructure/http.ts";
 import { CourseCatalogError } from "../../application/errors/CourseCatalogError.ts";
-import type { CourseCatalogRepository } from "../../application/course-catalog/CourseCatalogUseCases.ts";
+import type { CourseCatalogRepository } from "../../application/ports/CourseCatalogRepository.ts";
 import { toCourseCatalog } from "./mappers.ts";
 
 export class HttpCourseCatalogRepository implements CourseCatalogRepository {

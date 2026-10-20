@@ -7,7 +7,7 @@ import {
   SubjectListError,
   type SubjectListErrorCode,
 } from "../../application/errors/SubjectListError.ts";
-import type { SubjectListRepository } from "../../application/subject-list/SubjectListRepository";
+import type { SubjectListRepository } from "../../application/ports/SubjectListRepository.ts";
 import type { SubjectListDto, ProgramDto } from "./dto";
 import { toSubjectList, toProgram } from "./mappers.ts";
 

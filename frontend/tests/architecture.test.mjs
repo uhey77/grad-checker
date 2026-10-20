@@ -168,6 +168,45 @@ test("境界検査は逆依存とモジュール内部への直接参照を拒�
   );
 });
 
+test("Applicationを役割別に配置し、UseCaseは一操作のexecuteだけを持つ", async () => {
+  const roles = new Set(["dto", "ports", "services", "errors", "use_cases"]);
+  for (const moduleName of await readdir(resolve(root, "modules"))) {
+    const directory = resolve(root, "modules", moduleName, "application");
+    const children = await readdir(directory, { withFileTypes: true });
+    assert.ok(
+      children.every((entry) => entry.isDirectory() && roles.has(entry.name)),
+      moduleName,
+    );
+    const cases = await readdir(resolve(directory, "use_cases"));
+    assert.ok(cases.length > 0, moduleName);
+    for (const file of cases) {
+      const ast = ts.createSourceFile(
+        file,
+        await readFile(resolve(directory, "use_cases", file), "utf8"),
+        ts.ScriptTarget.Latest,
+        true,
+      );
+      const classes = ast.statements.filter(ts.isClassDeclaration);
+      assert.equal(classes.length, 1, file);
+      assert.ok(classes[0].name.text.endsWith("UseCase"), file);
+      const methods = classes[0].members
+        .filter(ts.isMethodDeclaration)
+        .map((method) => method.name.getText(ast));
+      assert.deepEqual(methods, ["execute"], file);
+    }
+    // 複数操作の集合は、実装を持たない注入用の型として表現する。
+    for (const file of await readdir(resolve(directory, "ports"))) {
+      const ast = ts.createSourceFile(
+        file,
+        await readFile(resolve(directory, "ports", file), "utf8"),
+        ts.ScriptTarget.Latest,
+        true,
+      );
+      assert.equal(ast.statements.some(ts.isClassDeclaration), false, file);
+    }
+  }
+});
+
 test("全ソースが層・モジュール・アプリ・共通基盤の境界を守る", async () => {
   const contracts = new Map();
   for (const moduleName of await readdir(resolve(root, "modules")))

@@ -1,9 +1,10 @@
 """本人確認の後、指定したセッションを失効させる。"""
 
-from modules.shared.grad_checker_shared.application.clock import Clock
+from modules.shared.grad_checker_shared.application.ports.clock import Clock
 
-from ..auth import AccountUnitOfWork, digest
-from ..authentication import SessionAuthentication
+from ..ports.auth import AccountUnitOfWork
+from ..services.auth import digest
+from ..services.authentication import SessionAuthentication
 
 
 class LogoutUseCase:

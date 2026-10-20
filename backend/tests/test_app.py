@@ -5,9 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 
 from api.api_service.main import create_app
-from api.api_service.presentation.dependencies import (
-    register_account,
-)
+from api.api_service.presentation.dependencies import register_account
 from config.settings import Settings
 from modules.accounts.grad_checker_accounts.public import (
     AuthenticateSessionUseCase,

@@ -10,8 +10,8 @@ from sqlmodel import Session, select
 
 from api.api_service.main import create_app
 from config.settings import Settings
-from modules.accounts.grad_checker_accounts.application.auth import digest
 from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
+from modules.accounts.grad_checker_accounts.application.services.auth import digest
 from modules.accounts.grad_checker_accounts.infrastructure.models import (
     AuthSession,
     Credential,

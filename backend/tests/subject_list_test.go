@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"grad-checker/backend/api/presentation"
-	"grad-checker/backend/modules/subjects/application"
+	"grad-checker/backend/modules/subjects/application/ports"
 )
 
 type fakeSubjectList struct {
@@ -81,13 +81,13 @@ func TestErrorCodesBecomeExternalErrors(t *testing.T) {
 		status int
 		detail string
 	}{
-		{&application.SubjectListError{Code: "curriculum_not_found"}, 404, "選択したカリキュラムが見つかりません。"},
-		{&application.SubjectListError{Code: "classification_inconsistent"}, 409, "科目分類のデータが不整合です。課程・科目データを確認してください。"},
-		{&application.SubjectListError{Code: "subject_list_unavailable"}, 503, "科目データを読み込めません。時間をおいて再試行してください。"},
-		{&application.SubjectListError{Code: "internal_error"}, 500, "科目データの取得中に予期しないエラーが発生しました。"},
-		{&application.SubjectListError{Code: "invalid_request"}, 502, "Pythonサービスの応答を読み込めません。"},
-		{application.ErrUnavailable, 502, "Pythonサービスに接続できません。起動状態を確認してください。"},
-		{application.ErrTimeout, 504, "Pythonサービスの応答がタイムアウトしました。"},
+		{&ports.SubjectListError{Code: "curriculum_not_found"}, 404, "選択したカリキュラムが見つかりません。"},
+		{&ports.SubjectListError{Code: "classification_inconsistent"}, 409, "科目分類のデータが不整合です。課程・科目データを確認してください。"},
+		{&ports.SubjectListError{Code: "subject_list_unavailable"}, 503, "科目データを読み込めません。時間をおいて再試行してください。"},
+		{&ports.SubjectListError{Code: "internal_error"}, 500, "科目データの取得中に予期しないエラーが発生しました。"},
+		{&ports.SubjectListError{Code: "invalid_request"}, 502, "Pythonサービスの応答を読み込めません。"},
+		{ports.ErrUnavailable, 502, "Pythonサービスに接続できません。起動状態を確認してください。"},
+		{ports.ErrTimeout, 504, "Pythonサービスの応答がタイムアウトしました。"},
 		{errors.New("SELECT private internal details"), 502, "Pythonサービスの応答を読み込めません。"},
 	} {
 		f := &fakeSubjectList{err: tc.err}

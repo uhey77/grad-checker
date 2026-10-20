@@ -2,9 +2,11 @@ from uuid import UUID
 
 import pytest
 
-from modules.subjects.grad_checker_subjects.application.subject_list import (
+from modules.subjects.grad_checker_subjects.application.dto.subject_list import (
     SubjectList,
     SubjectListProgram,
+)
+from modules.subjects.grad_checker_subjects.application.ports.subject_list import (
     SubjectListRepository,
 )
 
