@@ -2,11 +2,14 @@
 
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from modules.grades.grad_checker_grades.application.errors.grades import GradeError
-from modules.grades.grad_checker_grades.application.grades import check_attempts
-from modules.grades.grad_checker_grades.domain.grade import PASSING_GRADE_CODES
+from modules.grades.grad_checker_grades.public import (
+    PASSING_GRADE_CODES,
+    GradeError,
+    check_attempts,
+)
 
 from .completion_policy import CompletionPolicyData
+from .credit_summary import summarize
 from .errors.evaluation import EvaluationError
 from .evaluation_models import (
     CompletionConditionResult,
@@ -69,20 +72,12 @@ def evaluate_graduate(
         if group.overflow_target is not None:
             allocated[group.overflow_target] += raw[group.code] - allocated[group.code]
 
-    def summary(required: int, earned_count: int, credited: int) -> dict:
-        shortage = max(required - credited, 0)
-        return dict(
-            required_credits=required,
-            earned_credits=earned_count,
-            credited_credits=credited,
-            shortage=shortage,
-            result="fail" if shortage else "pass",
-        )
-
     conditions = []
     for group in policy.credit_groups:
         result = ConditionResult(
-            **summary(group.required_credits, raw[group.code], allocated[group.code]),
+            **summarize(
+                group.required_credits, raw[group.code], allocated[group.code]
+            ).model_dump(),
             id=uuid5(NAMESPACE_URL, f"{policy.id}:{group.code}"),
             code=group.code,
             name=group.name,
@@ -94,11 +89,11 @@ def evaluate_graduate(
             result.result = "fail"
         conditions.append(result)
     total = CreditSummary(
-        **summary(
+        **summarize(
             sum(g.required_credits for g in policy.credit_groups),
             earned_credits(set(associations)),
             sum(allocated.values()),
-        )
+        ).model_dump()
     )
     answer_codes = [a.code for a in snapshot.completion_answers]
     known = {c.code for c in policy.non_credit_conditions}

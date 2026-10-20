@@ -3,6 +3,7 @@
 from collections import defaultdict
 from uuid import UUID
 
+from ..domain.credits import AllocationTarget, CreditRequirement, allocate_best_fit
 from .errors.evaluation import EvaluationError
 from .evaluation_context import EvaluationContext, invalid_master
 from .evaluation_models import EvaluationWarning, ExternalAllocation
@@ -142,40 +143,25 @@ def best_fit(
     *,
     allocated: dict[UUID, int],
 ) -> dict[UUID, int]:
-    # 達成する区分合計・選択条件の数を最大化し、同数なら不足単位の合計を最小化。
-    # 上限は小さく、配分は単位単位で列挙する。同点は分類コード順で固定する。
-    roots = sorted(cohort, key=lambda root: context.classes[root].code)
-
-    def score(root: UUID, value: int) -> tuple[int, int]:
-        shortages = []
-        for row in context.conditions:
-            if row.classification_id != root or row.kind not in (
-                "classification_total",
-                "elective_total",
-            ):
-                continue
-            base = credited if row.kind == "classification_total" else elective
-            shortages.append(
-                max(
-                    row.required_credits
-                    - base.get(root, 0)
-                    - allocated.get(root, 0)
-                    - value,
-                    0,
+    # DTOと現在までの算入量をDomainの配分条件へ変換する。
+    targets = [
+        AllocationTarget(
+            id=root,
+            code=context.classes[root].code,
+            available_credits=available,
+            conditions=tuple(
+                CreditRequirement(
+                    row.required_credits,
+                    (credited if row.kind == "classification_total" else elective).get(
+                        root, 0
+                    )
+                    + allocated.get(root, 0),
                 )
-            )
-        return sum(value == 0 for value in shortages), -sum(shortages)
-
-    # 共通上限ごとの最良状態だけを残す。科目数に対する全組合せ探索をしない。
-    states: dict[int, tuple[int, int, tuple[int, ...]]] = {0: (0, 0, ())}
-    for root in roots:
-        following: dict[int, tuple[int, int, tuple[int, ...]]] = {}
-        for used, (passed, shortage, values) in states.items():
-            for value in range(min(cohort[root], limit - used) + 1):
-                fulfilled, deficit = score(root, value)
-                candidate = (passed + fulfilled, shortage + deficit, (*values, value))
-                count = used + value
-                if count not in following or candidate > following[count]:
-                    following[count] = candidate
-        states = following
-    return dict(zip(roots, states[limit][2], strict=True))
+                for row in context.conditions
+                if row.classification_id == root
+                and row.kind in ("classification_total", "elective_total")
+            ),
+        )
+        for root, available in cohort.items()
+    ]
+    return allocate_best_fit(targets, limit)

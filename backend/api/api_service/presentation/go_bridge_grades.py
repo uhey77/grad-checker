@@ -1,22 +1,18 @@
 """本人成績のブリッジアダプター。本人IDはセッションからのみ決定する。"""
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from pydantic import model_validator
 
 from api.api_service.presentation.dependencies import (
+    auth_service,
     current_identity,
-    database_engine,
+    grade_service,
 )
 from api.api_service.presentation.go_bridge_call import WritableSessionCall, respond
-from modules.grades.grad_checker_grades.application.grades import (
-    GradeService,
-    GradeSet,
-)
-from modules.grades.grad_checker_grades.infrastructure.grades import (
-    SqliteGradeUnitOfWork,
-)
+from modules.accounts.grad_checker_accounts.public import AuthService
+from modules.grades.grad_checker_grades.public import GradeService, GradeSet
 
 router = APIRouter(prefix="/bridge")
 
@@ -31,14 +27,17 @@ class GradeCall(WritableSessionCall):
 
 
 @router.post("/grades")
-def grades(call: GradeCall, request: Request) -> dict[str, object]:
+def grades(
+    call: GradeCall,
+    auth: Annotated[AuthService, Depends(auth_service)],
+    service: Annotated[GradeService, Depends(grade_service)],
+) -> dict[str, object]:
     def run() -> object:
-        service = GradeService(SqliteGradeUnitOfWork(database_engine(request)))
         if call.operation == "save":
-            identity = current_identity(request, call.token, call.csrf)
+            identity = current_identity(auth, call.token, call.csrf)
             assert call.grade_set is not None
             return service.save_grades(identity.account.id, call.grade_set)
-        identity = current_identity(request, call.token)
+        identity = current_identity(auth, call.token)
         return service.get_grades(identity.account.id)
 
     return respond(run)

@@ -1,5 +1,6 @@
 import {
   allowsRetake,
+  isValidAttemptSequence,
   courseStatus,
   maxAcademicYear,
   minAcademicYear,
@@ -132,7 +133,10 @@ export function sameGrades(a: GradeAttempt[], b: GradeAttempt[]): boolean {
 }
 
 // 保存前に画面で直せる入力の誤りを示す。回次の業務ルールは保存時にサーバーでも検証する。
-export function draftProblem(grades: GradeAttempt[]): string | null {
+export type GradeDraftProblem =
+  "invalid_academic_year" | "invalid_attempt_sequence";
+
+export function draftProblem(grades: GradeAttempt[]): GradeDraftProblem | null {
   if (
     grades.some(
       (g) =>
@@ -142,15 +146,11 @@ export function draftProblem(grades: GradeAttempt[]): string | null {
           g.academicYear > maxAcademicYear),
     )
   )
-    return `履修年度は${minAcademicYear}〜${maxAcademicYear}の整数で入力してください。`;
+    return "invalid_academic_year";
   const courses = new Set(grades.map((g) => g.courseId));
   for (const courseId of courses) {
     const attempts = attemptsOf(grades, courseId);
-    if (
-      attempts.some((a, index) => a.attemptNo !== index + 1) ||
-      attempts.slice(0, -1).some((a) => !allowsRetake(a))
-    )
-      return "再履修の前の回次は不合格（D・X）にしてください。";
+    if (!isValidAttemptSequence(attempts)) return "invalid_attempt_sequence";
   }
   return null;
 }

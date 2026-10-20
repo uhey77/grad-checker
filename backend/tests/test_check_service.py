@@ -19,7 +19,7 @@ from modules.requirements.grad_checker_requirements.application.check_results im
 from modules.requirements.grad_checker_requirements.application.errors import (
     evaluation as evaluation_errors,
 )
-from tests.fakes import FakeUnitOfWork
+from tests.fakes import FakeUnitOfWork, FixedClock
 
 
 class FakeEvaluationRepository(student_evaluation.EvaluationRepository):
@@ -84,7 +84,9 @@ class FakeEvaluationUnitOfWork(FakeUnitOfWork, student_evaluation.EvaluationUnit
 def test_stale_revision_rolls_back_without_saving_a_check():
     uow = FakeCheckUnitOfWork(data_revision=2)
     with pytest.raises(evaluation_errors.EvaluationError, match="revision_conflict"):
-        CheckService(uow).create_check("student", CheckRequest(expected_revision=1))
+        CheckService(uow, FixedClock()).create_check(
+            "student", CheckRequest(expected_revision=1)
+        )
     assert uow.events == ["write", "rollback"]
     assert uow.saved.added == []
 
@@ -92,13 +94,15 @@ def test_stale_revision_rolls_back_without_saving_a_check():
 def test_missing_check_is_read_without_writing():
     uow = FakeCheckUnitOfWork()
     with pytest.raises(evaluation_errors.EvaluationError, match="check_not_found"):
-        CheckService(uow).get_check("student", uuid4())
+        CheckService(uow, FixedClock()).get_check("student", uuid4())
     assert uow.events == ["read"]
 
 
 def test_check_list_counts_and_reads_in_one_read_block():
     uow = FakeCheckUnitOfWork()
-    page = CheckService(uow).list_checks("student", CheckPage(limit=5, offset=10))
+    page = CheckService(uow, FixedClock()).list_checks(
+        "student", CheckPage(limit=5, offset=10)
+    )
     assert (page.checks, page.limit, page.offset, page.total_count) == ([], 5, 10, 0)
     assert uow.events == ["read"]
 
@@ -108,15 +112,19 @@ def test_evaluation_reads_a_snapshot_and_computes_outside_the_transaction(
 ):
     uow = FakeEvaluationUnitOfWork()
     computed = []
+    times = []
 
     def evaluate(snapshot, evaluated_at):
         # 判定の計算はトランザクションを閉じてから行う。
         assert not uow.active
         computed.append(snapshot)
+        times.append(evaluated_at)
         return "result"
 
     monkeypatch.setattr(student_evaluation, "evaluate_student", evaluate)
-    service = student_evaluation.EvaluationService(uow)
+    clock = FixedClock()
+    service = student_evaluation.EvaluationService(uow, clock)
     assert service.evaluate("student") == "result"
     assert uow.events == ["read"]
     assert computed == [uow.evaluations.snapshot]
+    assert times == [clock.value]

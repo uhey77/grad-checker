@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from modules.subjects.grad_checker_subjects.public import (
     NonemptyText,
     NonnegativeInteger,
     SeedRecord,

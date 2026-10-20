@@ -5,14 +5,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from modules.grades.grad_checker_grades.application.grades import GradeAttempt
+from modules.grades.grad_checker_grades.public import GradeAttempt
 from modules.requirements.grad_checker_requirements.application.seed import (
     RequirementSeed,
 )
 from modules.requirements.grad_checker_requirements.domain.requirement import (
     RequirementKind,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from modules.subjects.grad_checker_subjects.public import (
     CurriculumData,
     NonnegativeInteger,
     SubjectDataSeed,

@@ -6,6 +6,39 @@ import ts from "typescript";
 
 const root = resolve("src");
 
+// 公開窓口を経由しても、DomainからApplicationへ逆依存させない。
+export function publicLayerAllowed(source, exportedLayer) {
+  if (!source.startsWith("modules/")) return true;
+  const layer = source.split("/")[2];
+  if (layer === "domain") return exportedLayer === "domain";
+  return ["domain", "application"].includes(exportedLayer);
+}
+
+async function publicExports(moduleName) {
+  const path = resolve(root, "modules", moduleName, "public.ts");
+  const ast = ts.createSourceFile(
+    path,
+    await readFile(path, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const layers = new Map();
+  for (const node of ast.statements) {
+    if (
+      ts.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      node.exportClause &&
+      ts.isNamedExports(node.exportClause)
+    ) {
+      const layer = node.moduleSpecifier.text.split("/")[1];
+      for (const element of node.exportClause.elements)
+        layers.set(element.name.text, layer);
+    }
+  }
+  return layers;
+}
+
 // ファイル名ではなく、実際のimport/export先と呼出しを解析する。
 export function dependencyAllowed(source, target) {
   const parts = source.split("/");
@@ -67,6 +100,18 @@ export function dependencyAllowed(source, target) {
 
 test("境界検査は逆依存とモジュール内部への直接参照を拒否する", () => {
   assert.equal(
+    publicLayerAllowed("modules/requirements/domain/models", "application"),
+    false,
+  );
+  assert.equal(
+    publicLayerAllowed("modules/requirements/domain/models", "domain"),
+    true,
+  );
+  assert.equal(
+    publicLayerAllowed("modules/requirements/application/evaluate", "domain"),
+    true,
+  );
+  assert.equal(
     dependencyAllowed(
       "modules/subjects/application/list",
       "modules/subjects/infrastructure/http",
@@ -124,6 +169,9 @@ test("境界検査は逆依存とモジュール内部への直接参照を拒�
 });
 
 test("全ソースが層・モジュール・アプリ・共通基盤の境界を守る", async () => {
+  const contracts = new Map();
+  for (const moduleName of await readdir(resolve(root, "modules")))
+    contracts.set(moduleName, await publicExports(moduleName));
   async function scan(directory) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = resolve(directory, entry.name);
@@ -161,6 +209,32 @@ test("全ソースが層・モジュール・アプリ・共通基盤の境界�
               dependencyAllowed(source, target),
               `${source} → ${target}`,
             );
+            const sourceParts = source.split("/");
+            const targetParts = target.split("/");
+            if (
+              sourceParts[0] === "modules" &&
+              targetParts[0] === "modules" &&
+              sourceParts[1] !== targetParts[1]
+            ) {
+              const bindings = ts.isImportDeclaration(node)
+                ? node.importClause?.namedBindings
+                : ts.isExportDeclaration(node)
+                  ? node.exportClause
+                  : null;
+              assert.ok(
+                bindings &&
+                  (ts.isNamedImports(bindings) || ts.isNamedExports(bindings)),
+                `${source}: モジュール間は名前付きの公開契約を使う`,
+              );
+              for (const element of bindings.elements) {
+                const name = (element.propertyName ?? element.name).text;
+                const exportedLayer = contracts.get(targetParts[1])?.get(name);
+                assert.ok(
+                  publicLayerAllowed(source, exportedLayer),
+                  `${source} → ${target}.${name} (${exportedLayer})`,
+                );
+              }
+            }
           } else if (
             layer === "domain" ||
             layer === "application" ||

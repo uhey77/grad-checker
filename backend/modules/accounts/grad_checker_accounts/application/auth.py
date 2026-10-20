@@ -3,7 +3,7 @@
 import hashlib
 import secrets
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict
 
@@ -11,6 +11,7 @@ from modules.accounts.grad_checker_accounts.application.errors.auth import AuthE
 from modules.accounts.grad_checker_accounts.domain.username import (
     normalize_username,
 )
+from modules.shared.grad_checker_shared.application.clock import Clock
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 
@@ -116,10 +117,12 @@ class AuthService:
         uow: AccountUnitOfWork,
         passwords: Passwords,
         policy: AuthPolicy,
+        clock: Clock,
     ) -> None:
         self.uow = uow
         self.passwords = passwords
         self.policy = policy
+        self.clock = clock
 
     def _attempt(self, operation: str, identity: str, now: datetime) -> None:
         # 試行回数は操作本体と別にcommitし、後続の検証や保存が失敗しても残す。
@@ -140,7 +143,7 @@ class AuthService:
             raise AuthError("invalid_password")
 
     def register(self, username: str, password: str, client_key: str) -> str:
-        now = datetime.now(UTC)
+        now = self.clock.now()
         self._attempt("register-ip", client_key, now)
         username = self._username(username)
         self._attempt("register-username", username, now)
@@ -155,7 +158,7 @@ class AuthService:
     def recover(
         self, username: str, recovery_code: str, password: str, client_key: str
     ) -> str:
-        now = datetime.now(UTC)
+        now = self.clock.now()
         self._attempt("recover-ip", client_key, now)
         username = self._username(username)
         self._attempt("recover-username", username, now)
@@ -177,7 +180,7 @@ class AuthService:
     def login(
         self, username: str, password: str, client_key: str
     ) -> tuple[SessionIdentity, str]:
-        now = datetime.now(UTC)
+        now = self.clock.now()
         self._attempt("login-ip", client_key, now)
         username = self._username(username)
         self._attempt("login-username", username, now)
@@ -206,7 +209,7 @@ class AuthService:
     def session(self, token: str) -> SessionIdentity:
         # 有効なセッションの最終利用日時を更新するため、書込みで確認する。
         with self.uow.write():
-            identity = self.uow.accounts.session(digest(token), datetime.now(UTC))
+            identity = self.uow.accounts.session(digest(token), self.clock.now())
         if identity is None:
             raise AuthError("invalid_credentials")
         csrf = digest(f"csrf:{token}")
@@ -226,7 +229,7 @@ class AuthService:
     def logout(self, token: str, csrf: str) -> None:
         self.authorize(token, csrf)
         with self.uow.write():
-            self.uow.accounts.revoke_session(digest(token), datetime.now(UTC))
+            self.uow.accounts.revoke_session(digest(token), self.clock.now())
 
     @staticmethod
     def _username(username: str) -> str:

@@ -1,6 +1,6 @@
 """認証ユースケースのトランザクション範囲をFakeのUnit of Workで検証する。"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -15,7 +15,7 @@ from modules.accounts.grad_checker_accounts.application.auth import (
     digest,
 )
 from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
-from tests.fakes import FakeUnitOfWork
+from tests.fakes import FakeUnitOfWork, FixedClock
 
 USERNAME = "student_01"
 PASSWORD = "app-only-password-123"
@@ -128,7 +128,7 @@ def uow() -> FakeAccountUnitOfWork:
 
 @pytest.fixture
 def service(uow: FakeAccountUnitOfWork) -> AuthService:
-    return AuthService(uow, FakePasswords(uow), POLICY)
+    return AuthService(uow, FakePasswords(uow), POLICY, FixedClock())
 
 
 ATTEMPTS = ["write", "commit", "write", "commit"]
@@ -191,3 +191,30 @@ def test_password_changed_after_verification_does_not_create_a_session(uow, serv
         service.login(USERNAME, PASSWORD, "ip")
     assert uow.events == [*ATTEMPTS, "read", "write", "rollback"]
     assert repository.saved_sessions == []
+
+
+def test_session_expiration_and_revocation_use_the_injected_clock(uow):
+    clock = FixedClock()
+    service = AuthService(uow, FakePasswords(uow), POLICY, clock)
+    identity, token = service.login(USERNAME, PASSWORD, "ip")
+    assert identity.expires_at == clock.value + timedelta(hours=POLICY.session_hours)
+    stored = StoredSession(
+        account=identity.account,
+        csrf_token_hash=digest(identity.csrf_token),
+        expires_at=identity.expires_at,
+    )
+    observed = []
+
+    def session(token_hash, now):
+        observed.append(now)
+        return (
+            stored if token_hash == digest(token) and now < stored.expires_at else None
+        )
+
+    uow.repository.session = session
+    clock.value = identity.expires_at - timedelta(seconds=1)
+    assert service.session(token).account == identity.account
+    clock.value = identity.expires_at
+    with pytest.raises(AuthError, match="invalid_credentials"):
+        service.session(token)
+    assert observed == [identity.expires_at - timedelta(seconds=1), identity.expires_at]

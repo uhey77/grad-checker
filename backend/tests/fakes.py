@@ -2,7 +2,9 @@
 
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 
+from modules.shared.grad_checker_shared.application.clock import Clock
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 
@@ -49,3 +51,11 @@ class FakeUnitOfWork(UnitOfWork):
             yield
         finally:
             self._active = False
+
+
+class FixedClock(Clock):
+    def __init__(self, value: datetime | None = None) -> None:
+        self.value = value or datetime(2026, 10, 20, tzinfo=UTC)
+
+    def now(self) -> datetime:
+        return self.value

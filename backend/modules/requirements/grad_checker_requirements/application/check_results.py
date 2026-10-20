@@ -1,12 +1,13 @@
 """本人が実行した卒業要件チェックを、当時の入力・結果とともに履歴として保存する。"""
 
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from modules.grades.grad_checker_grades.application.grades import GradeAttempt
+from modules.grades.grad_checker_grades.public import GradeAttempt
+from modules.shared.grad_checker_shared.application.clock import Clock
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 from .completion_policy import CompletionAnswer
@@ -110,8 +111,9 @@ class CheckUnitOfWork(UnitOfWork):
 
 
 class CheckService:
-    def __init__(self, uow: CheckUnitOfWork) -> None:
+    def __init__(self, uow: CheckUnitOfWork, clock: Clock) -> None:
         self.uow = uow
+        self.clock = clock
 
     def create_check(self, student_id: str, request: CheckRequest) -> SavedCheck:
         # 判定に使った成績版のまま保存するため、所属・成績・マスタの読取りから
@@ -126,7 +128,7 @@ class CheckService:
             snapshot = snapshot.model_copy(
                 update={"completion_answers": request.completion_answers}
             )
-            created_at = datetime.now(UTC)
+            created_at = self.clock.now()
             grades = sorted(
                 snapshot.grades, key=lambda grade: (grade.course_id, grade.attempt_no)
             )

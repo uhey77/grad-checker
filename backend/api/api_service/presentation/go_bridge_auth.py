@@ -1,12 +1,13 @@
 """認証ユースケースのブリッジ呼出し。Cookieと外部HTTPはGoが管理する。"""
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api.api_service.presentation.dependencies import auth_service
 from api.api_service.presentation.go_bridge_call import respond
+from modules.accounts.grad_checker_accounts.public import AuthService
 
 router = APIRouter(prefix="/bridge")
 
@@ -45,16 +46,16 @@ class AuthCall(BaseModel):
 
 
 @router.post("/auth")
-def auth(call: AuthCall, request: Request) -> dict[str, object]:
-    settings = request.app.state.settings
-    service = auth_service(request)
+def auth(
+    call: AuthCall, service: Annotated[AuthService, Depends(auth_service)]
+) -> dict[str, object]:
 
     def run() -> object:
         if call.operation == "config":
             return {
                 "policy": {
-                    "password_min_length": settings.auth_password_min_length,
-                    "password_max_length": settings.auth_password_max_length,
+                    "password_min_length": service.policy.password_min_length,
+                    "password_max_length": service.policy.password_max_length,
                 }
             }
         if call.operation == "register":

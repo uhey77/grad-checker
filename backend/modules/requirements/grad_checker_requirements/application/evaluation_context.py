@@ -2,9 +2,9 @@
 
 from uuid import UUID
 
-from modules.grades.grad_checker_grades.application.errors.grades import GradeError
-from modules.grades.grad_checker_grades.application.grades import (
+from modules.grades.grad_checker_grades.public import (
     GradeAttempt,
+    GradeError,
     check_attempts,
 )
 from modules.requirements.grad_checker_requirements.domain.requirement import (

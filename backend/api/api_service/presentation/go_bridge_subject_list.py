@@ -1,19 +1,17 @@
 """Goからユースケースを呼ぶブリッジアダプター。外部API仕様は持たない。"""
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from api.api_service.presentation.dependencies import database_engine
+from api.api_service.presentation.dependencies import subject_list_uow
 from api.api_service.presentation.go_bridge_call import respond
-from modules.subjects.grad_checker_subjects.application.subject_list import (
+from modules.subjects.grad_checker_subjects.public import (
+    SubjectListUnitOfWork,
     get_subject_list,
     list_subject_programs,
-)
-from modules.subjects.grad_checker_subjects.infrastructure.subject_list import (
-    SqliteSubjectListUnitOfWork,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -34,8 +32,10 @@ class SubjectListCall(BaseModel):
 
 
 @router.post("/subject-list")
-def subject_list(call: SubjectListCall, request: Request) -> dict[str, object]:
-    uow = SqliteSubjectListUnitOfWork(database_engine(request))
+def subject_list(
+    call: SubjectListCall,
+    uow: Annotated[SubjectListUnitOfWork, Depends(subject_list_uow)],
+) -> dict[str, object]:
 
     def run() -> object:
         if call.curriculum_id is None:

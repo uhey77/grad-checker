@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { gradeDraftProblemMessage } from "./errors.ts";
 import { errorMessage } from "../errorMessage";
 import { useExclusiveAction } from "../useExclusiveAction";
 import { useUnsavedChangesWarning } from "../useUnsavedChangesWarning";
@@ -152,7 +153,7 @@ export function useGradeEntry(
 
   async function save() {
     if (!data || running() || conflict || !dirty) return;
-    const problem = draftProblem(draft);
+    const problem = gradeDraftProblemMessage(draftProblem(draft));
     if (problem) {
       setError(problem);
       return;

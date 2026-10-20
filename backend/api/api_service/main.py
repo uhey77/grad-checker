@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from api.api_service.composition import build_dependencies
 from api.api_service.presentation.go_bridge_auth import router as bridge_auth_router
 from api.api_service.presentation.go_bridge_call import failure
 from api.api_service.presentation.go_bridge_checks import (
@@ -52,6 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
         runtime_settings = settings or Settings()
         engine = create_database_engine(runtime_settings.database_url)
+        installed_dependencies = {}
         try:
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
@@ -62,8 +64,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.state.database_engine = engine
             application.state.settings = runtime_settings
             application.state.passwords = ArgonPasswords()
+            for dependency, factory in build_dependencies(
+                engine, runtime_settings, application.state.passwords
+            ).items():
+                if dependency not in application.dependency_overrides:
+                    application.dependency_overrides[dependency] = factory
+                    installed_dependencies[dependency] = factory
             yield
         finally:
+            for dependency, factory in installed_dependencies.items():
+                if application.dependency_overrides.get(dependency) is factory:
+                    del application.dependency_overrides[dependency]
             engine.dispose()
 
     application = FastAPI(

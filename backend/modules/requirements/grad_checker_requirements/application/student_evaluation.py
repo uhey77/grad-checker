@@ -1,11 +1,12 @@
 """本人の保存済みデータを取得し、最新の卒業単位条件を計算する。"""
 
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from modules.shared.grad_checker_shared.application.clock import Clock
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 from .evaluation import evaluate_graduation
@@ -60,15 +61,16 @@ def evaluate_student(
 
 
 class EvaluationService:
-    def __init__(self, uow: EvaluationUnitOfWork) -> None:
+    def __init__(self, uow: EvaluationUnitOfWork, clock: Clock) -> None:
         self.uow = uow
+        self.clock = clock
 
     def evaluate(self, student_id: str) -> StudentEvaluation:
-        return evaluate_student(self._snapshot(student_id), datetime.now(UTC))
+        return evaluate_student(self._snapshot(student_id), self.clock.now())
 
     def dashboard(self, student_id: str) -> StudentDashboard:
         snapshot = self._snapshot(student_id)
-        result = evaluate_student(snapshot, datetime.now(UTC))
+        result = evaluate_student(snapshot, self.clock.now())
         return StudentDashboard(
             **result.model_dump(
                 include={

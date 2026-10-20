@@ -1,43 +1,53 @@
-"""ブリッジ呼出しごとのPythonリソース管理。"""
+"""ブリッジが必要とする契約。具体的な生成方法はComposition Rootで登録する。"""
 
-from fastapi import Request
-from sqlalchemy import Engine
-
-from modules.accounts.grad_checker_accounts.application.auth import (
-    AuthPolicy,
+from modules.accounts.grad_checker_accounts.public import (
     AuthService,
+    ProfileService,
     SessionIdentity,
 )
-from modules.accounts.grad_checker_accounts.infrastructure.repository import (
-    SqliteAccountUnitOfWork,
+from modules.grades.grad_checker_grades.public import GradeService
+from modules.requirements.grad_checker_requirements.public import (
+    CheckService,
+    EvaluationService,
+)
+from modules.subjects.grad_checker_subjects.public import (
+    CourseCatalogService,
+    SubjectListUnitOfWork,
 )
 
 
-def database_engine(request: Request) -> Engine:
-    """各モジュールのUnit of Workへ渡すDBエンジン。"""
-    return request.app.state.database_engine
+def auth_service() -> AuthService:
+    raise RuntimeError("AuthService is not configured")
 
 
-def auth_service(request: Request) -> AuthService:
-    settings = request.app.state.settings
-    return AuthService(
-        SqliteAccountUnitOfWork(database_engine(request)),
-        request.app.state.passwords,
-        AuthPolicy(
-            session_hours=settings.auth_session_hours,
-            password_min_length=settings.auth_password_min_length,
-            password_max_length=settings.auth_password_max_length,
-            attempt_window_minutes=settings.auth_attempt_window_minutes,
-            attempt_limit=settings.auth_attempt_limit,
-        ),
-    )
+def profile_service() -> ProfileService:
+    raise RuntimeError("ProfileService is not configured")
+
+
+def grade_service() -> GradeService:
+    raise RuntimeError("GradeService is not configured")
+
+
+def evaluation_service() -> EvaluationService:
+    raise RuntimeError("EvaluationService is not configured")
+
+
+def check_service() -> CheckService:
+    raise RuntimeError("CheckService is not configured")
+
+
+def course_catalog_service() -> CourseCatalogService:
+    raise RuntimeError("CourseCatalogService is not configured")
+
+
+def subject_list_uow() -> SubjectListUnitOfWork:
+    raise RuntimeError("SubjectListUnitOfWork is not configured")
 
 
 def current_identity(
-    request: Request, token: str, csrf: str | None = None
+    service: AuthService, token: str, csrf: str | None = None
 ) -> SessionIdentity:
-    """本人をセッションから決定する。変更操作はCSRFトークンを渡して照合する。"""
-    service = auth_service(request)
+    """本人はセッションから決定し、変更操作はCSRFトークンも照合する。"""
     if csrf is None:
         return service.session(token)
     return service.authorize(token, csrf)

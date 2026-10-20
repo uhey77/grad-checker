@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 
 from api.api_service.main import create_app
+from api.api_service.presentation.dependencies import auth_service
 from config.settings import Settings
 from modules.accounts.grad_checker_accounts.application.auth import AuthService
 
@@ -54,6 +55,44 @@ def test_database_url_is_loaded_at_startup(tmp_path: Path, monkeypatch) -> None:
 
     with TestClient(application):
         assert Path(application.state.database_engine.url.database) == database_path
+
+
+def test_composition_creates_request_local_uows_and_cleans_up_on_restart(tmp_path):
+    application = create_app(Settings(database_url=f"sqlite:///{tmp_path / 't.db'}"))
+    previous = None
+    for _ in range(2):
+        with TestClient(application) as client:
+            factory = application.dependency_overrides[auth_service]
+            first, second = factory(), factory()
+            assert isinstance(first, AuthService)
+            assert isinstance(second, AuthService)
+            assert first.uow is not second.uow
+            assert first.passwords is second.passwords
+            assert first.clock is second.clock
+            if previous is not None:
+                assert factory is not previous
+            assert (
+                client.post("/bridge/auth", json={"operation": "config"}).status_code
+                == 200
+            )
+            previous = factory
+        assert auth_service not in application.dependency_overrides
+
+
+def test_composition_preserves_dependency_overrides(tmp_path):
+    application = create_app(Settings(database_url=f"sqlite:///{tmp_path / 't.db'}"))
+
+    def custom_auth():
+        # このテストの開発用科目一覧経路は認証を利用しない。
+        raise AssertionError("should not resolve auth")
+
+    application.dependency_overrides[auth_service] = custom_auth
+    with TestClient(application) as client:
+        assert application.dependency_overrides[auth_service] is custom_auth
+        assert client.post(
+            "/bridge/subject-list", json={"operation": "list_programs"}
+        ).json() == {"data": []}
+    assert application.dependency_overrides[auth_service] is custom_auth
 
 
 @pytest.mark.parametrize(

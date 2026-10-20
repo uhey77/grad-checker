@@ -1,6 +1,7 @@
 """業務モジュールの依存方向と共有設定を検証する。"""
 
 import ast
+from importlib.util import resolve_name
 from pathlib import Path
 
 import pytest
@@ -18,10 +19,67 @@ def imported_modules(package: str) -> list[tuple[Path, list[str]]]:
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 imports.extend(alias.name for alias in node.names)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                imports.append(node.module)
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                if node.level:
+                    parent = ".".join(source.parent.relative_to(BACKEND).parts)
+                    module = resolve_name("." * node.level + module, parent)
+                imports.append(module)
         result.append((source, imports))
     return result
+
+
+@pytest.mark.parametrize("module", ["accounts", "grades", "requirements", "subjects"])
+def test_all_business_layers_and_public_contracts(module: str) -> None:
+    package = f"modules/{module}/grad_checker_{module}"
+    prefix = package.replace("/", ".")
+    for source, imports in imported_modules(package):
+        layer = source.relative_to(BACKEND / package).parts[0]
+        for name in imports:
+            if layer in ("domain", "application"):
+                assert name.split(".")[0] not in (
+                    "api",
+                    "config",
+                    "fastapi",
+                    "uvicorn",
+                    "sqlalchemy",
+                    "sqlmodel",
+                ), (source, name)
+                assert ".infrastructure" not in name, (source, name)
+            if layer == "domain":
+                assert ".application" not in name and not name.endswith(".public"), (
+                    source,
+                    name,
+                )
+            if layer == "infrastructure":
+                assert ".presentation" not in name, (source, name)
+            # モジュール間の業務契約はpublicに限定する。
+            if (
+                name.startswith("modules.")
+                and not name.startswith((prefix + ".", "modules.shared."))
+                and (".application" in name or ".domain" in name)
+            ):
+                pytest.fail(f"{source}: internal module contract {name}")
+            if layer == "public.py":
+                assert ".infrastructure" not in name, (source, name)
+
+
+def test_bridge_presentation_only_uses_public_business_contracts() -> None:
+    for source, imports in imported_modules("api/api_service/presentation"):
+        for name in imports:
+            assert name.split(".")[0] not in ("sqlalchemy", "sqlmodel", "config"), (
+                source,
+                name,
+            )
+            if name.startswith("modules."):
+                assert name.endswith(".public") or name.startswith(
+                    "modules.shared.grad_checker_shared.application."
+                ), (source, name)
+
+
+def test_application_time_is_supplied_as_a_dependency() -> None:
+    for source in (BACKEND / "modules").rglob("application/*.py"):
+        assert "datetime.now(" not in source.read_text(), source
 
 
 def test_subjects_do_not_import_api_or_configuration() -> None:

@@ -8,9 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from modules.grades.grad_checker_grades.application.errors.grades import GradeError
 from modules.grades.grad_checker_grades.domain.grade import (
+    CourseAttempts,
     GradeCode,
+    InvalidCourseAttemptsError,
     ResultStatus,
-    is_valid_attempt_sequence,
 )
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
@@ -70,19 +71,21 @@ def check_attempts(grades: list[GradeAttempt]) -> None:
     for grade in grades:
         by_course[grade.course_id].append(grade)
     for attempts in by_course.values():
-        if len({attempt.attempt_no for attempt in attempts}) != len(attempts):
-            raise GradeError("duplicate_attempt")
-        ordered = sorted(attempts, key=lambda attempt: attempt.attempt_no)
-        sequence = [
-            (
-                attempt.attempt_no,
-                ResultStatus(attempt.result_status),
-                None if attempt.grade_code is None else GradeCode(attempt.grade_code),
+        try:
+            CourseAttempts(
+                tuple(
+                    (
+                        attempt.attempt_no,
+                        ResultStatus(attempt.result_status),
+                        None
+                        if attempt.grade_code is None
+                        else GradeCode(attempt.grade_code),
+                    )
+                    for attempt in attempts
+                )
             )
-            for attempt in ordered
-        ]
-        if not is_valid_attempt_sequence(sequence):
-            raise GradeError("invalid_attempt_sequence")
+        except InvalidCourseAttemptsError as error:
+            raise GradeError(error.code) from error
 
 
 class GradeService:

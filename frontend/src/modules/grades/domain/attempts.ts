@@ -32,3 +32,14 @@ export function courseStatus(attempts: GradeAttempt[]): CourseStatus {
   if (latest.gradeCode === "X") return "absent";
   return "earned";
 }
+
+// 連番と、最新回次より前がすべて再履修可能であることを確認する。
+export function isValidAttemptSequence(
+  attempts: readonly GradeAttempt[],
+): boolean {
+  const ordered = [...attempts].sort((a, b) => a.attemptNo - b.attemptNo);
+  return (
+    ordered.every((attempt, index) => attempt.attemptNo === index + 1) &&
+    ordered.slice(0, -1).every(allowsRetake)
+  );
+}

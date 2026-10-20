@@ -3,9 +3,7 @@
 from collections.abc import Callable
 from uuid import UUID
 
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
-    SubjectOfferingData,
-)
+from modules.subjects.grad_checker_subjects.public import SubjectOfferingData
 
 from .evaluation_context import EvaluationContext
 from .evaluation_models import (

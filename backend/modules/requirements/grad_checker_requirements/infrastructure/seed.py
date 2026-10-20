@@ -32,12 +32,10 @@ from modules.requirements.grad_checker_requirements.infrastructure.models import
 from modules.shared.grad_checker_shared.infrastructure.unit_of_work import (
     SqlUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
-    SubjectDataSeed,
-)
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     SqliteSubjectDataStore,
 )
+from modules.subjects.grad_checker_subjects.public import SubjectDataSeed
 
 from ..application.completion_policy import CompletionPolicyData
 from .models import CompletionPolicy

@@ -31,6 +31,7 @@ try {
       "src/modules/subjects/infrastructure/subject-list/mappers.ts",
       "src/modules/subjects/infrastructure/subject-list/HttpSubjectListRepository.ts",
       "src/hooks/subjects/errors.ts",
+      "src/hooks/grades/errors.ts",
       "src/modules/accounts/infrastructure/HttpAuthRepository.ts",
       "src/modules/profiles/infrastructure/HttpProfileRepository.ts",
       "src/modules/profiles/application/ProfileUseCases.ts",

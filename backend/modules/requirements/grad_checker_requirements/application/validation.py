@@ -15,11 +15,9 @@ from modules.requirements.grad_checker_requirements.domain.requirement import (
     CreditRuleKind,
     RequirementKind,
 )
-from modules.subjects.grad_checker_subjects.application.errors.subject_data import (
-    SeedError,
-)
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from modules.subjects.grad_checker_subjects.public import (
     ClassificationData,
+    SeedError,
     SubjectDataSeed,
     validate_subject_data,
 )

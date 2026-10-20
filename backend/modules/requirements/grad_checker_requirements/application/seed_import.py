@@ -18,9 +18,7 @@ from modules.requirements.grad_checker_requirements.application.validation impor
     validate_requirements,
 )
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
-    SubjectDataSeed,
-)
+from modules.subjects.grad_checker_subjects.public import SubjectDataSeed
 
 from .completion_policy import CompletionPolicyData
 

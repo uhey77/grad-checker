@@ -1,19 +1,22 @@
 """本人の判定履歴を保存・一覧・取得するブリッジアダプター。本人IDはセッションからのみ決定する。"""
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from pydantic import Field, model_validator
 
 from api.api_service.presentation.dependencies import (
+    auth_service,
+    check_service,
     current_identity,
-    database_engine,
 )
 from api.api_service.presentation.go_bridge_call import WritableSessionCall, respond
-from modules.requirements.grad_checker_requirements.application import check_results
-from modules.requirements.grad_checker_requirements.infrastructure import (
-    check_results as check_storage,
+from modules.accounts.grad_checker_accounts.public import AuthService
+from modules.requirements.grad_checker_requirements.public import (
+    CheckPage,
+    CheckRequest,
+    CheckService,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -21,8 +24,8 @@ router = APIRouter(prefix="/bridge")
 
 class CheckCall(WritableSessionCall):
     operation: Literal["create", "list", "get"]
-    request: check_results.CheckRequest | None = None
-    page: check_results.CheckPage | None = None
+    request: CheckRequest | None = None
+    page: CheckPage | None = None
     check_id: UUID | None = Field(default=None, strict=False)
 
     @model_validator(mode="after")
@@ -35,16 +38,17 @@ class CheckCall(WritableSessionCall):
 
 
 @router.post("/checks")
-def checks(call: CheckCall, request: Request) -> dict[str, object]:
+def checks(
+    call: CheckCall,
+    auth: Annotated[AuthService, Depends(auth_service)],
+    service: Annotated[CheckService, Depends(check_service)],
+) -> dict[str, object]:
     def run() -> object:
-        service = check_results.CheckService(
-            check_storage.SqliteCheckUnitOfWork(database_engine(request))
-        )
         if call.operation == "create":
-            identity = current_identity(request, call.token, call.csrf)
+            identity = current_identity(auth, call.token, call.csrf)
             assert call.request is not None
             return service.create_check(identity.account.id, call.request)
-        identity = current_identity(request, call.token)
+        identity = current_identity(auth, call.token)
         if call.operation == "list":
             assert call.page is not None
             return service.list_checks(identity.account.id, call.page)

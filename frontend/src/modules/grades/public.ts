@@ -31,4 +31,5 @@ export {
   takenYears,
   type GradeChoice,
   type GradeFilters,
+  type GradeDraftProblem,
 } from "./application/gradeDraft.ts";

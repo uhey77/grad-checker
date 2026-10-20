@@ -15,7 +15,10 @@ const { toStudentGrades } = await load(
   "modules/grades/infrastructure/mappers.js",
 );
 const draft = await load("modules/grades/application/gradeDraft.js");
-const { courseStatus } = await load("modules/grades/domain/attempts.js");
+const { gradeDraftProblemMessage } = await load("hooks/grades/errors.js");
+const { courseStatus, isValidAttemptSequence } = await load(
+  "modules/grades/domain/attempts.js",
+);
 
 const dto = (course, number = 1, code = "A", year = 2026, term = "first") => ({
   course_id: course,
@@ -148,13 +151,13 @@ test("成績の編集は合格・未確定の後に再履修を追加せず、�
     attempt("c1", 2, "A", 2026, "second"),
   );
   assert.equal(draft.draftProblem(grades), null);
-  assert.match(
+  assert.equal(
     draft.draftProblem(draft.chooseGrade(grades, "c1", 1, "A")),
-    /不合格/,
+    "invalid_attempt_sequence",
   );
-  assert.match(
+  assert.equal(
     draft.draftProblem(draft.setAttemptPeriod(grades, "c1", 1, 1800, null)),
-    /1900/,
+    "invalid_academic_year",
   );
   grades = draft.removeLatestAttempt(grades, "c1");
   assert.equal(draft.attemptsOf(grades, "c1").length, 1);
@@ -201,5 +204,28 @@ test("修得状況と履修年度・学期で絞り込み、年度と学期は�
   assert.deepEqual(
     draft.takenYears([...attempts, attempt("d", 1, "A", null)]),
     [2026, 2025],
+  );
+});
+
+test("成績のDomainは連番・再履修を検証し、画面が入力エラーを日本語へ変換する", () => {
+  const valid = [attempt("c", 2, "A"), attempt("c", 1, "D")];
+  assert.ok(isValidAttemptSequence(valid));
+  assert.equal(valid[0].attemptNo, 2);
+  for (const invalid of [
+    [attempt("c", 2, "A")],
+    [attempt("c", 1, "D"), attempt("c", 1, "A")],
+    [attempt("c", 1, "D"), attempt("c", 3, "A")],
+    [attempt("c", 1, "A"), attempt("c", 2, "D")],
+    [attempt("c", 1, null), attempt("c", 2, "A")],
+  ])
+    assert.equal(isValidAttemptSequence(invalid), false);
+  assert.equal(gradeDraftProblemMessage(null), null);
+  assert.equal(
+    gradeDraftProblemMessage("invalid_academic_year"),
+    "履修年度は1900〜2100の整数で入力してください。",
+  );
+  assert.equal(
+    gradeDraftProblemMessage("invalid_attempt_sequence"),
+    "再履修の前の回次は不合格（D・X）にしてください。",
   );
 });

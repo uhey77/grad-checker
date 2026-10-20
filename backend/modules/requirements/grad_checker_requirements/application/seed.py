@@ -9,17 +9,15 @@ from modules.requirements.grad_checker_requirements.domain.requirement import (
     CreditRuleKind,
     RequirementKind,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
+from modules.subjects.grad_checker_subjects.public import (
     NonemptyText,
     NonnegativeInteger,
     PositiveInteger,
     SeedRecord,
+    VerificationStatus,
 )
-from modules.subjects.grad_checker_subjects.domain import curriculum_verification_status
 
 from .completion_policy import CompletionPolicyData
-
-VerificationStatus = curriculum_verification_status.VerificationStatus
 
 
 class RequirementData(SeedRecord):

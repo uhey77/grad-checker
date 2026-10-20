@@ -6,13 +6,13 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 from pydantic import ValidationError
 
-from modules.grades.grad_checker_grades.application.grades import GradeAttempt
-from modules.grades.grad_checker_grades.domain.grade import PASSING_GRADE_CODES
+from modules.grades.grad_checker_grades.public import PASSING_GRADE_CODES, GradeAttempt
 from modules.requirements.grad_checker_requirements.domain.requirement import (
     CreditRuleKind,
     RequirementKind,
 )
 
+from .credit_summary import summarize
 from .errors.evaluation import (
     EvaluationError,
 )
@@ -37,17 +37,6 @@ from .seed import (
     RequirementData,
 )
 from .validation import validate_requirements
-
-
-def summarize(required: int, earned: int, credited: int) -> CreditSummary:
-    shortage = max(required - credited, 0)
-    return CreditSummary(
-        required_credits=required,
-        earned_credits=earned,
-        credited_credits=credited,
-        shortage=shortage,
-        result="fail" if shortage else "pass",
-    )
 
 
 class _Evaluation:
