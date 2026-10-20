@@ -1,11 +1,16 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const directory = await mkdtemp(join(tmpdir(), "grad-checker-tests-"));
 try {
   await writeFile(join(directory, "package.json"), '{"type":"module"}');
+  await symlink(
+    resolve("node_modules"),
+    join(directory, "node_modules"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
   const compile = spawnSync(
     process.execPath,
     [
@@ -18,6 +23,8 @@ try {
       "--moduleResolution",
       "Bundler",
       "--strict",
+      "--jsx",
+      "react-jsx",
       "--skipLibCheck",
       "--rootDir",
       "src",
@@ -44,6 +51,15 @@ try {
       "src/modules/subjects/application/course-catalog/filterCatalogCourses.ts",
       "src/shared/infrastructure/http.ts",
       "src/shared/infrastructure/dtoReader.ts",
+      "src/i18n/createI18n.ts",
+      "src/i18n/messages.ts",
+      "src/components/accounts/AuthForm.tsx",
+      "src/components/requirements/GraduationResultView.tsx",
+      "src/components/requirements/GraduationCheckPanel.tsx",
+      "src/components/profiles/ProgramCoverage.tsx",
+      "src/components/grades/GradeTable.tsx",
+      "src/components/FilterFields.tsx",
+      "src/components/SaveBar.tsx",
     ],
     { stdio: "inherit" },
   );
@@ -61,6 +77,7 @@ try {
         "tests/requirements.test.mjs",
         "tests/course-catalog.test.mjs",
         "tests/shared-http.test.mjs",
+        "tests/i18n.test.mjs",
       ],
       {
         stdio: "inherit",

@@ -21,6 +21,7 @@ export function dependencyAllowed(source, target) {
       targetParts[1] === "infrastructure"
     );
   if (ownModule) {
+    if (targetParts[0] === "i18n") return false;
     if (["app", "App", "main", ...uiDirectories].includes(targetParts[0]))
       return false;
     if (targetParts[0] === "modules" && targetParts[1] !== ownModule)
@@ -51,6 +52,7 @@ export function dependencyAllowed(source, target) {
       return false;
     return targetParts[0] !== "main";
   }
+  if (parts[0] === "i18n") return targetParts[0] === "i18n";
   if (parts[0] === "app" && targetParts[0] === "modules")
     return (
       parts[1] === "composition" &&
@@ -66,6 +68,17 @@ export function dependencyAllowed(source, target) {
 }
 
 test("境界検査は逆依存とモジュール内部への直接参照を拒否する", () => {
+  for (const layer of ["domain", "application", "infrastructure"]) {
+    assert.equal(
+      dependencyAllowed(`modules/subjects/${layer}/example`, "i18n/createI18n"),
+      false,
+    );
+  }
+  assert.equal(
+    dependencyAllowed("i18n/createI18n", "app/composition/createApplication"),
+    false,
+  );
+  assert.equal(dependencyAllowed("i18n/createI18n", "i18n/en"), true);
   assert.equal(
     dependencyAllowed(
       "modules/subjects/application/list",
@@ -161,6 +174,11 @@ test("全ソースが層・モジュール・アプリ・共通基盤の境界�
               dependencyAllowed(source, target),
               `${source} → ${target}`,
             );
+          } else if (
+            source.startsWith("modules/") &&
+            /^(i18next|react-i18next)(\/|$)/.test(dependency)
+          ) {
+            assert.fail(`${source}: 翻訳はpresentationに限定する`);
           } else if (
             layer === "domain" ||
             layer === "application" ||
