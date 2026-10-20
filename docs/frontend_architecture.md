@@ -14,6 +14,7 @@ frontend/
 │   ├── App.tsx                           # アプリ全体の画面配置
 │   ├── app/composition/createApplication.ts  # 設定・依存の組み立て
 │   ├── layouts/AppLayout.tsx             # 共通レイアウト
+│   ├── i18n/                             # 表示言語・英語リソース・エラー表示変換
 │   ├── pages/subjects/SubjectListPage.tsx # 画面構成
 │   ├── components/subjects/              # 科目専用の表示部品
 │   │   ├── ProgramSelector.tsx           # 課程選択
@@ -39,7 +40,7 @@ frontend/
 
 科目専用のUIもcomponents・hooks・pagesに置き、各ディレクトリ内でsubjectsにまとめる。
 共通部品は各ディレクトリの共通領域へ配置する。業務領域をmodules/subjects、一覧という操作を内部のsubject-listとする。
-画像素材・Context・多言語化・API生成コードなどは実装する時点で対応するディレクトリを追加する。
+翻訳は`i18n/`へ集約し、`App`の`I18nextProvider`から全画面へ渡す。画像素材・API生成コードなどは実装する時点で対応するディレクトリを追加する。
 モジュールごとのpackage.jsonやロックは作らず、フロントエンド全体で依存管理する。
 
 ## 4層と依存境界
@@ -73,7 +74,7 @@ Pageは画面構成、各コンポーネントはpropsで受け取るデータ�
 
 HTTP失敗はinfrastructureでSubjectListErrorに変換する。404・409・5xx・その他HTTP失敗をコードで区別し、日本語detailを保持する。
 ネットワーク失敗とJSON解析失敗も区別し、キャンセルは変換せず伝播する。
-hooks/subjects/errors.tsがコードとdetailから表示文を決める。useRemoteはエラーをunknownとして保持し、業務固有の文言を持たない。
+hooks/subjects/errors.tsがコードとdetailから原文の表示文を決め、共通表示部品が選択言語へ翻訳する。useRemoteはエラーをunknownとして保持し、業務固有の文言を持たない。
 正常JSONのDTO変換は型契約に基づき、実行時スキーマ検証は未導入。
 
 useRemoteはロード・成功・失敗、離脱時のキャンセル、古い応答の排除を担当する。
@@ -234,7 +235,7 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 通信中の連打を防ぎ、所属／成績版の変更・編集・画面離脱で通信を中断する。
 応答の課程IDと成績版が表示中の保存済みデータに一致しない場合は結果を表示しない。
 カリキュラムの確認状態はverified・unverifiedの両方を受け入れ、APIの判定結果・単位を表示する。未知または欠落した確認状態は不正応答として拒否する。
-設定不足や未確認の算入規則はAPIの日本語detailを表示し、未達成と区別する。401は認証画面へ戻す。
+設定不足や未確認の算入規則はAPIの日本語detailを選択言語へ翻訳して表示し、未達成と区別する。401は認証画面へ戻す。
 判定結果はブラウザーストレージへ保存しない。おすすめは判定結果の保存済み候補・理由・状態を表示する。
 
 `CourseRecommendations` は `GraduationResultView` 内で最新詳細・保存直後・過去結果の共通表示を担う。候補の生成・並べ替えはPythonで行い、UIは受け取った順を維持する。`infrastructure/mappers.ts` は候補と寄与条件の重複、状態、正の減少量、開講期を検証し、snake_caseを公開モデルに変換する。推薦導入前の過去結果の欠落・nullだけは情報なしとして扱い、最新結果の欠落は不正応答にする。
@@ -284,7 +285,7 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 
 認証後は所属取得の成功時に一度だけダッシュボードを初期表示する。`DashboardPage` は保存済み所属、必要・修得・算入・不足単位、全条件と区分合計の達成概要を表示する。所属未設定ではマイページの所属設定へ案内し、成績0件と概要取得失敗は別の状態として表示する。共通メニューからダッシュボード・成績入力・マイページへ移動でき、既存画面をマウントしたまま表示を切り替えて未保存入力を保持する。
 
-`GraduationUseCases.dashboard` → `GraduationRepository.dashboard` → `HttpGraduationRepository` から `GET /api/me/dashboard` を呼び、共通DTO検証で概要を画面モデルへ変換する。`useDashboard` は `useRemote` により、表示中・保存版・課程・再試行に従って取得し、画面離脱・課程変更時は通信を中断する。異なる課程や既知の保存版より古い結果は表示しない。失敗時は日本語の理由と再試行を表示し、401では再ログインへ戻す。
+`GraduationUseCases.dashboard` → `GraduationRepository.dashboard` → `HttpGraduationRepository` から `GET /api/me/dashboard` を呼び、共通DTO検証で概要を画面モデルへ変換する。`useDashboard` は `useRemote` により、表示中・保存版・課程・再試行に従って取得し、画面離脱・課程変更時は通信を中断する。異なる課程や既知の保存版より古い結果は表示しない。失敗時は選択言語の理由と再試行を表示し、401では再ログインへ戻す。
 
 条件別詳細は利用者の操作時だけ `GET /api/me/graduation-requirements` で取得する。概要と成績版・課程・カリキュラム版・算入規則版が異なる場合は再取得を案内する。ダッシュボードの閲覧・再取得・詳細展開では `POST /checks` を呼ばず、履歴保存は成績入力の明示的なチェック操作に限る。
 
@@ -293,3 +294,11 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 ## 2026年10月19日の全課程・修了判定拡張
 
 2026年度の所属選択はProgramCoverageで学位段階・キャンパス・整備状況・根拠を表示する。GraduationCheckPanelで課程別の非単位条件を入力し、requirements/public.tsの契約を通じて保存判定を呼ぶ。DTO検証は各モジュールのinfrastructureに保持し、Reactは修了規則を計算しない。未入力の判定保留と本人申告の参考判定を結果・履歴に表示する。成績表は100件ずつ表示し、検索・絞り込みと全件の入力状態を維持する。
+
+## 日本語・英語の表示
+
+`i18next`と`react-i18next`を使用する。`i18n/createI18n.ts`が初期言語・翻訳リソース・保存・ページの言語とタイトルを管理し、`i18n/setup.ts`でブラウザーの情報を渡す。初期言語は有効な保存値、`navigator.languages`内の最初の対応言語、日本語の順に決める。ブラウザー設定の変更を監視してユーザーの選択を上書きしない。
+
+`LanguageSwitcher`を認証前後の共通ヘッダーへ配置する。切替で画面やフォームを再生成せず、未保存の入力・検索・判定条件の回答を維持する。`html.lang`・ページタイトル・表示中の検証エラーと保存通知も切り替える。日時と開講期のラベルは選択言語を使い、日時のタイムゾーンは閲覧環境に従う。
+
+翻訳はpresentationの責務とし、業務モジュールから`i18n/`を参照しない。HTTPのdetailとHookの通知は原文で保持し、共通の`ErrorState`・`FormError`などで描画時に翻訳する。科目名・所属名・分類名・判定条件名・推薦理由・未確認理由・出典データは原文のまま表示する。既知のAPIエラーは英訳し、未知のdetailは原文を残す。詳細は[多言語表示の仕様](i18n.md)を参照する。
