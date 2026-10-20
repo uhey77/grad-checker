@@ -293,3 +293,9 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 ## 2026年10月19日の全課程・修了判定拡張
 
 2026年度の所属選択はProgramCoverageで学位段階・キャンパス・整備状況・根拠を表示する。GraduationCheckPanelで課程別の非単位条件を入力し、requirements/public.tsの契約を通じて保存判定を呼ぶ。DTO検証は各モジュールのinfrastructureに保持し、Reactは修了規則を計算しない。未入力の判定保留と本人申告の参考判定を結果・履歴に表示する。成績表は100件ずつ表示し、検索・絞り込みと全件の入力状態を維持する。
+
+## 成績ルールと公開契約の境界
+
+成績の連番と再履修条件は `modules/grades/domain/attempts.ts` の純粋関数で扱う。編集用Applicationはその規則を呼び出し、`GradeDraftProblem` のコードを返す。`hooks/grades/errors.ts` がコードを日本語の表示文言へ変換し、`useGradeEntry` が表示する。既存の年度範囲・メッセージ・保存操作を維持し、同じ業務条件をバックエンドでも検証する。
+
+モジュールをまたぐ参照は引き続き `public.ts` を使う。公開窓口を経由しても層の依存方向は変わらない。Domainから参照できるのは他モジュールのDomain由来の公開型だけとし、Applicationのユースケース・エラー・検索処理をDomainへ持ち込まない。境界テストは公開名のexport元も確認する。

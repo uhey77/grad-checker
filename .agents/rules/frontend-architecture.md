@@ -34,7 +34,7 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 - `shared/infrastructure/` は各モジュールの `infrastructure` だけが利用する。`shared/` は自身の中だけを参照し、モジュール・UI・`app`・Reactに依存しない。業務エラーの型と日本語の文言は呼出し側のモジュールが渡す。
 - presentation（`pages`・`components`・`hooks`・`layouts`・`App.tsx`）はモジュールの `public.ts` を通してapplicationとdomainを利用する。具体的なHTTP取得先やAPIのDTOは参照しない。
 - 各モジュールの `composition.ts` でリポジトリとユースケースを生成する。`app/composition/` が設定を渡し、`main.tsx` がアプリを起動する。
-- モジュールは `app`・UIディレクトリ・`App.tsx`・`main.tsx` を参照しない。他モジュールの内部ファイルは参照せず、その `public.ts` に公開された契約を利用する。公開契約の利用にも各層の依存方向を適用する。
+- モジュールは `app`・UIディレクトリ・`App.tsx`・`main.tsx` を参照しない。他モジュールの内部ファイルは参照せず、その `public.ts` に公開された契約を利用する。公開契約の利用にも各層の依存方向を適用する。Domainから他モジュールの公開契約を参照するときはDomain由来の型だけに限定し、境界テストでexport元も検査する。
 - `public.ts` はdomain・applicationの契約だけを公開する。infrastructure・composition・UIは公開しない。`composition.ts` の利用は `app/composition/` に限定する。
 - 業務共通のHook・表示部品は業務モジュールに依存させない。科目専用のUIは各ディレクトリ内の `subjects/` に置く。HookからPage・表示部品を参照せず、表示部品からPageを参照しない。
 
@@ -47,7 +47,7 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 - コンポーネントやHookから直接 `fetch` しない。ユースケースと取得先の契約を通して取得する。
 - APIの `snake_case` と画面で使用するモデルの変換は `infrastructure` のmapperに集約する。コンポーネント内でDTOを変換しない。
 - 再利用する検索・並べ替え処理は `application` に置く。選択値や検索文字列など、ユーザー操作に伴う状態は `presentation` で管理する。
-- 表示ラベル・React固有の状態を `domain` へ入れない。業務ルールをJSX内へ埋め込まない。
+- 表示ラベル・React固有の状態を `domain` へ入れない。業務ルールをJSX内へ埋め込まない。成績の連番・再履修はDomainで判定し、編集入力の問題はApplicationがコードで返し、hooksで日本語の表示文言へ変換する。
 - ロード中・成功・失敗を明示的に扱い、再試行できるようにする。課程切替や画面離脱時には不要な通信をキャンセルし、古いレスポンスで現在の画面を上書きしない。
 - 課程ごとの分類・必修区分、複数の開講時期、出典の注記、適用入学年度の未確認状態を保持する。未確認の情報を確認済みとして表示しない。
 - 共通Hook・表示部品への共通化は、実際に共通の表示・状態管理責務がある場合に行う。

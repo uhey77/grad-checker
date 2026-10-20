@@ -13,12 +13,12 @@
 | `modules/subjects/grad_checker_subjects/application/` | Pythonのユースケース・取得契約・業務エラー | 科目一覧の取得契約、シードデータの整合性検証 |
 | `modules/subjects/grad_checker_subjects/infrastructure/` | PythonのDB・ファイルアクセス | SQLModel、リポジトリ |
 | `modules/subjects/application/`・`infrastructure/` | Goの取得契約とブリッジ通信の実装 | PythonへのHTTPクライアント |
-| `api/presentation/`・`api/api_service/presentation/` | Goの外部HTTP、Pythonのブリッジアダプター | 入力検証、業務エラー変換、Unit of Workの生成 |
+| `api/presentation/`・`api/api_service/presentation/` | Goの外部HTTP、Pythonのブリッジアダプター | 入力検証、業務エラー変換、注入されたユースケースの呼出し |
 | `modules/shared/pythonbridge/` | GoからPythonサービスを呼ぶ共通処理 | ブリッジ通信の包絡形式、タイムアウト・接続失敗・形式違反の区別 |
 | `api/presentation/http.go` | Goの外部HTTPで共通の検証と応答 | メソッド・セッション・CSRF・JSON本文の検証、共通の業務エラー変換 |
 | `modules/shared/grad_checker_shared/` | Pythonの業務モジュールで共通の業務エラー基底とUnit of Work | `BusinessError`、`UnitOfWork`、`SqlUnitOfWork` |
 | `api/api_service/presentation/go_bridge_call.py`・`dependencies.py` | Pythonのブリッジアダプターで共通の包絡形式・呼出し契約・本人確認 | `respond`、`SessionCall`、`current_identity` |
-| `api/main.go`・`api/api_service/main.py` | 設定・起動・終了と依存関係の組立て | ハンドラー注入、DB起動終了 |
+| `api/main.go`・`api/api_service/main.py`・`api/api_service/composition.py` | 設定・起動・終了と依存関係の組立て | ハンドラー注入、DB起動終了 |
 | `config/settings.py` | Pythonの環境設定 | DB接続URL |
 | `scripts/seed_subjects.py` | 開発者向けCLIの入口 | 引数処理、投入処理の呼出し、終了コード |
 
@@ -39,8 +39,10 @@
 - Pythonの`application`の入出力契約はPydanticを使用し、dataclassは使用しない。Goの取得契約には既存科目モデルに従うJSONデータを使用できる。ブリッジ通信の包絡形式はGoの`infrastructure`とPythonのブリッジアダプターに閉じ込める。
 - `infrastructure` は `application` の契約を実装し、`domain` の概念を利用できる。`presentation` は参照しない。
 - `presentation` はユースケースを呼び出す。業務判断やSQLクエリをルーターへ追加しない。
-- Goは`api/main.go`、Pythonは`api/api_service/main.py`とCLIの入口で具体的な依存関係を組み立てる。
-- PythonのブリッジアダプターはDBエンジンから各モジュールのUnit of Workを生成してユースケースへ渡し、結果または業務エラーコードを返す。この依存解決に限り`presentation`から`infrastructure`を参照できる。
+- PythonのAPI・他モジュールは各業務パッケージの`public.py`から業務契約を参照する。公開窓口はdomain・applicationのみを公開し、ORM・SQL・具体的なリポジトリを公開しない。共有SQLiteの横断参照は既存infrastructureに限り、domain・applicationへ広げない。
+- 認証・判定・履歴の現在時刻はABCの`Clock`を注入する。UTCの`SystemClock`はComposition Rootで選択する。サービス・UoWは呼出しごと、Sessionはread/writeごとに生成し、並行する要求でUoWを共有しない。
+- Goは`api/main.go`、Pythonは`api/api_service/main.py`・`composition.py`とCLIの入口で具体的な依存関係を組み立てる。
+- Pythonのブリッジアダプターは`Depends`でサービスまたはUnit of Workの抽象契約を受け取り、結果または業務エラーコードを返す。`presentation`から設定・DB・`infrastructure`を参照しない。具体的な生成はComposition Rootに集約する。
 - Goの外部ハンドラーは`application`の取得契約を使用する。具体的なPython HTTPクライアントは参照しない。
 - 各モジュールのGoの`infrastructure`は`modules/shared/pythonbridge`でブリッジ通信を行い、包絡形式の解析を重複させない。`pythonbridge`は業務モジュールを参照しない。業務エラー型への変換と応答内容の検証は各モジュールで行う。
 - Goの外部ハンドラーは`api/presentation/http.go`の共通関数で検証・エラー応答を行い、同じ失敗を画面ごとに異なるステータス・文言で返さない。
@@ -50,7 +52,7 @@
 
 ## 実装ルール
 
-- 新しい業務処理は `application` に置き、必要な取得・保存の契約をそこで定義する。DB処理は `infrastructure` に実装する。
+- ユースケースの手順と取得・保存契約は `application` に置く。業務上の不変条件・計算・判断は `domain`、DB処理は `infrastructure` に置く。DomainのエラーはApplicationで公開用の業務エラーへ変換する。
 - Pythonの`application`の取得・保存契約（リポジトリ・Unit of Work・外部処理）はABCの抽象メソッドで定義する。`infrastructure`の実装とテストのFakeは契約を継承し、実装する契約を明示する。
 - SQLModelのテーブルモデルを、そのまま業務契約として他の層へ広げない。リポジトリで入出力モデルへ変換する。
 - Pythonの業務エラーは`application/errors/`に定義する。DBライブラリの例外は`infrastructure`で業務エラーへ変換する。外部HTTPステータスと日本語`detail`への変換はGoの`presentation`で行う。Pythonのブリッジアダプターには外部APIのメッセージ・ヘッダー・ステータスの判断を置かない。

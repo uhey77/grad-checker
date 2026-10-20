@@ -5,7 +5,7 @@ Pythonの依存管理は`backend/`直下に統一し、共通設定は`backend/c
 Goが外部HTTPの入力検証・レスポンス・業務エラーのHTTP変換を担当し、Pythonが業務処理とDBを担当する。
 現在は開発用科目一覧、ユーザー名による自己登録・復旧・ログイン、本人所属の取得・保存、学生向け科目一覧・分類、本人成績の取得・保存を実装。Pythonの卒業単位判定関数・判定API・結果画面まで実装済み。他学部の配分は明示的な科目対応表と合意した方針がある場合に対応する。判定履歴の保存と本人の履歴一覧・過去結果取得、履歴を増やさないダッシュボード概要も実装済み。対象他学部科目の転記・推薦は未完了。
 
-卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類、applicationはPydanticの投入契約・集合検証と追加投入のユースケース（`seed_import.py`）、infrastructureは5テーブルと投入済みデータの読取り・追加を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIは以下の読取り専用経路を使用する。
+卒業要件マスタは `modules/requirements/grad_checker_requirements/` に配置する。domainは条件・規則の種類と単位の充足・同時期の他学部単位の配分規則、applicationはPydanticの投入契約・集合検証と追加投入のユースケース（`seed_import.py`）、infrastructureは5テーブルと投入済みデータの読取り・追加を担当する。科目マスタの契約・DBを参照できるが、科目モジュールから要件モジュールへは依存させない。`scripts/seed_requirements.py` が設定と具体実装を組み立てる。判定APIは以下の読取り専用経路を使用する。
 
 判定も同モジュールのapplicationに置く。`evaluation_models.py`が入力スナップショットと結果の
 Pydantic契約、`evaluation_context.py`がマスタ・所属・成績の検証と対象集合の展開、
@@ -34,7 +34,7 @@ GoがPythonの業務処理を呼ぶローカルHTTPを「ブリッジ通信」�
 - Goのpresentationはapplicationの取得契約に依存し、具体的なHTTPクライアントは参照しない。
 - Goのinfrastructureが取得契約を実装する。`api/main.go`で両者を組み立てる。
 - Pythonのapplication・domainはGo・ブリッジHTTP・外部HTTPに依存しない。
-- PythonのブリッジアダプターはSessionとリポジトリを組み立て、ユースケースを呼ぶ。
+- Pythonのブリッジアダプターは公開契約のサービスを依存注入で受け取り、ユースケースを呼ぶ。DB実装・設定は参照しない。
 - SQLModelのモデルとSQLはPythonのinfrastructureに保持する。
 
 ## 配置
@@ -47,14 +47,16 @@ backend/
 │   ├── main.go               # Goの起動・依存関係の組立て
 │   ├── presentation/subject_list.go   # 外部HTTPハンドラー
 │   └── api_service/
-│       ├── main.py                    # Pythonサービスの起動
-│       └── presentation/              # ブリッジHTTPとSession管理
+│       ├── main.py                    # Pythonサービスの起動・DB寿命管理
+│       ├── composition.py             # サービス・UoW・Clockの具体的な組み立て
+│       └── presentation/              # ブリッジHTTPと依存注入の契約
 ├── config/settings.py                # 共有設定。独立パッケージにはしない
 ├── modules/
 │   └── subjects/
 │       ├── application/subject_list.go
 │       ├── infrastructure/subject_list_client.go
 │       └── grad_checker_subjects/
+│           ├── public.py              # 他モジュールとAPIへの業務契約
 │           ├── domain/                # 科目区分など
 │           ├── application/           # ユースケース・取得契約・業務エラー
 │           └── infrastructure/        # DB・JSON読み込み
@@ -179,7 +181,7 @@ Swagger UIのJS/CSSは固定バージョンのCDNを利用し、仕様の外部�
 
 以前の`presentation/subject_list.py`と`health.py`を削除した。
 外部のUUID検証、日本語HTTPException、開発用表示の有効化判定、外部ルーター登録をGoへ移動した。
-Pythonにはブリッジ通信の受付、型検証、Session管理、ユースケース実行、結果・エラーコードのシリアライズが残る。
+Pythonにはブリッジ通信の受付、型検証、ユースケース実行、結果・エラーコードのシリアライズが残る。Session管理はinfrastructureのUnit of Workが担当する。
 Pythonサービスのプロセスは引き続き必要。言語を分けたことによる性能向上は未検証。
 
 ## 2026-10-11の分割後の検証
@@ -216,7 +218,7 @@ Goのpresentation/profile.goが学生向け `/api/programs`・`/api/me`・`/api/
 
 科目一覧は`modules/subjects`に操作を追加した。application/course_catalog.pyが本人課程から見た科目・分類の契約と絞り込み、infrastructure/course_catalog.pyが一つの読取スナップショットでの取得を担う。科目モジュールはaccounts・gradesを参照せず、`go_bridge_courses.py`がセッションと本人所属から課程IDを決めて渡す。所属未設定は`program_not_selected`。
 
-成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と全集合の検証、infrastructureが`grade_attempts`の版確認・差分置換・`students.data_revision`の加算を担う。`GradeService`が回次を検証してから、これらをUnit of WorkのBEGIN IMMEDIATEによる一つの書込みで行う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
+成績は新しい`modules/grades/`に置く。Pythonは`grad_checker_grades/{domain,application,infrastructure}/`、Goは`application/grades.go`と`infrastructure/grade_client.go`。domainが成績記号・確定状態と回次の並び、applicationがPydantic契約と科目ごとのDomainへの変換、infrastructureが`grade_attempts`の版確認・差分置換・`students.data_revision`の加算を担う。`GradeService`が回次を検証してから、これらをUnit of WorkのBEGIN IMMEDIATEによる一つの書込みで行う。科目・学生テーブルの参照に限りinfrastructureから他モジュールのSQLModelを参照する。
 
 Goのpresentation/courses.goとgrades.goが外部入力（クエリ・重複キー・未知フィールド・型・範囲・記号と状態の整合）を検証し、不正ならPythonを呼ばず422等を返す。回次の重複・連番・再履修の条件はPythonの業務ルールで判定し、業務エラーコードをGoが日本語detailへ変換する。
 
@@ -238,7 +240,7 @@ Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` 
 | `grad_checker_shared/infrastructure/unit_of_work.py` | `SqlUnitOfWork`。ブロックごとにSessionを開閉し、`read`は`BEGIN`、`write`は`BEGIN IMMEDIATE`で始める。DB例外は各モジュールが渡す関数で業務エラーへ変換する。ブロックの外でのリポジトリ利用と入れ子は`RuntimeError`にする |
 | 各モジュールの`application` | `UnitOfWork`（ABC）を継承した契約で、使うリポジトリを抽象プロパティとして宣言する。ユースケースが`with uow.read():`・`with uow.write():`で範囲を決める |
 | 各モジュールの`infrastructure` | `SqlUnitOfWork`と自モジュールの契約を継承し、ブロック中のSessionからリポジトリを生成する。リポジトリも契約（ABC）を継承し、commit・ロールバックを行わない |
-| ブリッジアダプター・CLI | DBエンジンからUoWを生成してユースケースへ渡す |
+| Composition Root・CLI | DBエンジンから要求ごとのUoWを生成し、ユースケースへ注入する。ブリッジアダプターは注入された業務契約を使う |
 
 範囲は、部分的な成功が業務上許されるかで決める。
 
@@ -251,3 +253,21 @@ Pythonも同じ責務で共通化した。`modules/shared/grad_checker_shared/` 
 ## 2026年10月19日の全課程・修了判定拡張
 
 2026年度全課程の修了規則はrequirementsモジュールのapplication/completion_policy.py、大学院判定はapplication/graduate_evaluation.pyで定義する。DBモデルとJSON列はinfrastructure/models.py、本人課程へ絞るSQL読取はinfrastructure/evaluation.pyに置く。Goは回答形式・応答形・エラー変換を担当し、単位・本人申告の業務判定はPythonに保持する。出典・整備状況は[2026年度対応表](curriculum_coverage_2026.md)。
+
+## Composition Root・公開契約・業務規則
+
+Pythonの `main.py` はDBの起動・終了を管理し、`composition.py` の `build_dependencies` でFastAPIの依存関係を登録する。ブリッジアダプターは `Depends` でサービスまたはUoWの抽象契約を受け取る。具体的なSQLModel・DBエンジン・設定への依存は持たない。テストは同じ依存窓口を差し替えられる。
+
+Engine・設定・パスワードハッシュ実装・Clockはアプリ単位で再利用する。サービスとUoWは呼出しごとに生成し、各UoWの `read` / `write` がSessionを開閉する。UoWをアプリ全体で共有しない。起動時は利用者が登録した依存の差し替えを維持し、終了時はその起動で登録した依存だけを解除する。
+
+`accounts`・`grades`・`subjects`・`requirements` はそれぞれ `public.py` でDTO・サービス・利用者が扱うエラーと注入契約を公開する。APIのPresentationと業務モジュール間の参照はこの窓口を使う。公開窓口にはORM・SQL・具体的なリポジトリを含めない。Composition Rootは組み立てに必要な具体実装を参照できる。
+
+成績の `domain/grade.py` にある不変の `CourseAttempts` は、一科目の回次の重複・連番・再履修条件を保証する。Applicationの `check_attempts` はPydantic DTOからDomainへの変換と業務エラーコードへの変換を行う。DomainにはHTTP・DB・Applicationへの依存を置かない。
+
+卒業要件の `domain/credits.py` は単位条件の充足と不足量、同時期の他学部単位の最良配分を所有する。配分は達成条件数、残る不足単位、分類コード順の順に評価する。`application/credit_summary.py` がDomainの判定を公開DTOへ変換し、学部・大学院で同じ不足量の定義を使う。未確認規則の扱い、読取スナップショットの取得、推薦・履歴の組み立ては既存のApplicationで調整する。
+
+認証の有効期限・試行時刻、卒業判定・履歴の日時は共通ABC `Clock` をコンストラクタで受け取る。Composition RootはUTCの `SystemClock` を渡し、テストは固定時刻を渡す。
+
+既存の共有SQLiteに対するモジュール横断のJOINと成績・所属共通の `students.data_revision` 更新は、既存のInfrastructure内に保持する。これは独立DBを持つBounded Contextへの分離を完了した構成ではない。今後その境界を分離するときは、版の照合・更新を同じトランザクションで行う保証を維持する。今回の変更ではAPI・スキーマ・自動commitの方式を変更しない。
+
+`test_module_boundaries.py` は相対importを解決して全業務モジュールの層と公開窓口、ブリッジからDB実装への依存、Applicationでの時刻の直接取得を検査する。Domainの規則は `test_domain_rules.py`、原子性・競合・保存済み履歴の互換性は既存のFake・SQLite・実HTTPテストで検証する。
