@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import type { CatalogCourse } from "../../modules/subjects/public.ts";
 import {
@@ -13,8 +14,8 @@ import {
   type GradeChoice,
   type TermCode,
 } from "../../modules/grades/public.ts";
-import { ScrollTable } from "../ScrollTable";
-import { NoMatchingSubjects } from "../subjects/NoMatchingSubjects";
+import { ScrollTable } from "../ScrollTable.tsx";
+import { NoMatchingSubjects } from "../subjects/NoMatchingSubjects.tsx";
 import {
   ClassificationCell,
   CreditsCell,
@@ -22,10 +23,9 @@ import {
   ProviderCell,
   SubjectNameCell,
   SubjectTypeBadge,
-} from "../subjects/SubjectCells";
-import { termLabels } from "../subjects/labels";
-import { courseStatusLabels, gradeChoiceLabels } from "./labels";
-
+} from "../subjects/SubjectCells.tsx";
+import { termLabels } from "../subjects/labels.ts";
+import { courseStatusLabels, gradeChoiceLabels } from "./labels.ts";
 interface Actions {
   choose: (
     courseId: string,
@@ -41,7 +41,6 @@ interface Actions {
   addRetake: (courseId: string) => void;
   removeLatest: (courseId: string) => void;
 }
-
 function AttemptEditor({
   course,
   attempt,
@@ -57,16 +56,22 @@ function AttemptEditor({
   disabled: boolean;
   actions: Actions;
 }) {
-  const label = `${course.name} 第${attempt.attemptNo}回`;
+  const { t } = useTranslation();
+  const label = t("{{value0}} 第{{value1}}回", {
+    value0: course.name,
+    value1: attempt.attemptNo,
+  });
   // 再履修の前の回次は不合格だけを選べる。合格・未確定は最新回次にだけ置ける。
   const choices: GradeChoice[] = latest
     ? [...gradeCodes, "pending"]
     : [...failingGradeCodes];
   return (
     <div className="attempt" role="group" aria-label={label}>
-      <span className="attempt-number">第{attempt.attemptNo}回</span>
+      <span className="attempt-number">
+        {t("第{{value0}}回", { value0: attempt.attemptNo })}
+      </span>
       <select
-        aria-label={`${label}の成績`}
+        aria-label={t("{{value0}}の成績", { value0: label })}
         value={attempt.gradeCode ?? "pending"}
         disabled={disabled}
         onChange={(event) =>
@@ -77,20 +82,20 @@ function AttemptEditor({
           )
         }
       >
-        {only ? <option value="">未履修</option> : null}
+        {only ? <option value="">{t("未履修")}</option> : null}
         {choices.map((choice) => (
           <option key={choice} value={choice}>
-            {gradeChoiceLabels[choice]}
+            {t(gradeChoiceLabels[choice])}
           </option>
         ))}
       </select>
       <input
-        aria-label={`${label}の履修年度（任意）`}
+        aria-label={t("{{value0}}の履修年度（任意）", { value0: label })}
         type="number"
         inputMode="numeric"
         min={minAcademicYear}
         max={maxAcademicYear}
-        placeholder="年度"
+        placeholder={t("年度")}
         value={attempt.academicYear ?? ""}
         disabled={disabled}
         onChange={(event) =>
@@ -105,7 +110,7 @@ function AttemptEditor({
         }
       />
       <select
-        aria-label={`${label}の履修学期（任意）`}
+        aria-label={t("{{value0}}の履修学期（任意）", { value0: label })}
         value={attempt.termCode ?? ""}
         disabled={disabled}
         onChange={(event) =>
@@ -117,10 +122,10 @@ function AttemptEditor({
           )
         }
       >
-        <option value="">学期未入力</option>
+        <option value="">{t("学期未入力")}</option>
         {Object.entries(termLabels).map(([value, text]) => (
           <option key={value} value={value}>
-            {text}
+            {t(text)}
           </option>
         ))}
       </select>
@@ -130,13 +135,12 @@ function AttemptEditor({
           disabled={disabled}
           onClick={() => actions.removeLatest(course.courseId)}
         >
-          第{attempt.attemptNo}回を削除
+          {t("第{{value0}}回を削除", { value0: attempt.attemptNo })}
         </button>
       ) : null}
     </div>
   );
 }
-
 export function GradeTable({
   courses,
   draft,
@@ -151,6 +155,7 @@ export function GradeTable({
   disabled: boolean;
   resetFilters: () => void;
 }) {
+  const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const pageSize = 100;
   const currentPage = Math.min(
@@ -164,26 +169,27 @@ export function GradeTable({
   if (courses.length === 0)
     return (
       <NoMatchingSubjects
-        note="非表示の科目の成績は保持されます。"
+        note={t("非表示の科目の成績は保持されます。")}
         resetFilters={resetFilters}
       />
     );
   return (
     <>
       {courses.length > pageSize && (
-        <nav aria-label="成績一覧のページ">
+        <nav aria-label={t("成績一覧のページ")}>
           <button
             type="button"
             disabled={disabled || currentPage === 0}
             onClick={() => setPage(currentPage - 1)}
           >
-            前の100件
+            {t("前の100件")}
           </button>
           <span role="status">
-            {" "}
-            {currentPage * pageSize + 1}〜
-            {Math.min((currentPage + 1) * pageSize, courses.length)}件／
-            {courses.length}件{" "}
+            {t(" {{value0}}〜{{value1}}件／{{value2}}件 ", {
+              value0: currentPage * pageSize + 1,
+              value1: Math.min((currentPage + 1) * pageSize, courses.length),
+              value2: courses.length,
+            })}
           </span>
           <button
             type="button"
@@ -192,24 +198,24 @@ export function GradeTable({
             }
             onClick={() => setPage(currentPage + 1)}
           >
-            次の100件
+            {t("次の100件")}
           </button>
         </nav>
       )}
       <ScrollTable
-        label="成績入力の科目一覧"
-        caption="本人の成績入力"
+        label={t("成績入力の科目一覧")}
+        caption={t("本人の成績入力")}
         className="grade-table"
       >
         <thead>
           <tr>
-            <th scope="col">科目名</th>
-            <th scope="col">本人課程の区分・種別</th>
-            <th scope="col">単位</th>
-            <th scope="col">開講学期</th>
-            <th scope="col">開講元・授業形態</th>
-            <th scope="col">成績（回次・成績・履修年度・学期）</th>
-            <th scope="col">修得状況</th>
+            <th scope="col">{t("科目名")}</th>
+            <th scope="col">{t("本人課程の区分・種別")}</th>
+            <th scope="col">{t("単位")}</th>
+            <th scope="col">{t("開講学期")}</th>
+            <th scope="col">{t("開講元・授業形態")}</th>
+            <th scope="col">{t("成績（回次・成績・履修年度・学期）")}</th>
+            <th scope="col">{t("修得状況")}</th>
           </tr>
         </thead>
         <tbody>
@@ -229,7 +235,7 @@ export function GradeTable({
                 <SubjectNameCell name={course.name} code={course.code} />
                 <ClassificationCell
                   path={placement?.classificationPath ?? []}
-                  emptyLabel="本人課程の科目表になし"
+                  emptyLabel={t("本人課程の科目表になし")}
                 >
                   {placement ? (
                     <SubjectTypeBadge type={placement.courseType} />
@@ -247,7 +253,9 @@ export function GradeTable({
                   {attempts.length === 0 ? (
                     <div className="attempt">
                       <select
-                        aria-label={`${course.name}の成績`}
+                        aria-label={t("{{value0}}の成績", {
+                          value0: course.name,
+                        })}
                         value=""
                         disabled={disabled}
                         onChange={(event) =>
@@ -258,10 +266,10 @@ export function GradeTable({
                           )
                         }
                       >
-                        <option value="">未履修</option>
+                        <option value="">{t("未履修")}</option>
                         {[...gradeCodes, "pending" as const].map((choice) => (
                           <option key={choice} value={choice}>
-                            {gradeChoiceLabels[choice]}
+                            {t(gradeChoiceLabels[choice])}
                           </option>
                         ))}
                       </select>
@@ -285,15 +293,15 @@ export function GradeTable({
                       disabled={disabled}
                       onClick={() => actions.addRetake(course.courseId)}
                     >
-                      再履修を追加
+                      {t("再履修を追加")}
                     </button>
                   ) : null}
                 </td>
                 <td>
                   <span className={`badge status-${status}`}>
-                    {courseStatusLabels[status]}
+                    {t(courseStatusLabels[status])}
                   </span>
-                  {changed ? <small>未保存の変更あり</small> : null}
+                  {changed ? <small>{t("未保存の変更あり")}</small> : null}
                 </td>
               </tr>
             );

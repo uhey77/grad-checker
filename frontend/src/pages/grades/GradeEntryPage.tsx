@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   departmentOptions,
   facultyOptions,
@@ -5,19 +6,18 @@ import {
 } from "../../modules/subjects/public.ts";
 import { takenYears, type GradeUseCases } from "../../modules/grades/public.ts";
 import type { ProgramOption } from "../../modules/profiles/public.ts";
-import { useGradeEntry } from "../../hooks/grades/useGradeEntry";
-import { GradeFilters } from "../../components/grades/GradeFilters";
-import { GradeTable } from "../../components/grades/GradeTable";
-import { ConfirmPanel } from "../../components/ConfirmPanel";
-import { PageHeading } from "../../components/PageHeading";
-import { SaveBar } from "../../components/SaveBar";
-import { ErrorState, LoadingState } from "../../components/StatusPanels";
-import { programLabel } from "../../components/subjects/labels";
+import { useGradeEntry } from "../../hooks/grades/useGradeEntry.ts";
+import { GradeFilters } from "../../components/grades/GradeFilters.tsx";
+import { GradeTable } from "../../components/grades/GradeTable.tsx";
+import { ConfirmPanel } from "../../components/ConfirmPanel.tsx";
+import { PageHeading } from "../../components/PageHeading.tsx";
+import { SaveBar } from "../../components/SaveBar.tsx";
+import { ErrorState, LoadingState } from "../../components/StatusPanels.tsx";
+import { programLabel } from "../../components/subjects/labels.ts";
 import type { GraduationUseCases } from "../../modules/requirements/public.ts";
-import { useCheckHistory } from "../../hooks/requirements/useCheckHistory";
-import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck";
-import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel";
-
+import { useCheckHistory } from "../../hooks/requirements/useCheckHistory.ts";
+import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck.ts";
+import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel.tsx";
 export function GradeEntryPage({
   catalogUseCases,
   gradeUseCases,
@@ -44,6 +44,7 @@ export function GradeEntryPage({
   showProfile: () => void;
   showDashboard: () => void;
 }) {
+  const { t } = useTranslation();
   const entry = useGradeEntry(
     catalogUseCases,
     gradeUseCases,
@@ -83,9 +84,9 @@ export function GradeEntryPage({
   return (
     <div className="grade-page">
       <button type="button" className="back-link" onClick={showDashboard}>
-        ← ダッシュボードへ戻る
+        {t("← ダッシュボードへ戻る")}
       </button>
-      <PageHeading title="成績入力" />
+      <PageHeading title={t("成績入力")} />
       {data && (
         <GraduationCheckPanel
           busy={check.busy}
@@ -109,27 +110,38 @@ export function GradeEntryPage({
           entry.programMissing ? (
             <ErrorState
               message={entry.loadError}
-              actionLabel="マイページで所属を設定"
+              actionLabel={t("マイページで所属を設定")}
               onAction={showProfile}
             />
           ) : (
             <ErrorState
               message={entry.loadError}
-              actionLabel="再試行"
+              actionLabel={t("再試行")}
               onAction={entry.retry}
             />
           )
         ) : (
-          <LoadingState>科目と成績を読み込んでいます…</LoadingState>
+          <LoadingState>{t("科目と成績を読み込んでいます…")}</LoadingState>
         )
       ) : (
-        <section className="panel subject-list-panel" aria-label="成績入力">
+        <section
+          className="panel subject-list-panel"
+          aria-label={t("成績入力")}
+        >
           <div className="list-heading">
             <div className="grade-context">
-              <h2>本人の課程：{curriculumLabel}</h2>
+              <h2>
+                {t("本人の課程：{{value0}}", { value0: curriculumLabel })}
+              </h2>
               <p>
-                表示 {entry.visibleCourses.length} 件／全{" "}
-                {data.catalog.courses.length} 件・成績入力済み {entered} 科目
+                {t(
+                  "表示 {{value0}} 件／全 {{value1}} 件・成績入力済み {{value2}} 科目",
+                  {
+                    value0: entry.visibleCourses.length,
+                    value1: data.catalog.courses.length,
+                    value2: entered,
+                  },
+                )}
               </p>
             </div>
           </div>
@@ -161,15 +173,17 @@ export function GradeEntryPage({
             busy={entry.busy}
             notice={entry.notice}
             dirty={entry.dirty}
-            cleanStatus="保存済みの成績を表示しています。"
+            cleanStatus={t("保存済みの成績を表示しています。")}
             confirmations={
               <>
                 {entry.confirmClear ? (
                   <ConfirmPanel
-                    label="成績の全件取消の確認"
-                    message="保存済みの成績をすべて取り消します。この操作はアプリ内の自己申告データだけを変更します。"
-                    confirmLabel="すべて取り消して保存"
-                    cancelLabel="取り消さない"
+                    label={t("成績の全件取消の確認")}
+                    message={t(
+                      "保存済みの成績をすべて取り消します。この操作はアプリ内の自己申告データだけを変更します。",
+                    )}
+                    confirmLabel={t("すべて取り消して保存")}
+                    cancelLabel={t("取り消さない")}
                     primary
                     onConfirm={() => void entry.save()}
                     onCancel={entry.cancelClear}
@@ -177,10 +191,12 @@ export function GradeEntryPage({
                 ) : null}
                 {entry.confirmReload ? (
                   <ConfirmPanel
-                    label="未保存変更の確認"
-                    message="未保存の変更を破棄して、保存済みの成績を再取得しますか？"
-                    confirmLabel="変更を破棄して再取得"
-                    cancelLabel="入力を続ける"
+                    label={t("未保存変更の確認")}
+                    message={t(
+                      "未保存の変更を破棄して、保存済みの成績を再取得しますか？",
+                    )}
+                    confirmLabel={t("変更を破棄して再取得")}
+                    cancelLabel={t("入力を続ける")}
                     onConfirm={entry.confirmRetry}
                     onCancel={entry.cancelRetry}
                   />
@@ -200,14 +216,14 @@ export function GradeEntryPage({
                   }
                   onClick={() => void entry.save()}
                 >
-                  {entry.busy ? "保存中…" : "成績を保存"}
+                  {entry.busy ? t("保存中…") : t("成績を保存")}
                 </button>
                 <button
                   type="button"
                   disabled={entry.busy}
                   onClick={entry.retry}
                 >
-                  保存済みの成績を再取得
+                  {t("保存済みの成績を再取得")}
                 </button>
               </>
             }

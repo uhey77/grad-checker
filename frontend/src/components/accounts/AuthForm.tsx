@@ -1,7 +1,7 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import type { AuthPolicy } from "../../modules/accounts/public.ts";
-import { FormError } from "../StatusPanels";
-
+import { FormError } from "../StatusPanels.tsx";
 type Mode = "login" | "register" | "recover";
 export function AuthForm({
   mode,
@@ -14,6 +14,7 @@ export function AuthForm({
   busy: boolean;
   submit: (loginName: string, password: string, recoveryCode: string) => void;
 }) {
+  const { t } = useTranslation();
   const [loginName, setLoginName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -77,7 +78,7 @@ export function AuthForm({
       }}
     >
       <fieldset disabled={busy}>
-        <label htmlFor="auth-username">ユーザー名</label>
+        <label htmlFor="auth-username">{t("ユーザー名")}</label>
         <input
           id="auth-username"
           name="username"
@@ -91,11 +92,13 @@ export function AuthForm({
           onChange={(event) => setLoginName(event.target.value)}
         />
         <p id="username-hint" className="field-hint">
-          半角英数字・アンダースコアの3〜32文字。大文字と小文字は区別しません。
+          {t(
+            "半角英数字・アンダースコアの3〜32文字。大文字と小文字は区別しません。",
+          )}
         </p>
         {mode === "recover" ? (
           <>
-            <label htmlFor="auth-recovery">復旧コード</label>
+            <label htmlFor="auth-recovery">{t("復旧コード")}</label>
             <input
               id="auth-recovery"
               name="recovery_code"
@@ -109,7 +112,7 @@ export function AuthForm({
           </>
         ) : null}
         <label htmlFor="auth-password">
-          {mode === "recover" ? "新しいパスワード" : "パスワード"}
+          {mode === "recover" ? t("新しいパスワード") : t("パスワード")}
         </label>
         <input
           id="auth-password"
@@ -127,10 +130,12 @@ export function AuthForm({
         {settingPassword ? (
           <>
             <p id="password-hint" className="field-hint">
-              {policy.passwordMinLength}〜{policy.passwordMaxLength}
-              文字で設定してください。
+              {t("{{value0}}〜{{value1}}文字で設定してください。", {
+                value0: policy.passwordMinLength,
+                value1: policy.passwordMaxLength,
+              })}
             </p>
-            <label htmlFor="auth-confirm">パスワード（確認）</label>
+            <label htmlFor="auth-confirm">{t("パスワード（確認）")}</label>
             <input
               id="auth-confirm"
               name="confirmation"
@@ -148,12 +153,12 @@ export function AuthForm({
         ) : null}
         <button className="primary-button" type="submit">
           {busy
-            ? "処理中…"
+            ? t("処理中…")
             : mode === "register"
-              ? "登録する"
+              ? t("登録する")
               : mode === "recover"
-                ? "パスワードを再設定する"
-                : "ログイン"}
+                ? t("パスワードを再設定する")
+                : t("ログイン")}
         </button>
       </fieldset>
     </form>

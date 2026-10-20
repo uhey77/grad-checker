@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 import type { CourseType, Offering } from "../../modules/subjects/public.ts";
 import {
@@ -5,10 +6,8 @@ import {
   offeringLabels,
   sharedAcrossYears,
   subjectTypeLabels,
-} from "./labels";
-
+} from "./labels.ts";
 // 科目一覧と成績入力で同じ科目を同じ形で表示するための表のセル。
-
 export function SubjectNameCell({
   name,
   code,
@@ -23,18 +22,19 @@ export function SubjectNameCell({
     </th>
   );
 }
-
 export function SubjectTypeBadge({ type }: { type: CourseType }) {
-  return <span className={`badge ${type}`}>{subjectTypeLabels[type]}</span>;
+  const { t } = useTranslation();
+  return <span className={`badge ${type}`}>{t(subjectTypeLabels[type])}</span>;
 }
-
 // 分類の最上位を見出しに、下位の科目群を補足に表示する。
 export function ClassificationCell({
   path,
   emptyLabel,
   children,
 }: {
-  path: { name: string }[];
+  path: {
+    name: string;
+  }[];
   emptyLabel: string;
   children?: ReactNode;
 }) {
@@ -48,18 +48,17 @@ export function ClassificationCell({
     </td>
   );
 }
-
 export function OfferingsCell({ offerings }: { offerings: Offering[] }) {
+  const { t } = useTranslation();
   return (
     <td className="offerings">
-      <span>{offeringLabels(offerings).join("・") || "記載なし"}</span>
+      <span>{offeringLabels(offerings, t).join(t("・")) || t("記載なし")}</span>
       {sharedAcrossYears(offerings) ? (
-        <small className="shared-years">学年共通開講</small>
+        <small className="shared-years">{t("学年共通開講")}</small>
       ) : null}
     </td>
   );
 }
-
 export function ProviderCell({
   facultyName,
   departmentName,
@@ -80,7 +79,6 @@ export function ProviderCell({
     </td>
   );
 }
-
 export function CreditsCell({ credits }: { credits: number }) {
   return <td className="credits">{credits}</td>;
 }

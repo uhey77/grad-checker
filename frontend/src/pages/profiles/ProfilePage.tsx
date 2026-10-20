@@ -1,11 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef } from "react";
-import type { useProfile } from "../../hooks/profiles/useProfile";
-import { ProgramCoverage } from "../../components/profiles/ProgramCoverage";
-import { ProgramForm } from "../../components/profiles/ProgramForm";
-import { PageHeading } from "../../components/PageHeading";
-import { ErrorState, LoadingState } from "../../components/StatusPanels";
-import { programLabel } from "../../components/subjects/labels";
-
+import type { useProfile } from "../../hooks/profiles/useProfile.ts";
+import { ProgramCoverage } from "../../components/profiles/ProgramCoverage.tsx";
+import { ProgramForm } from "../../components/profiles/ProgramForm.tsx";
+import { PageHeading } from "../../components/PageHeading.tsx";
+import { ErrorState, LoadingState } from "../../components/StatusPanels.tsx";
+import { programLabel } from "../../components/subjects/labels.ts";
 export function ProfilePage({
   profile,
   loginName,
@@ -19,6 +19,7 @@ export function ProfilePage({
   showGrades: () => void;
   showDashboard: () => void;
 }) {
+  const { t } = useTranslation();
   const editor = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
   const expanded = profile.editing || !profile.state?.profile.curriculumId;
@@ -32,16 +33,16 @@ export function ProfilePage({
   return (
     <div className="profile-page">
       <button className="back-link" type="button" onClick={showDashboard}>
-        ← ダッシュボードへ戻る
+        {t("← ダッシュボードへ戻る")}
       </button>
-      <PageHeading title="マイページ" />
+      <PageHeading title={t("マイページ")} />
       <section
         className="panel profile-panel"
         aria-labelledby="account-heading"
       >
-        <h2 id="account-heading">アカウント情報</h2>
+        <h2 id="account-heading">{t("アカウント情報")}</h2>
         <dl className="account-details">
-          <dt>ユーザー名</dt>
+          <dt>{t("ユーザー名")}</dt>
           <dd>{loginName}</dd>
         </dl>
       </section>
@@ -49,11 +50,11 @@ export function ProfilePage({
         profile.error ? (
           <ErrorState
             message={profile.error}
-            actionLabel="再試行"
+            actionLabel={t("再試行")}
             onAction={profile.retry}
           />
         ) : (
-          <LoadingState>所属情報を読み込んでいます…</LoadingState>
+          <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
         )
       ) : (
         <section
@@ -61,7 +62,7 @@ export function ProfilePage({
           aria-labelledby="program-heading"
         >
           <div className="profile-section-heading">
-            <h2 id="program-heading">所属情報</h2>
+            <h2 id="program-heading">{t("所属情報")}</h2>
             <button
               type="button"
               ref={editButton}
@@ -70,21 +71,21 @@ export function ProfilePage({
               disabled={expanded}
               onClick={profile.edit}
             >
-              {expanded ? "編集中" : "変更する"}
+              {expanded ? t("編集中") : t("変更する")}
             </button>
           </div>
           <p className="saved-program">
             {profile.savedProgram
               ? programLabel(profile.savedProgram)
               : profile.state.profile.curriculumId
-                ? "選択肢にないカリキュラム"
-                : "所属は未設定です。"}
+                ? t("選択肢にないカリキュラム")
+                : t("所属は未設定です。")}
           </p>
           {!expanded && <ProgramCoverage program={profile.savedProgram} />}
           {profile.notice && !expanded ? (
             <p className="profile-saved" role="status">
               <span aria-hidden="true">✓ </span>
-              {profile.notice}
+              {t(profile.notice)}
             </p>
           ) : null}
           <div
@@ -98,12 +99,14 @@ export function ProfilePage({
             <div className="profile-editor-inner">
               {profile.state.programs.length === 0 ? (
                 <p role="status">
-                  選択できるカリキュラムが登録されていません。
+                  {t("選択できるカリキュラムが登録されていません。")}
                 </p>
               ) : null}
               {profile.state.profile.curriculumId ? (
                 <p className="profile-help">
-                  所属を変更しても、保存した成績は削除されません。卒業要件への適用は変更後の課程に従います。
+                  {t(
+                    "所属を変更しても、保存した成績は削除されません。卒業要件への適用は変更後の課程に従います。",
+                  )}
                 </p>
               ) : null}
               <ProgramForm {...profile} programs={profile.state.programs} />
@@ -115,7 +118,7 @@ export function ProfilePage({
               type="button"
               onClick={showGrades}
             >
-              成績入力へ進む
+              {t("成績入力へ進む")}
             </button>
           ) : null}
         </section>

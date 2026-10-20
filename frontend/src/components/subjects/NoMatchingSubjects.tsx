@@ -1,5 +1,5 @@
-import { EmptyState } from "../StatusPanels";
-
+import { useTranslation } from "react-i18next";
+import { EmptyState } from "../StatusPanels.tsx";
 export function NoMatchingSubjects({
   note,
   resetFilters,
@@ -8,13 +8,14 @@ export function NoMatchingSubjects({
   note?: string;
   resetFilters: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <EmptyState
-      title="条件に一致する科目がありません"
-      message={["検索語や絞り込み条件を変更してください。", note]
+      title={t("条件に一致する科目がありません")}
+      message={[t("検索語や絞り込み条件を変更してください。"), note]
         .filter(Boolean)
-        .join("")}
-      actionLabel="すべての条件をクリア"
+        .join(" ")}
+      actionLabel={t("すべての条件をクリア")}
       onAction={resetFilters}
     />
   );

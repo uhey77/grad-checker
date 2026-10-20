@@ -1,14 +1,13 @@
+import { useTranslation } from "react-i18next";
 import type {
   CatalogCategory,
   CatalogFilters,
 } from "../../modules/subjects/public.ts";
 import type { GradeFilters as Filters } from "../../modules/grades/public.ts";
-import { FilterSelect, SearchField } from "../FilterFields";
-import { termLabels } from "../subjects/labels";
-import { courseStatusLabels } from "./labels";
-
+import { FilterSelect, SearchField } from "../FilterFields.tsx";
+import { termLabels } from "../subjects/labels.ts";
+import { courseStatusLabels } from "./labels.ts";
 type Key = keyof (CatalogFilters & Filters);
-
 // 子の区分を親の直後に並べ、字下げで階層を示す。
 function treeOrder(categories: CatalogCategory[]): CatalogCategory[] {
   const ordered: CatalogCategory[] = [];
@@ -23,7 +22,6 @@ function treeOrder(categories: CatalogCategory[]): CatalogCategory[] {
   visit(null);
   return ordered;
 }
-
 export function GradeFilters({
   filters,
   categories,
@@ -39,6 +37,7 @@ export function GradeFilters({
   years: number[];
   changeFilter: (key: Key, value: string) => void;
 }) {
+  const { t } = useTranslation();
   const select = (
     key: Exclude<Key, "search">,
     label: string,
@@ -58,14 +57,14 @@ export function GradeFilters({
     <div className="filters grade-filters">
       <SearchField
         id="grade-filter-search"
-        label="科目名・科目コードを検索"
-        placeholder="例：プログラミング、CS-C001"
+        label={t("科目名・科目コードを検索")}
+        placeholder={t("例：プログラミング、CS-C001")}
         value={filters.search}
         onChange={(value) => changeFilter("search", value)}
       />
       {select(
         "categoryId",
-        "科目区分",
+        t("科目区分"),
         treeOrder(categories).map((c) => [
           c.id,
           `${"　".repeat(c.level)}${c.name}`,
@@ -73,24 +72,45 @@ export function GradeFilters({
       )}
       {select(
         "faculty",
-        "開講学部",
+        t("開講学部"),
         faculties.map((name) => [name, name]),
       )}
       {select(
         "department",
-        "開講学科",
+        t("開講学科"),
         departments.map((name) => [name, name]),
         departments.length === 0,
       )}
-      {select("semester", "開講学期", Object.entries(termLabels))}
-      {select("status", "修得状況", Object.entries(courseStatusLabels))}
+      {select(
+        "semester",
+        t("開講学期"),
+        Object.entries(termLabels).map(
+          ([key, label]) => [key, t(label)] as const,
+        ),
+      )}
+      {select(
+        "status",
+        t("修得状況"),
+        Object.entries(courseStatusLabels).map(
+          ([key, label]) => [key, t(label)] as const,
+        ),
+      )}
       {select(
         "year",
-        "履修年度",
-        years.map((year) => [String(year), `${year}年度`]),
+        t("履修年度"),
+        years.map((year) => [
+          String(year),
+          t("{{value0}}年度", { value0: year }),
+        ]),
         years.length === 0,
       )}
-      {select("term", "履修学期", Object.entries(termLabels))}
+      {select(
+        "term",
+        t("履修学期"),
+        Object.entries(termLabels).map(
+          ([key, label]) => [key, t(label)] as const,
+        ),
+      )}
     </div>
   );
 }

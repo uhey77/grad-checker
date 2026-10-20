@@ -1,17 +1,21 @@
+import { I18nextProvider, useTranslation } from "react-i18next";
+import { siteI18n } from "./i18n/setup.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Application } from "./app/composition/createApplication";
-import { SubjectListPage } from "./pages/subjects/SubjectListPage";
-import { AppLayout } from "./layouts/AppLayout";
-import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate";
-import { ProfilePage } from "./pages/profiles/ProfilePage";
-import { GradeEntryPage } from "./pages/grades/GradeEntryPage";
-import { UserMenu } from "./components/accounts/UserMenu";
-import { ErrorState, FormError, LoadingState } from "./components/StatusPanels";
-import { useProfile } from "./hooks/profiles/useProfile";
-import { DashboardPage } from "./pages/requirements/DashboardPage";
-
+import type { Application } from "./app/composition/createApplication.ts";
+import { SubjectListPage } from "./pages/subjects/SubjectListPage.tsx";
+import { AppLayout } from "./layouts/AppLayout.tsx";
+import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate.tsx";
+import { ProfilePage } from "./pages/profiles/ProfilePage.tsx";
+import { GradeEntryPage } from "./pages/grades/GradeEntryPage.tsx";
+import { UserMenu } from "./components/accounts/UserMenu.tsx";
+import {
+  ErrorState,
+  FormError,
+  LoadingState,
+} from "./components/StatusPanels.tsx";
+import { useProfile } from "./hooks/profiles/useProfile.ts";
+import { DashboardPage } from "./pages/requirements/DashboardPage.tsx";
 type Screen = "profile" | "grades" | "dashboard";
-
 // 画面を切り替えても未保存の入力を失わないよう、各画面は表示を切り替えるだけにする。
 function StudentScreens({
   application,
@@ -26,6 +30,7 @@ function StudentScreens({
   expire: () => void;
   auth: AuthControls;
 }) {
+  const { t } = useTranslation();
   const [screen, setScreen] = useState<Screen | null>(null);
   const main = useRef<HTMLElement>(null);
   // 所属と成績は同じ更新版を共有する。片方の保存をもう片方の再取得に使う。
@@ -69,7 +74,7 @@ function StudentScreens({
       ) : null}
       <main id="main-content" tabIndex={-1} ref={main}>
         {screen === null && !profile.error ? (
-          <LoadingState>所属情報を読み込んでいます…</LoadingState>
+          <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
         ) : null}
         {screen === "dashboard" && (
           <div>
@@ -77,11 +82,11 @@ function StudentScreens({
               profile.error ? (
                 <ErrorState
                   message={profile.error}
-                  actionLabel="再試行"
+                  actionLabel={t("再試行")}
                   onAction={profile.retry}
                 />
               ) : (
-                <LoadingState>所属情報を読み込んでいます…</LoadingState>
+                <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
               )
             ) : (
               <DashboardPage
@@ -127,26 +132,27 @@ function StudentScreens({
         </div>
       </main>
       <details className="subject-preview">
-        <summary>科目一覧（開発用）</summary>
+        <summary>{t("科目一覧（開発用）")}</summary>
         <SubjectListPage useCases={application.subjects} />
       </details>
     </AppLayout>
   );
 }
-
 export function App({ application }: { application: Application }) {
   return (
-    <AuthGate useCases={application.accounts}>
-      {(session, expire, auth) => (
-        <StudentScreens
-          key={session.student.id}
-          application={application}
-          csrf={session.csrfToken}
-          loginName={session.student.loginName}
-          expire={expire}
-          auth={auth}
-        />
-      )}
-    </AuthGate>
+    <I18nextProvider i18n={siteI18n}>
+      <AuthGate useCases={application.accounts}>
+        {(session, expire, auth) => (
+          <StudentScreens
+            key={session.student.id}
+            application={application}
+            csrf={session.csrfToken}
+            loginName={session.student.loginName}
+            expire={expire}
+            auth={auth}
+          />
+        )}
+      </AuthGate>
+    </I18nextProvider>
   );
 }

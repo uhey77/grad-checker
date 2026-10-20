@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import {
   type SubjectSortOrder,
   type Offering,
@@ -49,7 +50,7 @@ export const subjectSortLabels: Record<SubjectSortOrder, string> = {
   semester: "開講学年・学期順",
 };
 
-export function offeringLabels(offerings: Offering[]): string[] {
+export function offeringLabels(offerings: Offering[], t?: TFunction): string[] {
   const years = new Map<number, Set<string>>();
   for (const offering of offerings) {
     const year = Math.ceil(offering.semesterOrder / 2);
@@ -65,7 +66,12 @@ export function offeringLabels(offerings: Offering[]): string[] {
         ...order.filter((term) => terms.has(term)),
         ...[...terms].filter((term) => !order.includes(term)),
       ].map((term) => termLabels[term as keyof typeof termLabels] ?? term);
-      return `${year}年次${labels.join("・")}`;
+      return t
+        ? t("{{value0}}年次{{value1}}", {
+            value0: year,
+            value1: labels.map((label) => t(label)).join(t("・")),
+          })
+        : `${year}年次${labels.join("・")}`;
     });
 }
 

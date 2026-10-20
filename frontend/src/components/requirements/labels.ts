@@ -7,16 +7,14 @@ export const judgmentLabels: Record<Judgment, string> = {
   fail: "未達成",
 };
 
-const dateTime = new Intl.DateTimeFormat("ja-JP", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
 // 判定日時を閲覧環境の時刻で表示する。
-export function checkedAtLabel(iso: string): string {
-  return dateTime.format(new Date(iso));
+export function checkedAtLabel(iso: string, language = "ja"): string {
+  return new Intl.DateTimeFormat(language === "en" ? "en-US" : "ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(iso));
 }

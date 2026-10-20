@@ -1,20 +1,26 @@
+import { Trans, useTranslation } from "react-i18next";
 import { useState } from "react";
 import type { CompletionAnswer } from "../../modules/requirements/public.ts";
 import type {
   CheckPage,
   SavedCheck,
 } from "../../modules/requirements/public.ts";
-import { ErrorState, LoadingState } from "../StatusPanels";
-import { CheckHistory } from "./CheckHistory";
-import { GraduationResultView } from "./GraduationResultView";
-import { PastCheckView } from "./PastCheckView";
-import { checkedAtLabel } from "./labels";
-
+import { ErrorState, LoadingState } from "../StatusPanels.tsx";
+import { CheckHistory } from "./CheckHistory.tsx";
+import { GraduationResultView } from "./GraduationResultView.tsx";
+import { PastCheckView } from "./PastCheckView.tsx";
+import { checkedAtLabel } from "./labels.ts";
 type Remote<T> =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | ({ status: "ready" } & T);
-
+  | {
+      status: "loading";
+    }
+  | {
+      status: "error";
+      message: string;
+    }
+  | ({
+      status: "ready";
+    } & T);
 export function GraduationCheckPanel({
   busy,
   blocked,
@@ -33,12 +39,19 @@ export function GraduationCheckPanel({
   check: (answers?: CompletionAnswer[]) => void;
   curriculumId?: string;
   degreeLevel?: "bachelor" | "master" | "doctoral";
-  completionConditions?: { code: string; name: string }[];
+  completionConditions?: {
+    code: string;
+    name: string;
+  }[];
   saved?: SavedCheck;
   error?: string;
   history: {
-    page: Remote<{ data: CheckPage }>;
-    detail: Remote<{ check: SavedCheck }> | null;
+    page: Remote<{
+      data: CheckPage;
+    }>;
+    detail: Remote<{
+      check: SavedCheck;
+    }> | null;
     pageSize: number;
     selectedId: string | null;
     select: (id: string) => void;
@@ -48,6 +61,7 @@ export function GraduationCheckPanel({
     retryDetail: () => void;
   };
 }) {
+  const { t, i18n } = useTranslation();
   const isGraduate = degreeLevel !== "bachelor";
   const [answerState, setAnswerState] = useState<{
     key: string;
@@ -65,9 +79,9 @@ export function GraduationCheckPanel({
   return (
     <section
       className="panel graduation-check"
-      aria-label={isGraduate ? "修了要件チェック" : "卒業要件チェック"}
+      aria-label={isGraduate ? t("修了要件チェック") : t("卒業要件チェック")}
     >
-      <h2>{isGraduate ? "修了要件チェック" : "卒業要件チェック"}</h2>
+      <h2>{isGraduate ? t("修了要件チェック") : t("卒業要件チェック")}</h2>
       {history.detail ? (
         <PastCheckView
           detail={history.detail}
@@ -77,13 +91,19 @@ export function GraduationCheckPanel({
       ) : (
         <>
           {dirty && (
-            <p>未保存の変更があります。成績を保存してから判定してください。</p>
+            <p>
+              {t(
+                "未保存の変更があります。成績を保存してから判定してください。",
+              )}
+            </p>
           )}
           {completionConditions.length > 0 && (
             <fieldset disabled={busy || blocked}>
-              <legend>単位以外の修了条件（本人申告）</legend>
+              <legend>{t("単位以外の修了条件（本人申告）")}</legend>
               <p>
-                大学の認定状況を確認して回答してください。未入力の条件があると判定を保留します。回答はこの判定の履歴に保存されます。
+                {t(
+                  "大学の認定状況を確認して回答してください。未入力の条件があると判定を保留します。回答はこの判定の履歴に保存されます。",
+                )}
               </p>
               {completionConditions.map((c) => (
                 <label key={c.code} className="completion-answer">
@@ -102,9 +122,9 @@ export function GraduationCheckPanel({
                       })
                     }
                   >
-                    <option value="unknown">未確認・未入力</option>
-                    <option value="met">達成（本人申告）</option>
-                    <option value="not_met">未達成</option>
+                    <option value="unknown">{t("未確認・未入力")}</option>
+                    <option value="met">{t("達成（本人申告）")}</option>
+                    <option value="not_met">{t("未達成")}</option>
                   </select>
                 </label>
               ))}
@@ -117,37 +137,44 @@ export function GraduationCheckPanel({
             onClick={submit}
           >
             {busy
-              ? "判定中…"
+              ? t("判定中…")
               : isGraduate
-                ? "修了要件をチェック"
-                : "卒業要件をチェック"}
+                ? t("修了要件をチェック")
+                : t("卒業要件をチェック")}
           </button>
           <p className="check-hint">
-            判定するたびに、結果を本人だけが見られる判定履歴に保存します。
+            {t(
+              "判定するたびに、結果を本人だけが見られる判定履歴に保存します。",
+            )}
           </p>
           {busy && (
             <LoadingState>
               {isGraduate
-                ? "修了要件を判定しています…"
-                : "卒業要件を判定しています…"}
+                ? t("修了要件を判定しています…")
+                : t("卒業要件を判定しています…")}
             </LoadingState>
           )}
           {error && (
             <ErrorState
-              title="判定できませんでした"
+              title={t("判定できませんでした")}
               message={error}
-              actionLabel="判定を再試行"
+              actionLabel={t("判定を再試行")}
               onAction={submit}
             />
           )}
           {saved && (
             <>
               <p className="check-saved" role="status">
-                最新の判定（
-                <time dateTime={saved.createdAt}>
-                  {checkedAtLabel(saved.createdAt)}
-                </time>
-                ）を判定履歴に保存しました。
+                <Trans
+                  i18nKey="最新の判定（<time>{{date}}</time>）を判定履歴に保存しました。"
+                  values={{
+                    date: checkedAtLabel(
+                      saved.createdAt,
+                      i18n.resolvedLanguage,
+                    ),
+                  }}
+                  components={{ time: <time dateTime={saved.createdAt} /> }}
+                />
               </p>
               <GraduationResultView result={saved.result} />
             </>

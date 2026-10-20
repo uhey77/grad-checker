@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 // 一覧の検索・絞り込み欄。選択肢は[値, 表示名]で受け取る。
 
 export function SearchField({
@@ -13,9 +15,10 @@ export function SearchField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="search-field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{t(label)}</label>
       <input
         id={id}
         type="search"
@@ -45,16 +48,17 @@ export function FilterSelect({
   disabled?: boolean;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{t(label)}</label>
       <select
         id={id}
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
       >
-        {allLabel === null ? null : <option value="">{allLabel}</option>}
+        {allLabel === null ? null : <option value="">{t(allLabel)}</option>}
         {options.map(([optionValue, text]) => (
           <option key={optionValue} value={optionValue}>
             {text}

@@ -1,15 +1,13 @@
-import { useEntranceProgress } from "../../hooks/useEntranceProgress";
+import { Trans, useTranslation } from "react-i18next";
+import { useEntranceProgress } from "../../hooks/useEntranceProgress.ts";
 import type {
   GraduationResult,
   RequirementResult,
 } from "../../modules/requirements/public.ts";
 
-const percent = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 });
-
 function fraction(credited: number, required: number) {
   return required === 0 ? 1 : Math.min(credited / required, 1);
 }
-
 export function GraduationInfographic({
   result,
   categories,
@@ -17,18 +15,31 @@ export function GraduationInfographic({
   result: Pick<GraduationResult, "total" | "result">;
   categories: RequirementResult[];
 }) {
+  const { t, i18n } = useTranslation();
+  const percent = new Intl.NumberFormat(i18n.resolvedLanguage, {
+    maximumFractionDigits: 1,
+  });
   const progress = useEntranceProgress();
   const total = result.total;
   const ratio = fraction(total.creditedCredits, total.requiredCredits);
-
   return (
-    <section className="graduation-infographic" aria-label="単位の進捗グラフ">
+    <section
+      className="graduation-infographic"
+      aria-label={t("単位の進捗グラフ")}
+    >
       <div className="credit-orbit-panel">
-        <h3>総単位の充足率</h3>
+        <h3>{t("総単位の充足率")}</h3>
         <div
           className="credit-orbit"
           role="img"
-          aria-label={`総単位の充足率 ${percent.format(ratio * 100)}%。算入${total.creditedCredits}単位、必要${total.requiredCredits}単位`}
+          aria-label={t(
+            "総単位の充足率 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位",
+            {
+              value0: percent.format(ratio * 100),
+              value1: total.creditedCredits,
+              value2: total.requiredCredits,
+            },
+          )}
         >
           <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false">
             <circle className="credit-orbit-track" cx="100" cy="100" r="83" />
@@ -49,24 +60,28 @@ export function GraduationInfographic({
             </strong>
             <span>
               <b>{Math.round(total.creditedCredits * progress)}</b>
-              <span> / {total.requiredCredits} 単位</span>
+              <span>
+                {t(" / {{value0}} 単位", { value0: total.requiredCredits })}
+              </span>
             </span>
           </div>
         </div>
         <p className="credit-orbit-caption">
           {total.shortage > 0 ? (
-            <>
-              総単位の不足は <strong>{total.shortage}単位</strong>
-            </>
+            <Trans
+              i18nKey="総単位の不足は <strong>{{credits}}単位</strong>"
+              values={{ credits: total.shortage }}
+              components={{ strong: <strong /> }}
+            />
           ) : (
-            <strong>総単位の条件を満たしています</strong>
+            <strong>{t("総単位の条件を満たしています")}</strong>
           )}
         </p>
       </div>
       <div className="category-progress-panel">
-        <h3>区分別の単位</h3>
+        <h3>{t("区分別の単位")}</h3>
         <p className="category-progress-help">
-          各区分に算入される単位を表示しています。
+          {t("各区分に算入される単位を表示しています。")}
         </p>
         <div className="category-progress-list">
           {categories.map((row, index) => {
@@ -78,8 +93,8 @@ export function GraduationInfographic({
                   <span>{row.name}</span>
                   <span className={`category-progress-status ${row.result}`}>
                     {row.result === "pass"
-                      ? "合計達成"
-                      : `あと${row.shortage}単位`}
+                      ? t("合計達成")
+                      : t("あと{{value0}}単位", { value0: row.shortage })}
                   </span>
                 </div>
                 <div
@@ -92,7 +107,14 @@ export function GraduationInfographic({
                     row.creditedCredits,
                     row.requiredCredits,
                   )}
-                  aria-valuetext={`算入${row.creditedCredits}単位、必要${row.requiredCredits}単位、不足${row.shortage}単位`}
+                  aria-valuetext={t(
+                    "算入{{value0}}単位、必要{{value1}}単位、不足{{value2}}単位",
+                    {
+                      value0: row.creditedCredits,
+                      value1: row.requiredCredits,
+                      value2: row.shortage,
+                    },
+                  )}
                 >
                   <span
                     className={`category-progress-fill tone-${index % 3}`}
@@ -102,8 +124,8 @@ export function GraduationInfographic({
                   />
                 </div>
                 <p className="category-progress-count">
-                  <strong>{row.creditedCredits}</strong> / {row.requiredCredits}{" "}
-                  単位
+                  <strong>{row.creditedCredits}</strong>
+                  {t(" / {{value0}} 単位", { value0: row.requiredCredits })}
                 </p>
               </div>
             );
@@ -111,7 +133,9 @@ export function GraduationInfographic({
         </div>
         {total.result === "pass" && result.result === "fail" && (
           <p className="category-progress-footnote">
-            総単位は満たしていますが、必修・内訳などに未達成の条件が残っています。
+            {t(
+              "総単位は満たしていますが、必修・内訳などに未達成の条件が残っています。",
+            )}
           </p>
         )}
       </div>
