@@ -66,13 +66,3 @@ class SubjectListUnitOfWork(UnitOfWork):
     @property
     @abstractmethod
     def subject_list(self) -> SubjectListRepository: ...
-
-
-def list_subject_programs(uow: SubjectListUnitOfWork) -> list[SubjectListProgram]:
-    with uow.read():
-        return uow.subject_list.list_programs()
-
-
-def get_subject_list(uow: SubjectListUnitOfWork, curriculum_id: UUID) -> SubjectList:
-    with uow.read():
-        return uow.subject_list.get_subject_list(curriculum_id)

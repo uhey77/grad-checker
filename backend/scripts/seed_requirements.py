@@ -12,15 +12,15 @@ from config.settings import Settings
 from modules.requirements.grad_checker_requirements.application.errors.seed import (
     RequirementSeedError,
 )
-from modules.requirements.grad_checker_requirements.application.seed_import import (
-    import_requirements,
-)
 from modules.requirements.grad_checker_requirements.infrastructure.schema import (
     create_requirement_schema,
 )
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,
     load_requirement_seed,
+)
+from modules.requirements.grad_checker_requirements.public import (
+    ImportRequirementsUseCase,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
@@ -40,7 +40,9 @@ def main() -> int:
         engine = create_database_engine(Settings().database_url)
         create_database_schema(engine)
         create_requirement_schema(engine)
-        result = import_requirements(SqliteRequirementUnitOfWork(engine), seed)
+        result = ImportRequirementsUseCase(SqliteRequirementUnitOfWork(engine)).execute(
+            seed
+        )
     except (
         RequirementSeedError,
         SQLAlchemyError,

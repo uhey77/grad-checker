@@ -31,9 +31,6 @@ from modules.grades.grad_checker_grades.infrastructure.schema import create_grad
 from modules.requirements.grad_checker_requirements.application import (
     student_evaluation,
 )
-from modules.requirements.grad_checker_requirements.application.seed_import import (
-    import_requirements,
-)
 from modules.requirements.grad_checker_requirements.infrastructure.evaluation import (
     SqliteEvaluationUnitOfWork,
 )
@@ -44,8 +41,8 @@ from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,
     load_requirement_seed,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_import import (
-    import_subject_data,
+from modules.requirements.grad_checker_requirements.public import (
+    ImportRequirementsUseCase,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
     SubjectDataSeed,
@@ -58,6 +55,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import i
     SqliteSubjectDataUnitOfWork,
     load_seed,
 )
+from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
 
 BACKEND = Path(__file__).resolve().parents[1]
 ORIGIN = "http://127.0.0.1:5173"
@@ -167,8 +165,10 @@ def run(iterations: int) -> dict:  # noqa: PLR0912, PLR0914, PLR0915
             create_account_schema(engine)
             create_grade_schema(engine)
             create_requirement_schema(engine)
-            import_subject_data(SqliteSubjectDataUnitOfWork(engine), seed)
-            import_requirements(SqliteRequirementUnitOfWork(engine), requirements)
+            ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(seed)
+            ImportRequirementsUseCase(SqliteRequirementUnitOfWork(engine)).execute(
+                requirements
+            )
             binary = temp / "grad-checker-api"
             subprocess.run(
                 [go, "build", "-o", str(binary), "./api"], cwd=BACKEND, check=True

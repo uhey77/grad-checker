@@ -2,21 +2,18 @@
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from modules.grades.grad_checker_grades.public import GradeAttempt
-from modules.shared.grad_checker_shared.application.clock import Clock
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 from .completion_policy import CompletionAnswer
-from .errors.evaluation import EvaluationError
 from .evaluation_models import CreditSummary, Judgment
 from .student_evaluation import (
     EvaluationRepository,
     StudentEvaluation,
-    evaluate_student,
 )
 
 MAX_REVISION = 9007199254740990
@@ -108,62 +105,3 @@ class CheckUnitOfWork(UnitOfWork):
     @property
     @abstractmethod
     def checks(self) -> CheckRepository: ...
-
-
-class CheckService:
-    def __init__(self, uow: CheckUnitOfWork, clock: Clock) -> None:
-        self.uow = uow
-        self.clock = clock
-
-    def create_check(self, student_id: str, request: CheckRequest) -> SavedCheck:
-        # 判定に使った成績版のまま保存するため、所属・成績・マスタの読取りから
-        # 版の照合・判定・保存までを一つの書込みロックの下で行う。
-        with self.uow.write():
-            snapshot = self.uow.evaluation.get_snapshot(student_id)
-            # 画面が最後に保存・取得した成績版で判定したことを保証する。
-            if snapshot.data_revision != request.expected_revision:
-                raise EvaluationError(
-                    "revision_conflict", "成績・所属が別の画面で更新されました。"
-                )
-            snapshot = snapshot.model_copy(
-                update={"completion_answers": request.completion_answers}
-            )
-            created_at = self.clock.now()
-            grades = sorted(
-                snapshot.grades, key=lambda grade: (grade.course_id, grade.attempt_no)
-            )
-            check = SavedCheck(
-                id=uuid4(),
-                created_at=created_at,
-                input=CheckInput(
-                    program_id=snapshot.program_id,
-                    curriculum_id=snapshot.curriculum_id,
-                    data_revision=snapshot.data_revision,
-                    grades=grades,
-                    completion_answers=request.completion_answers,
-                ),
-                result=evaluate_student(snapshot, created_at),
-            )
-            self.uow.checks.add(student_id, check)
-        # commitが成功してから結果を返す。
-        return check
-
-    def get_check(self, student_id: str, check_id: UUID) -> SavedCheck:
-        with self.uow.read():
-            check = self.uow.checks.get(student_id, check_id)
-        # 他人の履歴と存在しない履歴を区別しない。
-        if check is None:
-            raise EvaluationError("check_not_found", "判定履歴が見つかりません。")
-        return check
-
-    def list_checks(self, student_id: str, page: CheckPage) -> CheckList:
-        # 件数と一覧を同じ読取りスナップショットで数え、ページ境界をずらさない。
-        with self.uow.read():
-            total_count = self.uow.checks.count(student_id)
-            checks = self.uow.checks.list_page(student_id, page)
-        return CheckList(
-            checks=checks,
-            limit=page.limit,
-            offset=page.offset,
-            total_count=total_count,
-        )

@@ -6,16 +6,21 @@ from fastapi import APIRouter, Depends
 from pydantic import model_validator
 
 from api.api_service.presentation.dependencies import (
-    auth_service,
-    course_catalog_service,
+    authenticate_session,
     current_identity,
-    profile_service,
+    get_selected_curriculum,
+    list_categories,
+    list_courses,
 )
 from api.api_service.presentation.go_bridge_call import SessionCall, respond
-from modules.accounts.grad_checker_accounts.public import AuthService, ProfileService
+from modules.accounts.grad_checker_accounts.public import (
+    AuthenticateSessionUseCase,
+    GetSelectedCurriculumUseCase,
+)
 from modules.subjects.grad_checker_subjects.public import (
-    CourseCatalogService,
     CourseFilters,
+    ListCategoriesUseCase,
+    ListCoursesUseCase,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -35,15 +40,18 @@ class CourseCall(SessionCall):
 @router.post("/courses")
 def courses(
     call: CourseCall,
-    auth: Annotated[AuthService, Depends(auth_service)],
-    service: Annotated[CourseCatalogService, Depends(course_catalog_service)],
-    profiles: Annotated[ProfileService, Depends(profile_service)],
+    list_courses: Annotated[ListCoursesUseCase, Depends(list_courses)],
+    list_categories: Annotated[ListCategoriesUseCase, Depends(list_categories)],
+    get_selected_curriculum: Annotated[
+        GetSelectedCurriculumUseCase, Depends(get_selected_curriculum)
+    ],
+    auth: Annotated[AuthenticateSessionUseCase, Depends(authenticate_session)],
 ) -> dict[str, object]:
     def run() -> object:
         identity = current_identity(auth, call.token)
-        curriculum_id = profiles.selected_curriculum(identity.account.id)
+        curriculum_id = get_selected_curriculum.execute(identity.account.id)
         if call.operation == "categories":
-            return service.list_categories(curriculum_id)
-        return service.list_courses(curriculum_id, call.filters or CourseFilters())
+            return list_categories.execute(curriculum_id)
+        return list_courses.execute(curriculum_id, call.filters or CourseFilters())
 
     return respond(run)

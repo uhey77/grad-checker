@@ -4,14 +4,11 @@ from sqlalchemy import text
 from test_auth_http import PASSWORD, auth_services  # noqa: F401
 from test_university_curricula import masters, snapshot_for  # noqa: F401
 
-from modules.requirements.grad_checker_requirements.application.seed_import import (
-    import_requirements,
-)
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_import import (
-    import_subject_data,
+from modules.requirements.grad_checker_requirements.public import (
+    ImportRequirementsUseCase,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
@@ -19,6 +16,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.database import (
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     SqliteSubjectDataUnitOfWork,
 )
+from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
 
 
 def test_complete_seed_to_owner_only_completion_snapshot(
@@ -30,15 +28,19 @@ def test_complete_seed_to_owner_only_completion_snapshot(
     engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
     subjects, requirements = masters
     try:
-        import_subject_data(SqliteSubjectDataUnitOfWork(engine), subjects)
-        import_requirements(SqliteRequirementUnitOfWork(engine), requirements)
-        assert not any(
-            import_subject_data(SqliteSubjectDataUnitOfWork(engine), subjects).values()
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(subjects)
+        ImportRequirementsUseCase(SqliteRequirementUnitOfWork(engine)).execute(
+            requirements
         )
         assert not any(
-            import_requirements(
-                SqliteRequirementUnitOfWork(engine), requirements
-            ).values()
+            ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine))
+            .execute(subjects)
+            .values()
+        )
+        assert not any(
+            ImportRequirementsUseCase(SqliteRequirementUnitOfWork(engine))
+            .execute(requirements)
+            .values()
         )
         s = snapshot_for(masters, "GR-CS-M", earned=True, answers=True)
         credentials = {"login_name": "completion_owner", "password": PASSWORD}

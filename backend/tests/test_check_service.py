@@ -12,12 +12,17 @@ from modules.requirements.grad_checker_requirements.application.check_results im
     CheckPage,
     CheckRepository,
     CheckRequest,
-    CheckService,
     CheckUnitOfWork,
     SavedCheck,
 )
 from modules.requirements.grad_checker_requirements.application.errors import (
     evaluation as evaluation_errors,
+)
+from modules.requirements.grad_checker_requirements.public import (
+    CreateCheckUseCase,
+    EvaluateGraduationUseCase,
+    GetCheckUseCase,
+    ListChecksUseCase,
 )
 from tests.fakes import FakeUnitOfWork, FixedClock
 
@@ -84,7 +89,7 @@ class FakeEvaluationUnitOfWork(FakeUnitOfWork, student_evaluation.EvaluationUnit
 def test_stale_revision_rolls_back_without_saving_a_check():
     uow = FakeCheckUnitOfWork(data_revision=2)
     with pytest.raises(evaluation_errors.EvaluationError, match="revision_conflict"):
-        CheckService(uow, FixedClock()).create_check(
+        CreateCheckUseCase(uow, FixedClock()).execute(
             "student", CheckRequest(expected_revision=1)
         )
     assert uow.events == ["write", "rollback"]
@@ -94,15 +99,13 @@ def test_stale_revision_rolls_back_without_saving_a_check():
 def test_missing_check_is_read_without_writing():
     uow = FakeCheckUnitOfWork()
     with pytest.raises(evaluation_errors.EvaluationError, match="check_not_found"):
-        CheckService(uow, FixedClock()).get_check("student", uuid4())
+        GetCheckUseCase(uow).execute("student", uuid4())
     assert uow.events == ["read"]
 
 
 def test_check_list_counts_and_reads_in_one_read_block():
     uow = FakeCheckUnitOfWork()
-    page = CheckService(uow, FixedClock()).list_checks(
-        "student", CheckPage(limit=5, offset=10)
-    )
+    page = ListChecksUseCase(uow).execute("student", CheckPage(limit=5, offset=10))
     assert (page.checks, page.limit, page.offset, page.total_count) == ([], 5, 10, 0)
     assert uow.events == ["read"]
 
@@ -121,10 +124,13 @@ def test_evaluation_reads_a_snapshot_and_computes_outside_the_transaction(
         times.append(evaluated_at)
         return "result"
 
-    monkeypatch.setattr(student_evaluation, "evaluate_student", evaluate)
+    monkeypatch.setattr(
+        "modules.requirements.grad_checker_requirements.application.use_cases.evaluate_graduation.evaluate_student",
+        evaluate,
+    )
     clock = FixedClock()
-    service = student_evaluation.EvaluationService(uow, clock)
-    assert service.evaluate("student") == "result"
+    service = EvaluateGraduationUseCase(uow, clock)
+    assert service.execute("student") == "result"
     assert uow.events == ["read"]
     assert computed == [uow.evaluations.snapshot]
     assert times == [clock.value]

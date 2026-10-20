@@ -14,19 +14,17 @@ from modules.accounts.grad_checker_accounts.application.errors.profile import (
     ProfileError,
 )
 from modules.accounts.grad_checker_accounts.application.profile import (
-    ProfileService,
     ProgramSelection,
 )
 from modules.accounts.grad_checker_accounts.infrastructure.profile import (
     SqliteProfileUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_import import (
-    import_subject_data,
-)
+from modules.accounts.grad_checker_accounts.public import SaveProgramUseCase
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     SqliteSubjectDataUnitOfWork,
     load_seed,
 )
+from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
 
 BACKEND = Path(__file__).resolve().parents[1]
 
@@ -35,10 +33,9 @@ BACKEND = Path(__file__).resolve().parents[1]
 def profile_app(tmp_path):
     app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'profile.db'}"))
     with TestClient(app) as client:
-        import_subject_data(
-            SqliteSubjectDataUnitOfWork(app.state.database_engine),
-            load_seed(BACKEND / "seeds/cs_2026.json"),
-        )
+        ImportSubjectDataUseCase(
+            SqliteSubjectDataUnitOfWork(app.state.database_engine)
+        ).execute(load_seed(BACKEND / "seeds/cs_2026.json"))
         register(client)
         yield app, client, login(client)
 
@@ -131,9 +128,9 @@ def test_concurrent_revision_updates_have_only_one_winner(profile_app):
     student_id = identity["student"]["id"]
 
     def save(chosen):
-        service = ProfileService(SqliteProfileUnitOfWork(app.state.database_engine))
+        service = SaveProgramUseCase(SqliteProfileUnitOfWork(app.state.database_engine))
         try:
-            return service.save_program(student_id, chosen)
+            return service.execute(student_id, chosen)
         except ProfileError as error:
             return error.code
 

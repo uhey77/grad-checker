@@ -14,9 +14,6 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import text
 
-from modules.subjects.grad_checker_subjects.application.subject_data_import import (
-    import_subject_data,
-)
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
     create_database_schema,
@@ -25,6 +22,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import i
     SqliteSubjectDataUnitOfWork,
     load_seed,
 )
+from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
 
 BACKEND = Path(__file__).resolve().parents[1]
 BASE = "/api/dev/subject-list"
@@ -79,8 +77,8 @@ def services(tmp_path_factory):
     db_url = f"sqlite:///{directory / 'test.db'}"
     engine = create_database_engine(db_url)
     create_database_schema(engine)
-    import_subject_data(
-        SqliteSubjectDataUnitOfWork(engine), load_seed(BACKEND / "seeds/cs_2026.json")
+    ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+        load_seed(BACKEND / "seeds/cs_2026.json")
     )
     ports = [unused_port() for _ in range(3)]
     python_port, external_port, disabled_port = ports

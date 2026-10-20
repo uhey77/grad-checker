@@ -5,9 +5,23 @@ from typing import Annotated, Literal, Self
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from api.api_service.presentation.dependencies import auth_service
+from api.api_service.presentation.dependencies import (
+    authenticate_session,
+    get_auth_policy,
+    login,
+    logout,
+    recover_account,
+    register_account,
+)
 from api.api_service.presentation.go_bridge_call import respond
-from modules.accounts.grad_checker_accounts.public import AuthService
+from modules.accounts.grad_checker_accounts.public import (
+    AuthenticateSessionUseCase,
+    GetAuthPolicyUseCase,
+    LoginUseCase,
+    LogoutUseCase,
+    RecoverAccountUseCase,
+    RegisterAccountUseCase,
+)
 
 router = APIRouter(prefix="/bridge")
 
@@ -47,35 +61,47 @@ class AuthCall(BaseModel):
 
 @router.post("/auth")
 def auth(
-    call: AuthCall, service: Annotated[AuthService, Depends(auth_service)]
+    call: AuthCall,
+    *,
+    register_account: Annotated[RegisterAccountUseCase, Depends(register_account)],
+    recover_account: Annotated[RecoverAccountUseCase, Depends(recover_account)],
+    login: Annotated[LoginUseCase, Depends(login)],
+    logout: Annotated[LogoutUseCase, Depends(logout)],
+    authenticate_session: Annotated[
+        AuthenticateSessionUseCase, Depends(authenticate_session)
+    ],
+    get_auth_policy: Annotated[GetAuthPolicyUseCase, Depends(get_auth_policy)],
 ) -> dict[str, object]:
 
     def run() -> object:
         if call.operation == "config":
+            policy = get_auth_policy.execute()
             return {
                 "policy": {
-                    "password_min_length": service.policy.password_min_length,
-                    "password_max_length": service.policy.password_max_length,
+                    "password_min_length": policy.password_min_length,
+                    "password_max_length": policy.password_max_length,
                 }
             }
         if call.operation == "register":
-            recovery = service.register(call.login_name, call.password, call.client_key)
+            recovery = register_account.execute(
+                call.login_name, call.password, call.client_key
+            )
             return {"registered": True, "recovery_code": recovery}
         if call.operation == "recover":
-            recovery = service.recover(
+            recovery = recover_account.execute(
                 call.login_name, call.recovery_code, call.password, call.client_key
             )
             return {"recovered": True, "recovery_code": recovery}
         if call.operation == "logout":
-            service.logout(call.token, call.csrf)
+            logout.execute(call.token, call.csrf)
             return {"authenticated": False}
         raw_token = None
         if call.operation == "login":
-            identity, raw_token = service.login(
+            identity, raw_token = login.execute(
                 call.login_name, call.password, call.client_key
             )
         else:
-            identity = service.session(call.token)
+            identity = authenticate_session.execute(call.token)
         data: dict[str, object] = {
             "authenticated": True,
             "student": {

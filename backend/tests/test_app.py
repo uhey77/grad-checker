@@ -5,9 +5,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 
 from api.api_service.main import create_app
-from api.api_service.presentation.dependencies import auth_service
+from api.api_service.presentation.dependencies import (
+    register_account,
+)
 from config.settings import Settings
-from modules.accounts.grad_checker_accounts.application.auth import AuthService
+from modules.accounts.grad_checker_accounts.public import (
+    AuthenticateSessionUseCase,
+    RegisterAccountUseCase,
+)
 
 
 def test_startup_and_python_service(tmp_path: Path) -> None:
@@ -62,10 +67,10 @@ def test_composition_creates_request_local_uows_and_cleans_up_on_restart(tmp_pat
     previous = None
     for _ in range(2):
         with TestClient(application) as client:
-            factory = application.dependency_overrides[auth_service]
+            factory = application.dependency_overrides[register_account]
             first, second = factory(), factory()
-            assert isinstance(first, AuthService)
-            assert isinstance(second, AuthService)
+            assert isinstance(first, RegisterAccountUseCase)
+            assert isinstance(second, RegisterAccountUseCase)
             assert first.uow is not second.uow
             assert first.passwords is second.passwords
             assert first.clock is second.clock
@@ -76,7 +81,7 @@ def test_composition_creates_request_local_uows_and_cleans_up_on_restart(tmp_pat
                 == 200
             )
             previous = factory
-        assert auth_service not in application.dependency_overrides
+        assert register_account not in application.dependency_overrides
 
 
 def test_composition_preserves_dependency_overrides(tmp_path):
@@ -86,13 +91,13 @@ def test_composition_preserves_dependency_overrides(tmp_path):
         # このテストの開発用科目一覧経路は認証を利用しない。
         raise AssertionError("should not resolve auth")
 
-    application.dependency_overrides[auth_service] = custom_auth
+    application.dependency_overrides[register_account] = custom_auth
     with TestClient(application) as client:
-        assert application.dependency_overrides[auth_service] is custom_auth
+        assert application.dependency_overrides[register_account] is custom_auth
         assert client.post(
             "/bridge/subject-list", json={"operation": "list_programs"}
         ).json() == {"data": []}
-    assert application.dependency_overrides[auth_service] is custom_auth
+    assert application.dependency_overrides[register_account] is custom_auth
 
 
 @pytest.mark.parametrize(
@@ -101,7 +106,7 @@ def test_composition_preserves_dependency_overrides(tmp_path):
         (
             "/bridge/subject-list",
             {"operation": "list_programs"},
-            "api.api_service.presentation.go_bridge_subject_list.list_subject_programs",
+            "modules.subjects.grad_checker_subjects.public.ListSubjectProgramsUseCase.execute",
         ),
         ("/bridge/auth", {"operation": "session", "token": "t" * 43}, None),
         ("/bridge/grades", {"operation": "get", "token": "t" * 43}, None),
@@ -115,7 +120,7 @@ def test_unexpected_failures_return_internal_error_code(
 
     # 全てのブリッジアダプターが同じ包絡形式で予期しない失敗を返す。
     if target is None:
-        monkeypatch.setattr(AuthService, "session", broken)
+        monkeypatch.setattr(AuthenticateSessionUseCase, "execute", broken)
     else:
         monkeypatch.setattr(target, broken)
     application = create_app(Settings(database_url=f"sqlite:///{tmp_path / 't.db'}"))

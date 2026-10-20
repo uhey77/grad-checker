@@ -9,12 +9,20 @@ from modules.accounts.grad_checker_accounts.application.auth import (
     AccountRepository,
     AccountUnitOfWork,
     AuthPolicy,
-    AuthService,
     Passwords,
     StoredSession,
     digest,
 )
+from modules.accounts.grad_checker_accounts.application.authentication import (
+    SessionAuthentication,
+)
 from modules.accounts.grad_checker_accounts.application.errors.auth import AuthError
+from modules.accounts.grad_checker_accounts.public import (
+    AuthenticateSessionUseCase,
+    LoginUseCase,
+    RecoverAccountUseCase,
+    RegisterAccountUseCase,
+)
 from tests.fakes import FakeUnitOfWork, FixedClock
 
 USERNAME = "student_01"
@@ -127,56 +135,70 @@ def uow() -> FakeAccountUnitOfWork:
 
 
 @pytest.fixture
-def service(uow: FakeAccountUnitOfWork) -> AuthService:
-    return AuthService(uow, FakePasswords(uow), POLICY, FixedClock())
+def register_account(uow: FakeAccountUnitOfWork) -> RegisterAccountUseCase:
+    return RegisterAccountUseCase(uow, FakePasswords(uow), POLICY, FixedClock())
+
+
+@pytest.fixture
+def recover_account(uow: FakeAccountUnitOfWork) -> RecoverAccountUseCase:
+    return RecoverAccountUseCase(uow, FakePasswords(uow), POLICY, FixedClock())
+
+
+@pytest.fixture
+def login(uow: FakeAccountUnitOfWork) -> LoginUseCase:
+    return LoginUseCase(uow, FakePasswords(uow), POLICY, FixedClock())
 
 
 ATTEMPTS = ["write", "commit", "write", "commit"]
 
 
-def test_attempts_are_kept_even_when_registration_input_is_invalid(uow, service):
+def test_attempts_are_kept_even_when_registration_input_is_invalid(
+    uow, register_account
+):
     with pytest.raises(AuthError, match="invalid_password"):
-        service.register(USERNAME, "short", "192.0.2.1")
+        register_account.execute(USERNAME, "short", "192.0.2.1")
     # 試行回数は登録本体と別にcommitし、登録のトランザクションは開始しない。
     assert uow.events == ATTEMPTS
     assert len(uow.repository.attempts) == 2
 
 
-def test_registration_writes_once_after_attempts(uow, service):
-    assert len(service.register(USERNAME, PASSWORD, "192.0.2.1")) == 43
+def test_registration_writes_once_after_attempts(uow, register_account):
+    assert len(register_account.execute(USERNAME, PASSWORD, "192.0.2.1")) == 43
     assert uow.events == [*ATTEMPTS, "write", "commit"]
 
 
-def test_recovery_updates_credentials_and_revokes_sessions_in_one_write(uow, service):
-    replacement = service.recover(USERNAME, RECOVERY, "new-password-1234", "ip")
+def test_recovery_updates_credentials_and_revokes_sessions_in_one_write(
+    uow, recover_account
+):
+    replacement = recover_account.execute(USERNAME, RECOVERY, "new-password-1234", "ip")
     assert uow.events == [*ATTEMPTS, "write", "commit"]
     assert uow.repository.password_hash == "hash:new-password-1234"
     assert uow.repository.recovery_hash == digest(replacement)
     assert all(revoked is not None for revoked in uow.repository.sessions.values())
 
 
-def test_wrong_recovery_code_rolls_back_without_revoking_sessions(uow, service):
+def test_wrong_recovery_code_rolls_back_without_revoking_sessions(uow, recover_account):
     with pytest.raises(AuthError, match="invalid_recovery"):
-        service.recover(USERNAME, "x" * 43, "new-password-1234", "ip")
+        recover_account.execute(USERNAME, "x" * 43, "new-password-1234", "ip")
     assert uow.events == [*ATTEMPTS, "write", "rollback"]
     assert uow.repository.sessions == {"existing": None}
 
 
-def test_wrong_password_reads_credentials_without_writing_a_session(uow, service):
+def test_wrong_password_reads_credentials_without_writing_a_session(uow, login):
     with pytest.raises(AuthError, match="invalid_credentials"):
-        service.login(USERNAME, "wrong-password-1234", "ip")
+        login.execute(USERNAME, "wrong-password-1234", "ip")
     assert uow.events == [*ATTEMPTS, "read"]
     assert uow.repository.saved_sessions == []
 
 
-def test_login_saves_a_session_after_verifying_outside_transactions(uow, service):
-    identity, token = service.login(USERNAME, PASSWORD, "ip")
+def test_login_saves_a_session_after_verifying_outside_transactions(uow, login):
+    identity, token = login.execute(USERNAME, PASSWORD, "ip")
     assert identity.account.login_name == USERNAME
     assert uow.events == [*ATTEMPTS, "read", "write", "commit"]
     assert uow.repository.saved_sessions == [digest(token)]
 
 
-def test_password_changed_after_verification_does_not_create_a_session(uow, service):
+def test_password_changed_after_verification_does_not_create_a_session(uow, login):
     repository = uow.repository
     original = repository.credentials
 
@@ -188,15 +210,16 @@ def test_password_changed_after_verification_does_not_create_a_session(uow, serv
 
     repository.credentials = stale_credentials
     with pytest.raises(AuthError, match="invalid_credentials"):
-        service.login(USERNAME, PASSWORD, "ip")
+        login.execute(USERNAME, PASSWORD, "ip")
     assert uow.events == [*ATTEMPTS, "read", "write", "rollback"]
     assert repository.saved_sessions == []
 
 
 def test_session_expiration_and_revocation_use_the_injected_clock(uow):
     clock = FixedClock()
-    service = AuthService(uow, FakePasswords(uow), POLICY, clock)
-    identity, token = service.login(USERNAME, PASSWORD, "ip")
+    login_use_case = LoginUseCase(uow, FakePasswords(uow), POLICY, clock)
+    session_use_case = AuthenticateSessionUseCase(SessionAuthentication(uow, clock))
+    identity, token = login_use_case.execute(USERNAME, PASSWORD, "ip")
     assert identity.expires_at == clock.value + timedelta(hours=POLICY.session_hours)
     stored = StoredSession(
         account=identity.account,
@@ -213,8 +236,8 @@ def test_session_expiration_and_revocation_use_the_injected_clock(uow):
 
     uow.repository.session = session
     clock.value = identity.expires_at - timedelta(seconds=1)
-    assert service.session(token).account == identity.account
+    assert session_use_case.execute(token).account == identity.account
     clock.value = identity.expires_at
     with pytest.raises(AuthError, match="invalid_credentials"):
-        service.session(token)
+        session_use_case.execute(token)
     assert observed == [identity.expires_at - timedelta(seconds=1), identity.expires_at]

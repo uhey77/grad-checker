@@ -1,53 +1,122 @@
-"""ブリッジが必要とする契約。具体的な生成方法はComposition Rootで登録する。"""
+"""ブリッジが必要とするUseCase。具体的な生成方法はComposition Rootで登録する。"""
 
 from modules.accounts.grad_checker_accounts.public import (
-    AuthService,
-    ProfileService,
+    AuthenticateSessionUseCase,
+    GetAuthPolicyUseCase,
+    GetProfileUseCase,
+    GetSelectedCurriculumUseCase,
+    ListProgramsUseCase,
+    LoginUseCase,
+    LogoutUseCase,
+    RecoverAccountUseCase,
+    RegisterAccountUseCase,
+    SaveProgramUseCase,
     SessionIdentity,
 )
-from modules.grades.grad_checker_grades.public import GradeService
+from modules.grades.grad_checker_grades.public import (
+    GetGradesUseCase,
+    SaveGradesUseCase,
+)
 from modules.requirements.grad_checker_requirements.public import (
-    CheckService,
-    EvaluationService,
+    CreateCheckUseCase,
+    EvaluateGraduationUseCase,
+    GetCheckUseCase,
+    GetDashboardUseCase,
+    ListChecksUseCase,
 )
 from modules.subjects.grad_checker_subjects.public import (
-    CourseCatalogService,
-    SubjectListUnitOfWork,
+    GetSubjectListUseCase,
+    ListCategoriesUseCase,
+    ListCoursesUseCase,
+    ListSubjectProgramsUseCase,
 )
 
 
-def auth_service() -> AuthService:
-    raise RuntimeError("AuthService is not configured")
+def register_account() -> RegisterAccountUseCase:
+    raise RuntimeError("RegisterAccountUseCase is not configured")
 
 
-def profile_service() -> ProfileService:
-    raise RuntimeError("ProfileService is not configured")
+def recover_account() -> RecoverAccountUseCase:
+    raise RuntimeError("RecoverAccountUseCase is not configured")
 
 
-def grade_service() -> GradeService:
-    raise RuntimeError("GradeService is not configured")
+def login() -> LoginUseCase:
+    raise RuntimeError("LoginUseCase is not configured")
 
 
-def evaluation_service() -> EvaluationService:
-    raise RuntimeError("EvaluationService is not configured")
+def logout() -> LogoutUseCase:
+    raise RuntimeError("LogoutUseCase is not configured")
 
 
-def check_service() -> CheckService:
-    raise RuntimeError("CheckService is not configured")
+def authenticate_session() -> AuthenticateSessionUseCase:
+    raise RuntimeError("AuthenticateSessionUseCase is not configured")
 
 
-def course_catalog_service() -> CourseCatalogService:
-    raise RuntimeError("CourseCatalogService is not configured")
+def get_auth_policy() -> GetAuthPolicyUseCase:
+    raise RuntimeError("GetAuthPolicyUseCase is not configured")
 
 
-def subject_list_uow() -> SubjectListUnitOfWork:
-    raise RuntimeError("SubjectListUnitOfWork is not configured")
+def list_programs() -> ListProgramsUseCase:
+    raise RuntimeError("ListProgramsUseCase is not configured")
+
+
+def get_profile() -> GetProfileUseCase:
+    raise RuntimeError("GetProfileUseCase is not configured")
+
+
+def save_program() -> SaveProgramUseCase:
+    raise RuntimeError("SaveProgramUseCase is not configured")
+
+
+def get_selected_curriculum() -> GetSelectedCurriculumUseCase:
+    raise RuntimeError("GetSelectedCurriculumUseCase is not configured")
+
+
+def get_grades() -> GetGradesUseCase:
+    raise RuntimeError("GetGradesUseCase is not configured")
+
+
+def save_grades() -> SaveGradesUseCase:
+    raise RuntimeError("SaveGradesUseCase is not configured")
+
+
+def create_check() -> CreateCheckUseCase:
+    raise RuntimeError("CreateCheckUseCase is not configured")
+
+
+def get_check() -> GetCheckUseCase:
+    raise RuntimeError("GetCheckUseCase is not configured")
+
+
+def list_checks() -> ListChecksUseCase:
+    raise RuntimeError("ListChecksUseCase is not configured")
+
+
+def evaluate_graduation() -> EvaluateGraduationUseCase:
+    raise RuntimeError("EvaluateGraduationUseCase is not configured")
+
+
+def get_dashboard() -> GetDashboardUseCase:
+    raise RuntimeError("GetDashboardUseCase is not configured")
+
+
+def list_courses() -> ListCoursesUseCase:
+    raise RuntimeError("ListCoursesUseCase is not configured")
+
+
+def list_categories() -> ListCategoriesUseCase:
+    raise RuntimeError("ListCategoriesUseCase is not configured")
+
+
+def get_subject_list() -> GetSubjectListUseCase:
+    raise RuntimeError("GetSubjectListUseCase is not configured")
+
+
+def list_subject_programs() -> ListSubjectProgramsUseCase:
+    raise RuntimeError("ListSubjectProgramsUseCase is not configured")
 
 
 def current_identity(
-    service: AuthService, token: str, csrf: str | None = None
+    use_case: AuthenticateSessionUseCase, token: str, csrf: str | None = None
 ) -> SessionIdentity:
-    """本人はセッションから決定し、変更操作はCSRFトークンも照合する。"""
-    if csrf is None:
-        return service.session(token)
-    return service.authorize(token, csrf)
+    return use_case.execute(token, csrf)

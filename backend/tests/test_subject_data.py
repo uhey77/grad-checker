@@ -18,7 +18,6 @@ from modules.subjects.grad_checker_subjects.application.errors.subject_data impo
 from modules.subjects.grad_checker_subjects.application.subject_data_import import (
     SubjectDataStore,
     SubjectDataUnitOfWork,
-    import_subject_data,
 )
 from modules.subjects.grad_checker_subjects.application.subject_data_validation import (
     SubjectDataSeed,
@@ -31,6 +30,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import i
     SqliteSubjectDataUnitOfWork,
     load_seed,
 )
+from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
 from tests.fakes import FakeUnitOfWork
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -165,13 +165,15 @@ def test_seed_is_persistent_idempotent_and_handles_child_before_parent(engine, s
     reversed_seed = seed.model_copy(
         update={"classifications": list(reversed(seed.classifications))}
     )
-    result = import_subject_data(SqliteSubjectDataUnitOfWork(engine), reversed_seed)
+    result = ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+        reversed_seed
+    )
     assert result == {
         name: len(getattr(seed, name)) for name in SubjectDataSeed.model_fields
     }
     before = counts(engine)
-    assert import_subject_data(
-        SqliteSubjectDataUnitOfWork(engine), seed
+    assert ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+        seed
     ) == dict.fromkeys(SubjectDataSeed.model_fields, 0)
     assert counts(engine) == before
     # 新しいエンジンでも同じファイルに保存されている。
@@ -224,14 +226,14 @@ def test_invalid_master_is_rejected_without_any_saved_rows(engine, seed, case):
     elif case == "duplicate-code":
         data["courses"][1]["code"] = data["courses"][0]["code"]
     with pytest.raises(SeedError):
-        import_subject_data(
-            SqliteSubjectDataUnitOfWork(engine), SubjectDataSeed.model_validate(data)
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+            SubjectDataSeed.model_validate(data)
         )
     assert counts(engine) == dict.fromkeys(SubjectDataSeed.model_fields, 0)
 
 
 def test_existing_conflict_is_not_overwritten_and_new_rows_are_not_added(engine, seed):
-    import_subject_data(SqliteSubjectDataUnitOfWork(engine), seed)
+    ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(seed)
     data = seed.model_dump(mode="json")
     data["academic_programs"].append(
         {"id": str(uuid4()), "code": "NEW", "faculty_name": "追加学部"}
@@ -239,8 +241,8 @@ def test_existing_conflict_is_not_overwritten_and_new_rows_are_not_added(engine,
     data["courses"][0]["credits"] = 10
     before = counts(engine)
     with pytest.raises(SeedError, match="既存データ"):
-        import_subject_data(
-            SqliteSubjectDataUnitOfWork(engine), SubjectDataSeed.model_validate(data)
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+            SubjectDataSeed.model_validate(data)
         )
     assert counts(engine) == before
     with engine.connect() as connection:
@@ -253,14 +255,14 @@ def test_existing_conflict_is_not_overwritten_and_new_rows_are_not_added(engine,
 
 
 def test_incremental_seed_can_reference_existing_master(engine, seed):
-    import_subject_data(SqliteSubjectDataUnitOfWork(engine), seed)
+    ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(seed)
     data = {name: [] for name in SubjectDataSeed.model_fields}
     course = seed.courses[0].model_dump(mode="json")
     course.update(id=str(uuid4()), code="NEW-COURSE", name="テスト用の追加科目")
     data["courses"] = [course]
     assert (
-        import_subject_data(
-            SqliteSubjectDataUnitOfWork(engine), SubjectDataSeed.model_validate(data)
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+            SubjectDataSeed.model_validate(data)
         )["courses"]
         == 1
     )
@@ -276,13 +278,13 @@ def test_save_failure_rolls_back_preceding_tables(engine, seed):
             )
         )
     with pytest.raises(SeedError, match="全件の変更を取り消しました"):
-        import_subject_data(SqliteSubjectDataUnitOfWork(engine), seed)
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(seed)
     assert counts(engine) == dict.fromkeys(SubjectDataSeed.model_fields, 0)
 
 
 @pytest.mark.parametrize("invalid", [0, -2, 1.5, "invalid"])
 def test_database_itself_rejects_invalid_credits(engine, seed, invalid):
-    import_subject_data(SqliteSubjectDataUnitOfWork(engine), seed)
+    ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(seed)
     with engine.begin() as connection:
         with pytest.raises(IntegrityError):
             connection.execute(
@@ -294,7 +296,7 @@ def test_database_itself_rejects_invalid_credits(engine, seed, invalid):
 def test_database_enforces_same_curriculum_references_restrict_and_nullable_uniqueness(
     engine, seed
 ):
-    import_subject_data(SqliteSubjectDataUnitOfWork(engine), seed)
+    ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(seed)
     root = str(seed.classifications[0].id)
     child = str(seed.classifications[1].id)
     foreign_root = str(seed.classifications[17].id)
@@ -388,7 +390,7 @@ def test_import_adds_only_new_records_in_one_write(seed):
         update={"academic_programs": seed.academic_programs}
     )
     uow = FakeSubjectDataUnitOfWork(existing)
-    result = import_subject_data(uow, seed)
+    result = ImportSubjectDataUseCase(uow).execute(seed)
     assert uow.events == ["write", "commit"]
     [additions] = uow.store.inserted
     assert additions.academic_programs == []
@@ -401,7 +403,7 @@ def test_duplicate_input_is_rejected_before_the_transaction(seed):
     data["courses"].append(data["courses"][0])
     uow = FakeSubjectDataUnitOfWork(empty_seed())
     with pytest.raises(SeedError, match="重複"):
-        import_subject_data(uow, SubjectDataSeed.model_validate(data))
+        ImportSubjectDataUseCase(uow).execute(SubjectDataSeed.model_validate(data))
     assert uow.events == []
 
 
@@ -410,6 +412,6 @@ def test_conflict_with_existing_data_rolls_back_without_insert(seed):
     data["courses"][0]["credits"] = 10
     uow = FakeSubjectDataUnitOfWork(seed)
     with pytest.raises(SeedError, match="既存データ"):
-        import_subject_data(uow, SubjectDataSeed.model_validate(data))
+        ImportSubjectDataUseCase(uow).execute(SubjectDataSeed.model_validate(data))
     assert uow.events == ["write", "rollback"]
     assert uow.store.inserted == []

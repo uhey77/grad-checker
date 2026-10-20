@@ -6,13 +6,18 @@ from fastapi import APIRouter, Depends
 from pydantic import model_validator
 
 from api.api_service.presentation.dependencies import (
-    auth_service,
+    authenticate_session,
     current_identity,
-    grade_service,
+    get_grades,
+    save_grades,
 )
 from api.api_service.presentation.go_bridge_call import WritableSessionCall, respond
-from modules.accounts.grad_checker_accounts.public import AuthService
-from modules.grades.grad_checker_grades.public import GradeService, GradeSet
+from modules.accounts.grad_checker_accounts.public import AuthenticateSessionUseCase
+from modules.grades.grad_checker_grades.public import (
+    GetGradesUseCase,
+    GradeSet,
+    SaveGradesUseCase,
+)
 
 router = APIRouter(prefix="/bridge")
 
@@ -29,15 +34,16 @@ class GradeCall(WritableSessionCall):
 @router.post("/grades")
 def grades(
     call: GradeCall,
-    auth: Annotated[AuthService, Depends(auth_service)],
-    service: Annotated[GradeService, Depends(grade_service)],
+    get_grades: Annotated[GetGradesUseCase, Depends(get_grades)],
+    save_grades: Annotated[SaveGradesUseCase, Depends(save_grades)],
+    auth: Annotated[AuthenticateSessionUseCase, Depends(authenticate_session)],
 ) -> dict[str, object]:
     def run() -> object:
         if call.operation == "save":
             identity = current_identity(auth, call.token, call.csrf)
             assert call.grade_set is not None
-            return service.save_grades(identity.account.id, call.grade_set)
+            return save_grades.execute(identity.account.id, call.grade_set)
         identity = current_identity(auth, call.token)
-        return service.get_grades(identity.account.id)
+        return get_grades.execute(identity.account.id)
 
     return respond(run)

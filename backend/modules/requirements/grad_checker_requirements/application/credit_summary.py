@@ -5,7 +5,7 @@ from .evaluation_models import CreditSummary
 
 
 def summarize(required: int, earned: int, credited: int) -> CreditSummary:
-    condition = CreditRequirement(required, credited)
+    condition = CreditRequirement(required=required, credited=credited)
     return CreditSummary(
         required_credits=required,
         earned_credits=earned,

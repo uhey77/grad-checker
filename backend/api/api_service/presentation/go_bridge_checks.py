@@ -7,16 +7,20 @@ from fastapi import APIRouter, Depends
 from pydantic import Field, model_validator
 
 from api.api_service.presentation.dependencies import (
-    auth_service,
-    check_service,
+    authenticate_session,
+    create_check,
     current_identity,
+    get_check,
+    list_checks,
 )
 from api.api_service.presentation.go_bridge_call import WritableSessionCall, respond
-from modules.accounts.grad_checker_accounts.public import AuthService
+from modules.accounts.grad_checker_accounts.public import AuthenticateSessionUseCase
 from modules.requirements.grad_checker_requirements.public import (
     CheckPage,
     CheckRequest,
-    CheckService,
+    CreateCheckUseCase,
+    GetCheckUseCase,
+    ListChecksUseCase,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -40,19 +44,21 @@ class CheckCall(WritableSessionCall):
 @router.post("/checks")
 def checks(
     call: CheckCall,
-    auth: Annotated[AuthService, Depends(auth_service)],
-    service: Annotated[CheckService, Depends(check_service)],
+    create_check: Annotated[CreateCheckUseCase, Depends(create_check)],
+    get_check: Annotated[GetCheckUseCase, Depends(get_check)],
+    list_checks: Annotated[ListChecksUseCase, Depends(list_checks)],
+    auth: Annotated[AuthenticateSessionUseCase, Depends(authenticate_session)],
 ) -> dict[str, object]:
     def run() -> object:
         if call.operation == "create":
             identity = current_identity(auth, call.token, call.csrf)
             assert call.request is not None
-            return service.create_check(identity.account.id, call.request)
+            return create_check.execute(identity.account.id, call.request)
         identity = current_identity(auth, call.token)
         if call.operation == "list":
             assert call.page is not None
-            return service.list_checks(identity.account.id, call.page)
+            return list_checks.execute(identity.account.id, call.page)
         assert call.check_id is not None
-        return service.get_check(identity.account.id, call.check_id)
+        return get_check.execute(identity.account.id, call.check_id)
 
     return respond(run)

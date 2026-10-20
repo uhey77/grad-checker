@@ -1,9 +1,10 @@
 """成績記号・確定状態と、同じ科目の履修回次の並び。"""
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ResultStatus(StrEnum):
@@ -42,7 +43,7 @@ def is_valid_attempt_sequence(
     return all(allows_retake(status, code) for _, status, code in attempts[:-1])
 
 
-class InvalidCourseAttemptsError(ValueError):
+class InvalidCourseAttemptsError(Exception):
     def __init__(
         self, code: Literal["duplicate_attempt", "invalid_attempt_sequence"]
     ) -> None:
@@ -50,17 +51,27 @@ class InvalidCourseAttemptsError(ValueError):
         self.code = code
 
 
-@dataclass(frozen=True)
-class CourseAttempts:
+class CourseAttempts(BaseModel):
     """一科目の履修回次。並び順を正規化し、重複・欠番・再履修条件を守る。"""
+
+    model_config = ConfigDict(strict=True, frozen=True, extra="forbid")
 
     attempts: tuple[tuple[int, ResultStatus, GradeCode | None], ...]
 
-    def __post_init__(self) -> None:
-        ordered = tuple(sorted(self.attempts, key=lambda attempt: attempt[0]))
+    @field_validator("attempts")
+    @classmethod
+    def valid_history(
+        cls, attempts: tuple[tuple[int, ResultStatus, GradeCode | None], ...]
+    ) -> tuple[tuple[int, ResultStatus, GradeCode | None], ...]:
+        ordered = tuple(sorted(attempts, key=lambda attempt: attempt[0]))
         numbers = [number for number, _, _ in ordered]
         if len(set(numbers)) != len(numbers):
             raise InvalidCourseAttemptsError("duplicate_attempt")
         if not is_valid_attempt_sequence(ordered):
             raise InvalidCourseAttemptsError("invalid_attempt_sequence")
-        object.__setattr__(self, "attempts", ordered)
+        if any(
+            (status == ResultStatus.FINALIZED) != (code is not None)
+            for _, status, code in ordered
+        ):
+            raise InvalidCourseAttemptsError("invalid_attempt_sequence")
+        return ordered

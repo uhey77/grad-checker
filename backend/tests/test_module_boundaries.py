@@ -78,8 +78,42 @@ def test_bridge_presentation_only_uses_public_business_contracts() -> None:
 
 
 def test_application_time_is_supplied_as_a_dependency() -> None:
-    for source in (BACKEND / "modules").rglob("application/*.py"):
-        assert "datetime.now(" not in source.read_text(), source
+    for source in (BACKEND / "modules").rglob("*.py"):
+        if "application" in source.parts:
+            assert "datetime.now(" not in source.read_text(), source
+
+
+def test_business_models_do_not_use_dataclasses() -> None:
+    for source, imports in imported_modules("modules"):
+        assert "dataclasses" not in imports, source
+
+
+@pytest.mark.parametrize("module", ["accounts", "grades", "requirements", "subjects"])
+def test_public_operations_are_individual_use_cases(module: str) -> None:
+    package = BACKEND / f"modules/{module}/grad_checker_{module}"
+    public = ast.parse((package / "public.py").read_text())
+    exported = {
+        alias.name
+        for node in public.body
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+    }
+    cases = []
+    for source in (package / "application/use_cases").glob("*.py"):
+        for node in ast.parse(source.read_text()).body:
+            if isinstance(node, ast.ClassDef):
+                cases.append(node.name)
+                assert node.name.endswith("UseCase"), source
+                assert node.name in exported, source
+                methods = {
+                    item.name
+                    for item in node.body
+                    if isinstance(item, ast.FunctionDef)
+                    and not item.name.startswith("_")
+                }
+                assert methods == {"execute"}, source
+    assert cases, module
+    assert not any(name.endswith("Service") for name in exported), module
 
 
 def test_subjects_do_not_import_api_or_configuration() -> None:

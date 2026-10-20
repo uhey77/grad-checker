@@ -6,9 +6,6 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
-from modules.subjects.grad_checker_subjects.application.errors.course_catalog import (
-    CourseCatalogError,
-)
 from modules.subjects.grad_checker_subjects.domain.subject_type import SubjectType
 
 from ..domain.curriculum_verification_status import (
@@ -131,30 +128,3 @@ class CourseCatalogUnitOfWork(UnitOfWork):
     @property
     @abstractmethod
     def catalog(self) -> CourseCatalogRepository: ...
-
-
-class CourseCatalogService:
-    def __init__(self, uow: CourseCatalogUnitOfWork) -> None:
-        self.uow = uow
-
-    def _catalog(self, curriculum_id: str) -> CourseCatalog:
-        # 絞り込みはスナップショットの取得後に行い、読取りを短くする。
-        with self.uow.read():
-            return self.uow.catalog.get_catalog(curriculum_id)
-
-    def list_courses(self, curriculum_id: str, filters: CourseFilters) -> CourseList:
-        catalog = self._catalog(curriculum_id)
-        if filters.category_id is not None and all(
-            category.id != filters.category_id for category in catalog.categories
-        ):
-            raise CourseCatalogError("unknown_category")
-        return CourseList(
-            curriculum=catalog.curriculum,
-            courses=[course for course in catalog.courses if matches(course, filters)],
-        )
-
-    def list_categories(self, curriculum_id: str) -> CategoryList:
-        catalog = self._catalog(curriculum_id)
-        return CategoryList(
-            curriculum=catalog.curriculum, categories=catalog.categories
-        )

@@ -7,14 +7,11 @@ from sqlalchemy import text
 from test_auth_http import PASSWORD, auth_services  # noqa: F401
 from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
 
-from modules.requirements.grad_checker_requirements.application.seed_import import (
-    import_requirements,
-)
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_import import (
-    import_subject_data,
+from modules.requirements.grad_checker_requirements.public import (
+    ImportRequirementsUseCase,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
@@ -22,6 +19,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.database import (
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     SqliteSubjectDataUnitOfWork,
 )
+from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
 
 ENDPOINT = "/api/me/dashboard"
 
@@ -30,8 +28,12 @@ def test_dashboard_snapshot_read_only_and_errors(auth_services, tmp_path, snapsh
     client = auth_services
     engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
     try:
-        import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
-        import_requirements(SqliteRequirementUnitOfWork(engine), snapshot.requirements)
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+            snapshot.subjects
+        )
+        ImportRequirementsUseCase(SqliteRequirementUnitOfWork(engine)).execute(
+            snapshot.requirements
+        )
         assert client.get(ENDPOINT).status_code == 401
         credentials = {"login_name": "dashboard_01", "password": PASSWORD}
         client.post("/api/auth/register", json=credentials).raise_for_status()

@@ -36,13 +36,13 @@
 
 - `domain` は他のアプリ層、FastAPI、SQLModel、DB、HTTPに依存させない。
 - `application` は `domain` を参照できる。`infrastructure`・`presentation` の具体実装は参照しない。
-- Pythonの`application`の入出力契約はPydanticを使用し、dataclassは使用しない。Goの取得契約には既存科目モデルに従うJSONデータを使用できる。ブリッジ通信の包絡形式はGoの`infrastructure`とPythonのブリッジアダプターに閉じ込める。
+- Pythonの業務モジュールではDomainを含めdataclassを使用しない。Applicationの入出力DTOはPydantic、Domainの値オブジェクトはPydanticの`BaseModel`・`RootModel`で表し、原則`strict=True`・`frozen=True`・`extra="forbid"`とする。Domain内で完結する制約をvalidatorに置き、DB・認可・外部処理は持ち込まない。Goの取得契約には既存科目モデルに従うJSONデータを使用できる。ブリッジ通信の包絡形式はGoの`infrastructure`とPythonのブリッジアダプターに閉じ込める。
 - `infrastructure` は `application` の契約を実装し、`domain` の概念を利用できる。`presentation` は参照しない。
 - `presentation` はユースケースを呼び出す。業務判断やSQLクエリをルーターへ追加しない。
 - PythonのAPI・他モジュールは各業務パッケージの`public.py`から業務契約を参照する。公開窓口はdomain・applicationのみを公開し、ORM・SQL・具体的なリポジトリを公開しない。共有SQLiteの横断参照は既存infrastructureに限り、domain・applicationへ広げない。
-- 認証・判定・履歴の現在時刻はABCの`Clock`を注入する。UTCの`SystemClock`はComposition Rootで選択する。サービス・UoWは呼出しごと、Sessionはread/writeごとに生成し、並行する要求でUoWを共有しない。
+- 認証・判定・履歴の現在時刻はABCの`Clock`を注入する。UTCの`SystemClock`はComposition Rootで選択する。UseCase・UoWは呼出しごと、Sessionはread/writeごとに生成し、並行する要求でUoWを共有しない。
 - Goは`api/main.go`、Pythonは`api/api_service/main.py`・`composition.py`とCLIの入口で具体的な依存関係を組み立てる。
-- Pythonのブリッジアダプターは`Depends`でサービスまたはUnit of Workの抽象契約を受け取り、結果または業務エラーコードを返す。`presentation`から設定・DB・`infrastructure`を参照しない。具体的な生成はComposition Rootに集約する。
+- Pythonのブリッジアダプターは`Depends`で操作別UseCaseを受け取り、`execute`を呼んで結果または業務エラーコードを返す。`presentation`から設定・DB・`infrastructure`を参照しない。具体的な生成はComposition Rootに集約する。
 - Goの外部ハンドラーは`application`の取得契約を使用する。具体的なPython HTTPクライアントは参照しない。
 - 各モジュールのGoの`infrastructure`は`modules/shared/pythonbridge`でブリッジ通信を行い、包絡形式の解析を重複させない。`pythonbridge`は業務モジュールを参照しない。業務エラー型への変換と応答内容の検証は各モジュールで行う。
 - Goの外部ハンドラーは`api/presentation/http.go`の共通関数で検証・エラー応答を行い、同じ失敗を画面ごとに異なるステータス・文言で返さない。
@@ -52,6 +52,7 @@
 
 ## 実装ルール
 
+- 公開操作は `application/use_cases/<操作>.py` の1操作1クラスの`*UseCase`にし、公開実行メソッドを`execute`に統一する。処理本体とトランザクション境界をそのUseCaseへ置き、複数操作を持つServiceで代用したり、そのServiceへの委譲だけのUseCaseを増やしたりしない。UseCase同士の直接呼出しを避け、共有する段取りはApplication Serviceへ切り出す。API・CLIは公開窓口のUseCaseを呼ぶ。
 - ユースケースの手順と取得・保存契約は `application` に置く。業務上の不変条件・計算・判断は `domain`、DB処理は `infrastructure` に置く。DomainのエラーはApplicationで公開用の業務エラーへ変換する。
 - Pythonの`application`の取得・保存契約（リポジトリ・Unit of Work・外部処理）はABCの抽象メソッドで定義する。`infrastructure`の実装とテストのFakeは契約を継承し、実装する契約を明示する。
 - SQLModelのテーブルモデルを、そのまま業務契約として他の層へ広げない。リポジトリで入出力モデルへ変換する。

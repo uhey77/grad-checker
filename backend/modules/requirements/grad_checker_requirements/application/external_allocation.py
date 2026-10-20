@@ -151,10 +151,10 @@ def best_fit(
             available_credits=available,
             conditions=tuple(
                 CreditRequirement(
-                    row.required_credits,
-                    (credited if row.kind == "classification_total" else elective).get(
-                        root, 0
-                    )
+                    required=row.required_credits,
+                    credited=(
+                        credited if row.kind == "classification_total" else elective
+                    ).get(root, 0)
                     + allocated.get(root, 0),
                 )
                 for row in context.conditions

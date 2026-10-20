@@ -5,13 +5,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from api.api_service.presentation.dependencies import (
-    auth_service,
+    authenticate_session,
     current_identity,
-    evaluation_service,
+    evaluate_graduation,
+    get_dashboard,
 )
 from api.api_service.presentation.go_bridge_call import SessionCall, respond
-from modules.accounts.grad_checker_accounts.public import AuthService
-from modules.requirements.grad_checker_requirements.public import EvaluationService
+from modules.accounts.grad_checker_accounts.public import AuthenticateSessionUseCase
+from modules.requirements.grad_checker_requirements.public import (
+    EvaluateGraduationUseCase,
+    GetDashboardUseCase,
+)
 
 router = APIRouter(prefix="/bridge")
 
@@ -19,12 +23,12 @@ router = APIRouter(prefix="/bridge")
 @router.post("/dashboard")
 def dashboard(
     call: SessionCall,
-    auth: Annotated[AuthService, Depends(auth_service)],
-    service: Annotated[EvaluationService, Depends(evaluation_service)],
+    auth: Annotated[AuthenticateSessionUseCase, Depends(authenticate_session)],
+    service: Annotated[GetDashboardUseCase, Depends(get_dashboard)],
 ) -> dict[str, object]:
     def run() -> object:
         identity = current_identity(auth, call.token)
-        return service.dashboard(identity.account.id)
+        return service.execute(identity.account.id)
 
     return respond(run)
 
@@ -32,11 +36,11 @@ def dashboard(
 @router.post("/graduation-requirements")
 def graduation_requirements(
     call: SessionCall,
-    auth: Annotated[AuthService, Depends(auth_service)],
-    service: Annotated[EvaluationService, Depends(evaluation_service)],
+    auth: Annotated[AuthenticateSessionUseCase, Depends(authenticate_session)],
+    service: Annotated[EvaluateGraduationUseCase, Depends(evaluate_graduation)],
 ) -> dict[str, object]:
     def run() -> object:
         identity = current_identity(auth, call.token)
-        return service.evaluate(identity.account.id)
+        return service.execute(identity.account.id)
 
     return respond(run)

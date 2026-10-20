@@ -6,7 +6,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from modules.shared.grad_checker_shared.application.clock import Clock
 from modules.shared.grad_checker_shared.application.unit_of_work import UnitOfWork
 
 from .evaluation import evaluate_graduation
@@ -60,39 +59,7 @@ def evaluate_student(
     return StudentEvaluation(**result.model_dump(), evaluated_at=evaluated_at)
 
 
-class EvaluationService:
-    def __init__(self, uow: EvaluationUnitOfWork, clock: Clock) -> None:
-        self.uow = uow
-        self.clock = clock
-
-    def evaluate(self, student_id: str) -> StudentEvaluation:
-        return evaluate_student(self._snapshot(student_id), self.clock.now())
-
-    def dashboard(self, student_id: str) -> StudentDashboard:
-        snapshot = self._snapshot(student_id)
-        result = evaluate_student(snapshot, self.clock.now())
-        return StudentDashboard(
-            **result.model_dump(
-                include={
-                    "degree_level",
-                    "completion_conditions",
-                    "result",
-                    "evaluated_at",
-                    "data_revision",
-                    "curriculum",
-                    "rule_revisions",
-                    "total",
-                    "categories",
-                    "warnings",
-                }
-            ),
-            curriculum_revision=result.curriculum.revision,
-            grade_count=len(snapshot.grades),
-        )
-
-    def _snapshot(self, student_id: str) -> EvaluationSnapshot:
-        # 読取り専用。履歴作成や成績版の更新は行わない。
-        with self.uow.read():
-            snapshot = self.uow.evaluation.get_snapshot(student_id)
-        # 判定の計算はスナップショットの取得後、トランザクションの外で行う。
-        return snapshot
+def read_snapshot(uow: EvaluationUnitOfWork, student_id: str) -> EvaluationSnapshot:
+    # 判定の計算は読取りトランザクションを閉じた後に行う。
+    with uow.read():
+        return uow.evaluation.get_snapshot(student_id)

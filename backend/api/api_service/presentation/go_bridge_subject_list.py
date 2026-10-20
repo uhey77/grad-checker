@@ -6,12 +6,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from api.api_service.presentation.dependencies import subject_list_uow
-from api.api_service.presentation.go_bridge_call import respond
-from modules.subjects.grad_checker_subjects.public import (
-    SubjectListUnitOfWork,
+from api.api_service.presentation.dependencies import (
     get_subject_list,
     list_subject_programs,
+)
+from api.api_service.presentation.go_bridge_call import respond
+from modules.subjects.grad_checker_subjects.public import (
+    GetSubjectListUseCase,
+    ListSubjectProgramsUseCase,
 )
 
 router = APIRouter(prefix="/bridge")
@@ -34,12 +36,15 @@ class SubjectListCall(BaseModel):
 @router.post("/subject-list")
 def subject_list(
     call: SubjectListCall,
-    uow: Annotated[SubjectListUnitOfWork, Depends(subject_list_uow)],
+    get_list: Annotated[GetSubjectListUseCase, Depends(get_subject_list)],
+    list_programs: Annotated[
+        ListSubjectProgramsUseCase, Depends(list_subject_programs)
+    ],
 ) -> dict[str, object]:
 
     def run() -> object:
         if call.curriculum_id is None:
-            return list_subject_programs(uow)
-        return get_subject_list(uow, call.curriculum_id)
+            return list_programs.execute()
+        return get_list.execute(call.curriculum_id)
 
     return respond(run)

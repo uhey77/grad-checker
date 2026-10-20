@@ -6,14 +6,11 @@ from sqlalchemy import text
 from test_auth_http import PASSWORD, auth_services  # noqa: F401
 from test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
 
-from modules.requirements.grad_checker_requirements.application.seed_import import (
-    import_requirements,
-)
 from modules.requirements.grad_checker_requirements.infrastructure.seed import (
     SqliteRequirementUnitOfWork,
 )
-from modules.subjects.grad_checker_subjects.application.subject_data_import import (
-    import_subject_data,
+from modules.requirements.grad_checker_requirements.public import (
+    ImportRequirementsUseCase,
 )
 from modules.subjects.grad_checker_subjects.infrastructure.database import (
     create_database_engine,
@@ -21,6 +18,7 @@ from modules.subjects.grad_checker_subjects.infrastructure.database import (
 from modules.subjects.grad_checker_subjects.infrastructure.subject_data_import import (
     SqliteSubjectDataUnitOfWork,
 )
+from modules.subjects.grad_checker_subjects.public import ImportSubjectDataUseCase
 
 
 def sign_in(client, login_name, snapshot):  # noqa: F811
@@ -55,8 +53,12 @@ def test_check_snapshot_is_saved_and_read_only_by_owner(
             ).scalar()
 
     try:
-        import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
-        import_requirements(SqliteRequirementUnitOfWork(engine), snapshot.requirements)
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+            snapshot.subjects
+        )
+        ImportRequirementsUseCase(SqliteRequirementUnitOfWork(engine)).execute(
+            snapshot.requirements
+        )
         assert (
             client.post("/api/checks", json={"expected_revision": 0}).status_code == 401
         )
@@ -135,8 +137,12 @@ def test_owner_lists_check_summaries_with_paging(
     client = auth_services
     engine = create_database_engine(f"sqlite:///{tmp_path / 'auth.db'}")
     try:
-        import_subject_data(SqliteSubjectDataUnitOfWork(engine), snapshot.subjects)
-        import_requirements(SqliteRequirementUnitOfWork(engine), snapshot.requirements)
+        ImportSubjectDataUseCase(SqliteSubjectDataUnitOfWork(engine)).execute(
+            snapshot.subjects
+        )
+        ImportRequirementsUseCase(SqliteRequirementUnitOfWork(engine)).execute(
+            snapshot.requirements
+        )
         assert client.get("/api/checks").status_code == 401
         headers = sign_in(client, "list_owner", snapshot)
         created = [
