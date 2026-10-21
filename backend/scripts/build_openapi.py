@@ -7,29 +7,21 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
-from modules.accounts.grad_checker_accounts.application.profile import (
-    Profile,
-    ProgramOption,
+from modules.accounts.application.dto.profile import Profile, ProgramOption
+from modules.grades.application.dto.grades import StudentGrades
+from modules.requirements.application.dto import check_results as check_results_dto
+from modules.requirements.application.dto import (
+    student_evaluation as student_evaluation_dto,
 )
-from modules.grades.grad_checker_grades.application.grades import StudentGrades
-from modules.requirements.grad_checker_requirements.application.check_results import (
-    CheckList,
-    SavedCheck,
-)
-from modules.requirements.grad_checker_requirements.application.student_evaluation import (  # noqa: E501
-    StudentDashboard,
-    StudentEvaluation,
-)
-from modules.subjects.grad_checker_subjects.application.course_catalog import (
-    CategoryList,
-    CourseList,
-)
-from modules.subjects.grad_checker_subjects.application.subject_list import (
+from modules.subjects.application.dto.course_catalog import CategoryList, CourseList
+from modules.subjects.application.dto.subject_list import (
     SubjectList,
     SubjectListProgram,
 )
 
-OUTPUT = Path(__file__).resolve().parents[1] / "api/presentation/apidocs/openapi.json"
+OUTPUT = (
+    Path(__file__).resolve().parents[1] / "apps/api/controllers/apidocs/openapi.json"
+)
 MAX_REVISION = 9007199254740990
 
 
@@ -73,10 +65,10 @@ def build_document() -> dict:  # noqa: PLR0915
         Profile,
         ProgramOption,
         StudentGrades,
-        StudentEvaluation,
-        StudentDashboard,
-        SavedCheck,
-        CheckList,
+        student_evaluation_dto.StudentEvaluation,
+        student_evaluation_dto.StudentDashboard,
+        check_results_dto.SavedCheck,
+        check_results_dto.CheckList,
         CourseList,
         CategoryList,
         SubjectList,

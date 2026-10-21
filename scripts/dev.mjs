@@ -80,7 +80,7 @@ start(
     "run",
     "--locked",
     "uvicorn",
-    "api.api_service.main:app",
+    "apps.bridge.main:app",
     "--reload",
     "--host",
     "127.0.0.1",
@@ -94,7 +94,7 @@ start(
   "go",
   [
     "run",
-    "./api",
+    "./apps/api",
     "-public-origin",
     process.env.PUBLIC_ORIGIN || "http://127.0.0.1:5173",
     ...(subjectListPreview ? ["-subject-list-preview"] : []),

@@ -63,7 +63,7 @@ task backend-requirements-seed  # 要件・規則マスタを追加投入
 ```
 
 同名のMakeターゲットも使用できる。CLIは `backend/` から
-`uv run --locked python -m scripts.seed_requirements --file seeds/cs_requirements_2026.json`。
+`uv run --locked python -m apps.cli seed-requirements --file seeds/cs_requirements_2026.json`。
 トップレベルは上表に対応する5配列を必須とし、未知フィールド・不正UUID・非整数単位・課程外参照・
 空の対象集合・親子不整合・群の重複・必修小計不一致・別区分への超過換算を拒否する。
 既存DBのマスタと追加分を合わせて検証する。
