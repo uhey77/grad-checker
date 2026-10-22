@@ -88,7 +88,6 @@ GoがPATHにない場合は結合テストがスキップされるため、完�
 
 ## 関連文書
 
-- [要件定義](../../docs/RDD.md)
 - [OpenAPI](../../backend/apps/api/controllers/apidocs/openapi.json)
 - [卒業要件判定ロジック](../../docs/graduation_requirement_logic.md)
 - [シードデータの説明](../../backend/seeds/README.md)

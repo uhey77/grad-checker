@@ -78,7 +78,6 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 
 - [バックエンドのルール](backend-architecture.md)
 - [OpenAPI](../../backend/apps/api/controllers/apidocs/openapi.json)
-- [要件定義](../../docs/RDD.md)
 
 設計文書に記載された機能がすべて実装済みであるとは扱わない。
 
