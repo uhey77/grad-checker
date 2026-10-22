@@ -1,5 +1,5 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useId, useRef, useState } from "react";
-
 export function UserMenu({
   loginName,
   busy,
@@ -15,6 +15,7 @@ export function UserMenu({
   showGrades: () => void;
   logout: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -51,7 +52,7 @@ export function UserMenu({
         type="button"
         className="user-menu-trigger"
         ref={trigger}
-        aria-label={`${loginName}のユーザーメニュー`}
+        aria-label={t("{{value0}}のユーザーメニュー", { value0: loginName })}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((value) => !value)}
@@ -64,7 +65,7 @@ export function UserMenu({
       <nav
         id={id}
         className="user-menu-panel"
-        aria-label="ユーザーメニュー"
+        aria-label={t("ユーザーメニュー")}
         aria-hidden={!open}
         inert={!open}
         data-open={open}
@@ -76,7 +77,7 @@ export function UserMenu({
             showDashboard();
           }}
         >
-          ダッシュボード
+          {t("ダッシュボード")}
         </button>
         <button
           type="button"
@@ -85,7 +86,7 @@ export function UserMenu({
             showGrades();
           }}
         >
-          成績入力
+          {t("成績入力")}
         </button>
         <button
           type="button"
@@ -94,7 +95,7 @@ export function UserMenu({
             showProfile();
           }}
         >
-          マイページ
+          {t("マイページ")}
         </button>
         <button
           type="button"
@@ -104,7 +105,7 @@ export function UserMenu({
             logout();
           }}
         >
-          {busy ? "ログアウト中…" : "ログアウト"}
+          {busy ? t("ログアウト中…") : t("ログアウト")}
         </button>
       </nav>
     </div>

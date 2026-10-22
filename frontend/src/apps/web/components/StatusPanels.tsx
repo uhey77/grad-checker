@@ -1,11 +1,14 @@
+import { useTranslation } from "react-i18next";
+import { translateMessage } from "../../../i18n/messages.ts";
 import type { ReactNode } from "react";
 
 // 取得中・失敗・0件・入力エラーの表示を全画面で揃える。
 
 export function LoadingState({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   return (
     <p className="loading" role="status">
-      {children}
+      {typeof children === "string" ? translateMessage(children, t) : children}
     </p>
   );
 }
@@ -21,12 +24,13 @@ export function ErrorState({
   actionLabel,
   onAction,
 }: Action & { title?: string; message: string }) {
+  const { t } = useTranslation();
   return (
     <section className="error" role="alert">
-      {title ? <strong>{title}</strong> : null}
-      <p>{message}</p>
+      {title ? <strong>{t(title)}</strong> : null}
+      <p>{translateMessage(message, t)}</p>
       <button type="button" onClick={onAction}>
-        {actionLabel}
+        {t(actionLabel)}
       </button>
     </section>
   );
@@ -38,12 +42,13 @@ export function EmptyState({
   actionLabel,
   onAction,
 }: Action & { title: string; message: string }) {
+  const { t } = useTranslation();
   return (
     <div className="empty" role="status">
-      <strong>{title}</strong>
-      <p>{message}</p>
+      <strong>{t(title)}</strong>
+      <p>{translateMessage(message, t)}</p>
       <button type="button" onClick={onAction}>
-        {actionLabel}
+        {t(actionLabel)}
       </button>
     </div>
   );
@@ -56,9 +61,10 @@ export function FormError({
   id?: string;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <p id={id} className="form-error" role="alert">
-      {children}
+      {typeof children === "string" ? translateMessage(children, t) : children}
     </p>
   );
 }

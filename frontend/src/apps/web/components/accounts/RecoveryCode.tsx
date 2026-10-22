@@ -1,5 +1,5 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
-
 export function RecoveryCode({
   code,
   proceed,
@@ -7,14 +7,17 @@ export function RecoveryCode({
   code: string;
   proceed: () => void;
 }) {
+  const { t } = useTranslation();
   const [saved, setSaved] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
   return (
     <>
       <p className="auth-help">
-        このコードは一度だけ表示します。パスワードを忘れたときに必要です。画面を閉じたり再読み込みしたりする前に、安全な場所に保管してください。
+        {t(
+          "このコードは一度だけ表示します。パスワードを忘れたときに必要です。画面を閉じたり再読み込みしたりする前に、安全な場所に保管してください。",
+        )}
       </p>
-      <label htmlFor="issued-recovery">復旧コード</label>
+      <label htmlFor="issued-recovery">{t("復旧コード")}</label>
       <input
         id="issued-recovery"
         className="recovery-code"
@@ -39,13 +42,13 @@ export function RecoveryCode({
           }
         }}
       >
-        復旧コードをコピー
+        {t("復旧コードをコピー")}
       </button>
       <p className="auth-help" role="status">
-        {copyMessage}
+        {t(copyMessage)}
       </p>
       <p className="auth-help">
-        コードとパスワードを両方失った場合、アカウントは復旧できません。
+        {t("コードとパスワードを両方失った場合、アカウントは復旧できません。")}
       </p>
       <label className="recovery-confirm">
         <input
@@ -53,10 +56,10 @@ export function RecoveryCode({
           checked={saved}
           onChange={(event) => setSaved(event.target.checked)}
         />
-        復旧コードを保管しました
+        {t("復旧コードを保管しました")}
       </label>
       <button className="primary-button" disabled={!saved} onClick={proceed}>
-        ログインへ進む
+        {t("ログインへ進む")}
       </button>
     </>
   );

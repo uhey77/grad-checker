@@ -1,9 +1,9 @@
+import { useTranslation } from "react-i18next";
 import type { ProgramOption } from "../../../../modules/profiles/public.ts";
 import { ProgramCoverage } from "./ProgramCoverage.tsx";
 import { ConfirmPanel } from "../ConfirmPanel.tsx";
 import { SaveBar } from "../SaveBar.tsx";
 import { programLabel } from "../subjects/labels.ts";
-
 export function ProgramForm({
   programs,
   chosenId,
@@ -35,6 +35,7 @@ export function ProgramForm({
   confirmRetry: () => void;
   cancelRetry: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <form
       className="profile-form"
@@ -44,7 +45,7 @@ export function ProgramForm({
       }}
     >
       <div>
-        <label htmlFor="profile-program">学部・研究科・学科・専攻</label>
+        <label htmlFor="profile-program">{t("学部・研究科・学科・専攻")}</label>
         <select
           id="profile-program"
           value={chosenId}
@@ -52,18 +53,18 @@ export function ProgramForm({
           onChange={(event) => choose(event.target.value)}
         >
           <option value="" disabled>
-            選択してください
+            {t("選択してください")}
           </option>
           {chosenId && !selected ? (
             <option value={chosenId} disabled>
-              保存済みの所属（選択肢にありません）
+              {t("保存済みの所属（選択肢にありません）")}
             </option>
           ) : null}
           {programs.map((p) => (
             <option key={p.curriculumId} value={p.curriculumId}>
               {programLabel(p)}
               {p.completionPolicy?.unresolvedReasons.length
-                ? "（判定準備中）"
+                ? t("（判定準備中）")
                 : ""}
             </option>
           ))}
@@ -75,14 +76,16 @@ export function ProgramForm({
         busy={busy}
         notice={notice}
         dirty={dirty}
-        cleanStatus={chosenId ? "" : "所属は未設定です。"}
+        cleanStatus={chosenId ? "" : t("所属は未設定です。")}
         confirmations={
           confirmReload ? (
             <ConfirmPanel
-              label="未保存変更の確認"
-              message="未保存の選択を破棄して、保存済みの所属を再取得しますか？"
-              confirmLabel="変更を破棄して再取得"
-              cancelLabel="選択を続ける"
+              label={t("未保存変更の確認")}
+              message={t(
+                "未保存の選択を破棄して、保存済みの所属を再取得しますか？",
+              )}
+              confirmLabel={t("変更を破棄して再取得")}
+              cancelLabel={t("選択を続ける")}
               onConfirm={confirmRetry}
               onCancel={cancelRetry}
             />
@@ -95,10 +98,10 @@ export function ProgramForm({
               className="primary-button"
               disabled={!selected || !dirty || busy || conflict}
             >
-              {busy ? "保存中…" : "所属を保存"}
+              {busy ? t("保存中…") : t("所属を保存")}
             </button>
             <button type="button" disabled={busy} onClick={retry}>
-              保存済みの所属を再取得
+              {t("保存済みの所属を再取得")}
             </button>
           </>
         }

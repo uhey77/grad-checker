@@ -1,7 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { type Program } from "../../../../modules/subjects/public.ts";
-
 import { programLabel } from "./labels.ts";
-
 interface Props {
   programs: Program[];
   curriculumId: string;
@@ -14,11 +13,12 @@ export function ProgramSelector({
   status,
   onChange,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <section className="panel program-panel" aria-labelledby="program-heading">
       <div className="program-select">
         <label id="program-heading" htmlFor="program">
-          確認する課程
+          {t("確認する課程")}
         </label>
         <select
           id="program"
@@ -37,10 +37,10 @@ export function ProgramSelector({
           ) : (
             <option value="">
               {status === "loading"
-                ? "課程を読み込み中"
+                ? t("課程を読み込み中")
                 : status === "error"
-                  ? "課程を取得できませんでした"
-                  : "選択できる課程がありません"}
+                  ? t("課程を取得できませんでした")
+                  : t("選択できる課程がありません")}
             </option>
           )}
         </select>

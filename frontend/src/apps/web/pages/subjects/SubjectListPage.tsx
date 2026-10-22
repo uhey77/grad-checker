@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { type SubjectListUseCases } from "../../../../modules/subjects/public.ts";
 import { ProgramSelector } from "../../components/subjects/ProgramSelector.tsx";
 import { SubjectSummary } from "../../components/subjects/SubjectSummary.tsx";
@@ -11,12 +12,12 @@ import {
   ErrorState,
   LoadingState,
 } from "../../components/StatusPanels.tsx";
-
 export function SubjectListPage({
   useCases,
 }: {
   useCases: SubjectListUseCases;
 }) {
+  const { t } = useTranslation();
   const {
     programs,
     curriculumId,
@@ -39,7 +40,7 @@ export function SubjectListPage({
   return (
     <>
       <main>
-        <PageHeading title="科目一覧" />
+        <PageHeading title={t("科目一覧")} />
         <ProgramSelector
           programs={programs}
           curriculumId={curriculumId}
@@ -48,25 +49,27 @@ export function SubjectListPage({
         />
         {error ? (
           <ErrorState
-            title="一覧を読み込めませんでした"
+            title={t("一覧を読み込めませんでした")}
             message={error}
-            actionLabel="再試行"
+            actionLabel={t("再試行")}
             onAction={retry}
           />
         ) : noPrograms ? (
           <EmptyState
-            title="科目データが登録されていません"
-            message="時間をおいて再読み込みしてください。"
-            actionLabel="再読み込み"
+            title={t("科目データが登録されていません")}
+            message={t("時間をおいて再読み込みしてください。")}
+            actionLabel={t("再読み込み")}
             onAction={retry}
           />
         ) : !subjectList ? (
-          <LoadingState>科目一覧を読み込んでいます…</LoadingState>
+          <LoadingState>{t("科目一覧を読み込んでいます…")}</LoadingState>
         ) : subjectList.subjects.length === 0 ? (
           <EmptyState
-            title="この課程の科目データが登録されていません"
-            message="別の課程を選ぶか、時間をおいて再読み込みしてください。"
-            actionLabel="再読み込み"
+            title={t("この課程の科目データが登録されていません")}
+            message={t(
+              "別の課程を選ぶか、時間をおいて再読み込みしてください。",
+            )}
+            actionLabel={t("再読み込み")}
             onAction={retry}
           />
         ) : (
@@ -88,7 +91,10 @@ export function SubjectListPage({
                 <h2 id="list-heading">{programLabel(subjectList.program)}</h2>
                 <div>
                   <span role="status" aria-live="polite">
-                    {visible.length} / {subjectList.subjects.length} 科目
+                    {t("{{value0}} / {{value1}} 科目", {
+                      value0: visible.length,
+                      value1: subjectList.subjects.length,
+                    })}
                   </span>
                   <button
                     className="reset-button"
@@ -96,7 +102,7 @@ export function SubjectListPage({
                     onClick={resetFilters}
                     disabled={!hasFilters}
                   >
-                    条件をクリア
+                    {t("条件をクリア")}
                   </button>
                 </div>
               </div>

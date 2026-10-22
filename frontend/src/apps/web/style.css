@@ -1114,3 +1114,30 @@ tbody tr.earned-row:hover {
 .judgment.pending {
   color: #8a5b12;
 }
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.language-switcher select {
+  width: auto;
+  min-width: 6rem;
+}
+@media (max-width: 600px) {
+  .header-inner {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .header-controls {
+    gap: 0.5rem;
+  }
+}

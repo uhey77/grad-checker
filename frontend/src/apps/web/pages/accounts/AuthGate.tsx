@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   AuthSession,
@@ -12,13 +13,11 @@ import {
   FormError,
   LoadingState,
 } from "../../components/StatusPanels.tsx";
-
 export type AuthControls = {
   busy: boolean;
   error: string;
   logout: () => void;
 };
-
 export function AuthGate({
   useCases,
   children,
@@ -30,6 +29,7 @@ export function AuthGate({
     controls: AuthControls,
   ) => ReactNode;
 }) {
+  const { t } = useTranslation();
   const auth = useAuth(useCases);
   const [mode, setMode] = useState<"login" | "register" | "recover">("login");
   const [notice, setNotice] = useState("");
@@ -47,7 +47,7 @@ export function AuthGate({
     return (
       <AppLayout>
         <main id="main-content">
-          <LoadingState>ログイン状態を確認しています…</LoadingState>
+          <LoadingState>{t("ログイン状態を確認しています…")}</LoadingState>
         </main>
       </AppLayout>
     );
@@ -57,7 +57,7 @@ export function AuthGate({
         <main id="main-content">
           <ErrorState
             message={auth.error}
-            actionLabel="再試行"
+            actionLabel={t("再試行")}
             onAction={auth.retry}
           />
         </main>
@@ -71,7 +71,6 @@ export function AuthGate({
     });
   const showRecovery = (code: string) => {
     setRecoveryCode(code);
-
     setNotice(
       mode === "register"
         ? "登録が完了しました。"
@@ -84,21 +83,21 @@ export function AuthGate({
         <section className="auth-card">
           <h1 ref={heading} tabIndex={-1}>
             {recoveryCode
-              ? "復旧コードを保管してください"
+              ? t("復旧コードを保管してください")
               : mode === "register"
-                ? "新規登録"
+                ? t("新規登録")
                 : mode === "recover"
-                  ? "パスワードの再設定"
-                  : "ログイン"}
+                  ? t("パスワードの再設定")
+                  : t("ログイン")}
           </h1>
-          {notice ? <p role="status">{notice}</p> : null}
+          {notice ? <p role="status">{t(notice)}</p> : null}
           {recoveryCode ? (
             <RecoveryCode
               code={recoveryCode}
               proceed={() => {
                 setRecoveryCode("");
                 switchMode("login");
-                setNotice("ユーザー名とパスワードでログインしてください。");
+                setNotice(t("ユーザー名とパスワードでログインしてください。"));
               }}
             />
           ) : (
@@ -106,10 +105,16 @@ export function AuthGate({
               {auth.error ? <FormError>{auth.error}</FormError> : null}
               <p className="auth-help">
                 {mode === "register"
-                  ? "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。"
+                  ? t(
+                      "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。",
+                    )
                   : mode === "recover"
-                    ? "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。"
-                    : "アプリ専用のユーザー名とパスワードを入力してください。"}
+                    ? t(
+                        "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。",
+                      )
+                    : t(
+                        "アプリ専用のユーザー名とパスワードを入力してください。",
+                      )}
               </p>
               <AuthForm
                 key={mode}
@@ -134,7 +139,7 @@ export function AuthGate({
                       switchMode("register");
                     }}
                   >
-                    新規登録
+                    {t("新規登録")}
                   </button>
                   <button
                     className="auth-switch"
@@ -143,7 +148,7 @@ export function AuthGate({
                       switchMode("recover");
                     }}
                   >
-                    パスワードを忘れた場合
+                    {t("パスワードを忘れた場合")}
                   </button>
                 </>
               ) : (
@@ -154,7 +159,7 @@ export function AuthGate({
                     switchMode("login");
                   }}
                 >
-                  ログインへ戻る
+                  {t("ログインへ戻る")}
                 </button>
               )}
             </>
