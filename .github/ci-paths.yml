@@ -1,0 +1,27 @@
+# some-with-excludes で評価する。文書以外の未知の共通ファイルは両方を検証する。
+shared:
+  - '**'
+  - '!backend/**'
+  - '!frontend/**'
+  - '!docs/**'
+  - '!**/*.md'
+  - '!.agents/**'
+  - '!.claude/**'
+  - '!.gitignore'
+  - '!.gitattributes'
+  - '!LICENSE*'
+
+backend:
+  - 'backend/**'
+  - '!**/*.md'
+
+frontend:
+  - 'frontend/**'
+  - '!**/*.md'
+
+# フロントの翻訳テストも公開APIのdetailを参照する。
+api:
+  - 'backend/apps/api/controllers/apidocs/openapi.json'
+  - 'backend/scripts/build_openapi.py'
+  - 'backend/modules/**/application/dto/**/*.py'
+  - 'docs/api_specification.md'

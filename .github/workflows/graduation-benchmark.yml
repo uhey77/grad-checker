@@ -8,8 +8,22 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: graduation-benchmark-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    name: Detect benchmark changes
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/changes.yml
+
   graduation-benchmark:
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
