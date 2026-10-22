@@ -1,0 +1,32 @@
+name: Detect changes
+
+on:
+  workflow_call:
+    outputs:
+      backend:
+        description: Backend checks and benchmark are required
+        value: ${{ jobs.detect.outputs.backend }}
+      frontend:
+        description: Frontend checks are required
+        value: ${{ jobs.detect.outputs.frontend }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.filter.outputs.backend == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' }}
+      frontend: ${{ steps.filter.outputs.frontend == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        id: filter
+        with:
+          filters: .github/ci-paths.yml
+          predicate-quantifier: some-with-excludes
