@@ -1,9 +1,8 @@
 # フロントエンドのアーキテクチャルール
 
 対象は `frontend/`。React・TypeScript・Viteを使用し、バックエンドと同じ4層の責務・依存方向を守る。domain・application・infrastructureは業務モジュール内、presentationはapps/web内のUIディレクトリに配置する。
-科目一覧の設計意図は [フロントエンドの構成](../../docs/frontend_architecture.md) を参照する。
 
-[バックエンドの構成](../../docs/backend_architecture.md)に従い、ViteからGoの外部APIを呼び出す。
+ViteからGoの外部APIを呼び出す。
 Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通信の包絡形式やDB処理をフロントエンドに追加しない。
 
 ## 各層の責務
@@ -77,10 +76,8 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 
 ## 関連文書
 
-- [フロントエンドの構成](../../docs/frontend_architecture.md)
-- [学生画面設計](../../docs/screen_design/student_screen_design.md)
-- [API仕様](../../docs/api_specification.md)
-- [要件定義](../../docs/RDD.md)
+- [バックエンドのルール](backend-architecture.md)
+- [OpenAPI](../../backend/apps/api/controllers/apidocs/openapi.json)
 
 設計文書に記載された機能がすべて実装済みであるとは扱わない。
 

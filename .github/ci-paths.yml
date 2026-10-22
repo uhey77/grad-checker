@@ -24,4 +24,3 @@ api:
   - 'backend/apps/api/controllers/apidocs/openapi.json'
   - 'backend/scripts/build_openapi.py'
   - 'backend/modules/**/application/dto/**/*.py'
-  - 'docs/api_specification.md'
