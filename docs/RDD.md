@@ -17,7 +17,6 @@
 ### 1.1 技術構成
 
 旧ルート文書の構成を統合し、2026-10-11の設計変更でGoを外部HTTP、Pythonを業務処理・DBとして共通の層構成に配置する。
-現時点の実装対象は開発用科目一覧。詳細は[バックエンドの構成](backend_architecture.md)を参照する。
 
 | 分野 | 採用技術 |
 |---|---|
@@ -267,7 +266,7 @@ APIエラーは `{"detail": "日本語のメッセージ"}` に統一し、画�
 
 ## 13. 基本設計との関係
 
-本書と[設計変更記録](design_changes_v1_2.md)を基準とし、[判定](graduation_requirement_logic.md)、[DB](database_design.md)、[API](api_specification.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)をv1.3へ整合させる。API接頭辞は `/api` とし、現時点で `/v1` は付けない。旧人工知能限定・閲覧専用の仕様は使用しない。大学院の本人申告未入力に限りpendingを使用する。実装・マスタ投入が完了したことは意味しない。
+本書を要件の基準とし、詳細な判定ルールは[判定](graduation_requirement_logic.md)を参照する。API契約は[OpenAPI](../backend/apps/api/controllers/apidocs/openapi.json)、DB構造と検証内容は実装とテストを参照する。API接頭辞は `/api` とし、現時点で `/v1` は付けない。旧人工知能限定・閲覧専用の仕様は使用しない。大学院の本人申告未入力に限りpendingを使用する。実装・マスタ投入が完了したことは意味しない。
 
 ## 14. 初期開発の完了条件
 

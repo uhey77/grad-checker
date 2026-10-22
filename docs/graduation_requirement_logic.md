@@ -107,9 +107,9 @@ Pythonの判定ユースケースは、所属課程の未修得科目と、明�
 
 ## 7. エラーと検証
 
-分類循環、必修集合・必要値不足、課程不一致、重複する群配分、未知の算入先、非整数単位、成績矛盾、未確認規則を検出する。設定不足はAPI409、未知科目は400、不正形式は422、DB障害は503として[API仕様](api_specification.md)に従う。大学院の非単位条件未入力にはpendingを返す。設定不足による停止とは区別する。
+分類循環、必修集合・必要値不足、課程不一致、重複する群配分、未知の算入先、非整数単位、成績矛盾、未確認規則を検出する。設定不足はAPI409、未知科目は400、不正形式は422、DB障害は503として[OpenAPI](../backend/apps/api/controllers/apidocs/openapi.json)に従う。大学院の非単位条件未入力にはpendingを返す。設定不足による停止とは区別する。
 
-関連：[DB](database_design.md)、[画面](screen_design/student_screen_design.md)、[テスト](test_specification.md)、[未確定事項](open_questions.md)。
+関連：[未確定事項](open_questions.md)。
 
 ## 大学院と分類をまたぐ内訳
 

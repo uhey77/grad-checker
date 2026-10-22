@@ -3,7 +3,6 @@
 対象は `backend/`。APIと業務モジュールを分け、各モジュール内で層の依存方向を守る。
 外部HTTPはGo、業務処理とDBはPython、両者の接続はローカルのブリッジHTTPとする。GoがPythonを呼ぶこの通信を「ブリッジ通信」と呼び、Pythonの受け口は`/bridge/*`・`go_bridge_*.py`、Goの共通クライアントは`shared/pythonbridge`とする。
 科目一覧・アカウント認証・本人成績の保存をこの分担で実装する。学生向けの未実装機能を実装済みとは扱わない。
-構成と通信契約は[バックエンドの構成](../../docs/backend_architecture.md)を参照する。
 
 ## 各層の責務
 
@@ -27,7 +26,7 @@
 - Pythonの依存定義・ロック・Pythonバージョン・仮想環境は`backend/pyproject.toml`・`backend/uv.lock`・`backend/.python-version`・`backend/.venv`に統一する。`apps/`・`modules/`・`shared/`に重複して置かない。
 - `apps/`・`modules/`・`shared/`・`migrations/`・`scripts/`は共通環境にインストールするPythonパッケージとする。業務ごとのコード配置と層の依存方向は維持する。
 - 科目モジュールはAPI・設定を参照しない。APIとCLIが設定値と具体実装を組み合わせる。
-- 通常の起動はリポジトリルートのTask / Makeを使用する。画面は127.0.0.1:5173、Go外部APIは127.0.0.1:8000、Pythonサービスは127.0.0.1:8001に統一する。Python単独起動は`backend-python-dev`を使用し、直接起動する場合も`--host 127.0.0.1 --port 8001`を明示する。CLIは`backend/`から`python -m apps.cli seed-subjects`で起動する。詳細は[起動と確認](../../docs/backend_architecture.md#起動と確認)を参照する。
+- 通常の起動はリポジトリルートのTask / Makeを使用する。画面は127.0.0.1:5173、Go外部APIは127.0.0.1:8000、Pythonサービスは127.0.0.1:8001に統一する。Python単独起動は`backend-python-dev`を使用し、直接起動する場合も`--host 127.0.0.1 --port 8001`を明示する。CLIは`backend/`から`python -m apps.cli seed-subjects`で起動する。
 - 業務処理・HTTP・設定と開発ツールの第三者依存はすべて`backend/pyproject.toml`に宣言し、一つのロックで解決する。
 - Goの`go.mod`は`backend/`直下の一つに統一する。配下に別の`go.mod`を作らず、API・科目・テストを共通モジュールから検証する。ローカル`require`・`replace`は不要。
 - 新しい業務モジュールは`modules/<機能>/`に配置し、必要になった利用側からのみ参照する。Python依存はバックエンドルートに追加する。
@@ -90,8 +89,7 @@ GoがPATHにない場合は結合テストがスキップされるため、完�
 ## 関連文書
 
 - [要件定義](../../docs/RDD.md)
-- [API仕様](../../docs/api_specification.md)
-- [DB設計](../../docs/database_design.md)
+- [OpenAPI](../../backend/apps/api/controllers/apidocs/openapi.json)
 - [卒業要件判定ロジック](../../docs/graduation_requirement_logic.md)
 - [シードデータの説明](../../backend/seeds/README.md)
 

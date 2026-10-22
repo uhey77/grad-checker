@@ -1,12 +1,12 @@
 # 未確定事項と確認記録
 
-文書版：1.4、更新日：2026年10月15日。[RDD](RDD.md)と[設計変更記録](design_changes_v1_2.md)が現在の基準。未確認の大学規則を独自に確定しない。添付便覧はローカル確認元で、リポジトリへの原本配置は未実施。
+文書版：1.4、更新日：2026年10月15日。[RDD](RDD.md)が現在の基準。未確認の大学規則を独自に確定しない。添付便覧はローカル確認元で、リポジトリへの原本配置は未実施。
 
 ## 1. 確定した仕様
 
 全学部課程、ログイン後の本人入力・保存、他学部算入、科目分類表示、区分・学部／学科・学期絞り込み、判定履歴の本人専用保存・再取得、おすすめ科目を初期開発に含める。
 
-技術構成はGoの外部HTTP、Pythonの業務処理・FastAPIのブリッジ通信・SQLModel/SQLite、React/TypeScript、pytestとGoのtesting。2026-10-11の分担変更は[バックエンドの構成](backend_architecture.md)を参照。科目単位は正整数、成績はS/A/B/C/D/X、判定はpass/fail。エラーは日本語detail文字列。/apiを使用しv1は付けない。JSONシード・Swagger UI・README手順・200科目1秒・2週間の目安を引き継ぐ。
+技術構成はGoの外部HTTP、Pythonの業務処理・FastAPIのブリッジ通信・SQLModel/SQLite、React/TypeScript、pytestとGoのtesting。科目単位は正整数、成績はS/A/B/C/D/X、判定はpass/fail。エラーは日本語detail文字列。/apiを使用しv1は付けない。JSONシード・Swagger UI・README手順・200科目1秒・2週間の目安を引き継ぐ。
 
 共有は不要。学生向け成績JSONファイル読み込み・エクスポートは後回し。APIのJSON通信と開発者のマスタJSONシードは使用する。便覧の自動取得は追加しない。
 
