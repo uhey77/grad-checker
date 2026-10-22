@@ -98,7 +98,7 @@ backend-subject-list:
 	node scripts/dev.mjs --backend-only --subject-list-preview
 
 backend-python-dev:
-	cd backend && uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
+	cd backend && uv run --locked uvicorn apps.bridge.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
 backend-test:
 	cd backend && uv run --locked pytest
@@ -128,10 +128,10 @@ pre-commit:
 	uv run --locked --project backend pre-commit run --all-files
 
 backend-seed:
-	cd backend && uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
+	cd backend && uv run --locked python -m apps.cli seed-subjects --file seeds/cs_2026.json
 
 backend-requirements-seed:
-	cd backend && uv run --locked python -m scripts.seed_requirements --file seeds/cs_requirements_2026.json
+	cd backend && uv run --locked python -m apps.cli seed-requirements --file seeds/cs_requirements_2026.json
 
 backend-requirements-build:
 	cd backend && uv run --locked python seeds/build_cs_requirements_seed.py
@@ -143,7 +143,7 @@ dev-go:
 	$(MAKE) dev
 
 go-api-dev:
-	cd backend && go run ./api -subject-list-preview
+	cd backend && go run ./apps/api -subject-list-preview
 
 go-api-check:
 	node scripts/check-go-format.mjs
@@ -185,7 +185,7 @@ api-docs-build:
 
 api-docs-check:
 	cd backend && uv run --locked python -m scripts.build_openapi --check
-	cd backend && uv run --locked pytest tests/test_openapi.py
+	cd backend && uv run --locked pytest tests/contract/test_openapi.py
 
 benchmark-graduation:
 	cd backend && uv run --locked python -m scripts.benchmark_graduation --iterations 10
@@ -195,8 +195,8 @@ benchmark-graduation:
 backend-all-seed:
 	$(MAKE) backend-seed
 	$(MAKE) backend-requirements-seed
-	cd backend && uv run --locked python -m scripts.seed_subjects --file seeds/university_2026.json
-	cd backend && uv run --locked python -m scripts.seed_requirements --file seeds/university_requirements_2026.json
+	cd backend && uv run --locked python -m apps.cli seed-subjects --file seeds/university_2026.json
+	cd backend && uv run --locked python -m apps.cli seed-requirements --file seeds/university_requirements_2026.json
 
 backend-all-seed-build:
 	cd backend && uv run --locked python -m seeds.build_university_seed

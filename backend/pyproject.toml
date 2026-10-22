@@ -18,7 +18,7 @@ requires = ["uv_build>=0.10.2,<0.11"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = ["api", "modules", "config", "scripts"]
+module-name = ["apps", "modules", "shared", "migrations", "scripts"]
 module-root = ""
 
 [dependency-groups]
@@ -62,18 +62,4 @@ ignore = [
 ]
 
 [tool.ty.src]
-include = [
-    "api/api_service",
-    "modules/subjects/grad_checker_subjects",
-    "modules/accounts/grad_checker_accounts",
-    "modules/grades/grad_checker_grades",
-    "modules/requirements/grad_checker_requirements",
-    "modules/shared/grad_checker_shared",
-    "config",
-    "scripts",
-    "tests",
-    "seeds/build_cs_seed.py",
-    "seeds/build_cs_requirements_seed.py",
-    "seeds/build_university_seed.py",
-    "seeds/university_external_rules.py",
-]
+include = ["apps", "modules", "shared", "migrations", "scripts", "tests", "seeds"]

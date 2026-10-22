@@ -76,7 +76,7 @@ tasks:
     desc: Pythonサービスだけを起動
     dir: backend
     cmds:
-      - uv run --locked uvicorn api.api_service.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
+      - uv run --locked uvicorn apps.bridge.main:app --app-dir . --reload --host 127.0.0.1 --port 8001
 
   backend-test:
     desc: Python・結合テストとGoの競合検出付きテストを実行
@@ -128,13 +128,13 @@ tasks:
     desc: CS学部の便覧掲載科目データを検証して追加投入
     dir: backend
     cmds:
-      - uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
+      - uv run --locked python -m apps.cli seed-subjects --file seeds/cs_2026.json
 
   backend-requirements-seed:
     desc: 科目マスタ投入後にCS4課程の卒業要件・算入規則を追加投入
     dir: backend
     cmds:
-      - uv run --locked python -m scripts.seed_requirements --file seeds/cs_requirements_2026.json
+      - uv run --locked python -m apps.cli seed-requirements --file seeds/cs_requirements_2026.json
 
   backend-requirements-build:
     desc: 照合済み転記と科目シードから卒業要件シードを再生成
@@ -162,7 +162,7 @@ tasks:
     desc: Go外部APIだけを起動（科目一覧有効）
     dir: backend
     cmds:
-      - go run ./api -subject-list-preview
+      - go run ./apps/api -subject-list-preview
 
   go-api-check:
     desc: Goの整形状態・静的解析を検証
@@ -241,7 +241,7 @@ tasks:
     dir: backend
     cmds:
       - uv run --locked python -m scripts.build_openapi --check
-      - uv run --locked pytest tests/test_openapi.py
+      - uv run --locked pytest tests/contract/test_openapi.py
 
   benchmark-graduation:
     desc: 200科目の卒業判定Go API性能計測
@@ -256,8 +256,8 @@ tasks:
     cmds:
       - task: backend-seed
       - task: backend-requirements-seed
-      - uv run --locked python -m scripts.seed_subjects --file seeds/university_2026.json
-      - uv run --locked python -m scripts.seed_requirements --file seeds/university_requirements_2026.json
+      - uv run --locked python -m apps.cli seed-subjects --file seeds/university_2026.json
+      - uv run --locked python -m apps.cli seed-requirements --file seeds/university_requirements_2026.json
 
   backend-all-seed-build:
     desc: 保存済みの公式表転記から全課程の追加シードを再生成

@@ -4,7 +4,7 @@
 
 ## 現在の実装範囲（2026年10月16日）
 
-`backend/modules/requirements/grad_checker_requirements/application/evaluation.py` の
+`backend/modules/requirements/application/evaluation.py` の
 `evaluate_graduation(EvaluationSnapshot)` を実装した。DB・HTTPに依存せず、所属課程・
 適用カリキュラム・成績版・成績・科目マスタ・要件マスタの整合した入力を受け取る。
 マスタは既存の投入用Pydantic契約を共有し、関数入口で独立コピーを再検証する。
@@ -29,7 +29,7 @@ CS4課程のマスタ構造に対応し、課程の全科目を含む総単位�
 他学部算入は、明示的な対象科目・算入先と配分方針が登録された規則について対応した。
 2026年度の追加シードでは、照合できた講義科目の明示的な対応を登録する。未照合科目は推測しない。
 算入先未登録の課程外科目はエラーにし、黙って除外しない。おすすめの生成・履歴保存・本人の一覧と過去結果取得まで実装済み。推薦理由・開講期・判定時の状態も当時のまま保存する。
-`backend/tests/test_requirement_evaluation.py` は架空課程と実シードのCS4課程で計算を検証する。
+`backend/tests/unit/test_requirement_evaluation.py` は架空課程と実シードのCS4課程で計算を検証する。
 `test_external_allocation.py` は架空の照合済み他学部科目で取得順・最適配分・入力要求を検証する。
 実シードを変更しないCS4課程でも、成績0件と必修科目修得時の計算を単体・実HTTPで検証する。
 

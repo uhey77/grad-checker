@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const cwd = fileURLToPath(new URL("../backend/", import.meta.url));
-const result = spawnSync("gofmt", ["-l", "api", "modules", "tests"], {
+const result = spawnSync("gofmt", ["-l", "apps", "modules", "shared", "tests"], {
   cwd,
   encoding: "utf8",
 });

@@ -19,7 +19,7 @@
 
 ```sh
 uv run python seeds/build_cs_seed.py
-uv run --locked python -m scripts.seed_subjects --file seeds/cs_2026.json
+uv run --locked python -m apps.cli.handlers.seed_subjects --file seeds/cs_2026.json
 ```
 
 | 登録内容 | 件数 |
@@ -92,9 +92,9 @@ UUID・必須文字列・正整数／非負整数を検証し、未知フィー�
 
 ## 実装ファイル
 
-- `modules/subjects/grad_checker_subjects/application/subject_data_validation.py`：投入する課程・科目データの型と整合性検証。
-- `modules/subjects/grad_checker_subjects/application/subject_data_import.py`：既存データとの照合・全体の検証と、一つの書込みトランザクション（Unit of Work）での追加投入。
-- `modules/subjects/grad_checker_subjects/infrastructure/subject_data_import.py`：JSONの読み込みと、投入済みデータの読取り・追加。
-- `modules/subjects/grad_checker_subjects/infrastructure/subject_models.py`：課程・科目データを保存する6テーブル。
-- `modules/subjects/grad_checker_subjects/application/errors/subject_data.py`：投入処理の例外。
-- `api/presentation/subject_list.go`：科目一覧を取得するAPI。
+- `modules/subjects/application/dto/subject_data.py`・`modules/subjects/application/services/subject_data_validation.py`：投入する課程・科目データの型と整合性検証。
+- `modules/subjects/application/use_cases/import_subject_data.py`：既存データとの照合・全体の検証と、一つの書込みトランザクション（Unit of Work）での追加投入。
+- `modules/subjects/infrastructure/persistence/repositories/subject_data.py`：JSONの読み込みと、投入済みデータの読取り・追加。
+- `modules/subjects/infrastructure/persistence/models/subject_models.py`：課程・科目データを保存する6テーブル。
+- `modules/subjects/application/errors/subject_data.py`：投入処理の例外。
+- `apps/api/controllers/subject_list.go`：科目一覧を取得するAPI。

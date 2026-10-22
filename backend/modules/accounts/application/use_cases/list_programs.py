@@ -1,0 +1,13 @@
+"""ListProgramsUseCaseの処理手順とトランザクション境界。"""
+
+from modules.accounts.application.dto.profile import ProgramOption
+from modules.accounts.application.uow.profile import ProfileUnitOfWork
+
+
+class ListProgramsUseCase:
+    def __init__(self, uow: ProfileUnitOfWork) -> None:
+        self.uow = uow
+
+    def execute(self) -> list[ProgramOption]:
+        with self.uow.read():
+            return self.uow.profiles.list_programs()

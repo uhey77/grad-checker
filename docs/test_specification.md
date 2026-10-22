@@ -12,7 +12,7 @@
 | Pythonのブリッジ通信 | pytest / FastAPI TestClient、`backend/tests/` | 操作名・引数の検証、結果とエラーコード、Session管理。外部向け日本語HTTPエラーは担当しない |
 | Goの外部HTTP | Goのtesting、`backend/tests/subject_list_test.go` | UUID検証・正規化、ルート・メソッド・開発用表示の制御、日本語detail・ステータス・ヘッダー |
 | GoのブリッジHTTPクライアント | Goのtesting / httptest、`backend/tests/subject_list_client_test.go` | Pythonへの要求、ブリッジの包絡形式の解釈、不正応答・接続失敗・タイムアウト・キャンセル |
-| Go → Python → SQLite | pytestの実プロセス結合テスト、`backend/tests/test_subject_list_http.py` | 一時DBと実サーバーを使った取得結果の一致、外部ルートとブリッジのルートの分離、業務エラーのHTTP変換 |
+| Go → Python → SQLite | pytestの実プロセス結合テスト、`backend/tests/e2e/test_subject_list_http.py` | 一時DBと実サーバーを使った取得結果の一致、外部ルートとブリッジのルートの分離、業務エラーのHTTP変換 |
 | フロントエンド | Node.jsのtest runner、`frontend/tests/`。画面操作はブラウザーで確認 | DTO変換、ユースケース、検索・並べ替え、層の依存方向、表示・通信状態 |
 
 Python・Goのテストは`backend/tests/`へ集約し、Goは対象パッケージの公開契約をimportして検証する。Pythonの業務テストはGoやHTTPを介さず検証し、Goへ卒業判定やSQLを重複実装しない。
@@ -66,7 +66,7 @@ Pythonの業務層をpytestで検証する。外部HTTPのステータスやGo�
 | U15 | 同一候補が複数不足条件へ寄与 | 候補は1件、理由と条件コードを併記 | T20 |
 | U16 | 課程を切り替えて同じ科目を判定 | 課程別種別・必要値・算入先を使用 | T06/T16 |
 
-U14・U15は `backend/tests/test_recommendations.py` で必修優先、複数開講期の最小順・不明末尾、同順位ID順、理由集約、修得済み除外、不合格・未確定、全条件達成、確認済み超過換算、他学部対応表・共通上限・取得時期未確定を検証する。`test_check_results.py` で推薦を含む保存結果の不変性と推薦導入前の履歴互換を、`frontend/tests/requirements.test.mjs` でDTO検証・順序保持・旧履歴の情報なし表示契約を検証する。V07は一時DBのブラウザーで最新詳細・保存直後・過去詳細、375pxの横スクロール、読込み・失敗・再試行を確認する。
+U14・U15は `backend/tests/unit/test_recommendations.py` で必修優先、複数開講期の最小順・不明末尾、同順位ID順、理由集約、修得済み除外、不合格・未確定、全条件達成、確認済み超過換算、他学部対応表・共通上限・取得時期未確定を検証する。`test_check_results.py` で推薦を含む保存結果の不変性と推薦導入前の履歴互換を、`frontend/tests/requirements.test.mjs` でDTO検証・順序保持・旧履歴の情報なし表示契約を検証する。V07は一時DBのブラウザーで最新詳細・保存直後・過去詳細、375pxの横スクロール、読込み・失敗・再試行を確認する。
 
 ## 3. Go外部API・Python・SQLite結合テスト
 
@@ -151,19 +151,19 @@ U14・U15は `backend/tests/test_recommendations.py` で必修優先、複数開
 
 ## 本人所属保存の検証
 
-- `backend/tests/test_profile.py`：一時SQLiteで未設定、未確認状態、保存・再ログイン、別アカウント分離、更新失敗時不変、同一revisionの並行更新を検証する。
-- `backend/tests/test_profile_http.py`：実Go→Python→一時DBで認証必須、Origin/CSRF、不正入力、競合、保存・ログアウト・再ログイン後の復元を検証する。
+- `backend/tests/integration/test_profile.py`：一時SQLiteで未設定、未確認状態、保存・再ログイン、別アカウント分離、更新失敗時不変、同一revisionの並行更新を検証する。
+- `backend/tests/e2e/test_profile_http.py`：実Go→Python→一時DBで認証必須、Origin/CSRF、不正入力、競合、保存・ログアウト・再ログイン後の復元を検証する。
 - `backend/tests/profile_test.go`：公開ハンドラーの入力検証・業務エラー変換、ブリッジ通信契約の不正応答拒否を検証する。
 - `frontend/tests/profiles.test.mjs`：DTO変換、未確認状態、Cookie/CSRF/revision、401/409/通信失敗/キャンセルを検証する。
 - 画面では所属選択・保存・再読込・再ログインに加え、保存失敗時の選択保持、競合後の再取得、取得失敗・選択肢0件を確認する。
 
 ## 学生向け科目一覧・本人成績の検証（2026-10-16）
 
-- `backend/tests/test_grades.py`：一時SQLiteで全集合の保存・訂正・省略による取消・全取消、別アカウント分離、回次の重複・欠番・合格／未確定後の再履修拒否、未知科目、旧revision、CSRF不正、不正値で全体不変、課程外の既知科目の保存、所属保存とのrevision共有、変更のない回次のupdated_at保持、並行保存の勝者1件、DB障害時のロールバック、DBのCHECK制約を検証する。FakeのUnit of Workで、回次の検証が書込み開始前に行われ、置換が一つの書込みでcommit・ロールバックされることも検証する。
-- `backend/tests/test_course_catalog.py`：所属未設定、本人課程の分類・種別と課程外科目のplacement=null・並び順、分類一覧、区分（子孫を含む）・開講学部・学科・学期・検索語のAND、未知分類・不正な条件を検証する。
-- `backend/tests/test_grades_http.py`：実Go→Python→一時DBで認証必須、所属未設定409、絞り込み、所属保存後の旧revision409、Origin/CSRF、未知科目400・回次と成績記号の422、保存・再取得・全取消、ログアウト後401、別アカウント分離を検証する（I04〜I06・I09・I14・I15）。
+- `backend/tests/integration/test_grades.py`：一時SQLiteで全集合の保存・訂正・省略による取消・全取消、別アカウント分離、回次の重複・欠番・合格／未確定後の再履修拒否、未知科目、旧revision、CSRF不正、不正値で全体不変、課程外の既知科目の保存、所属保存とのrevision共有、変更のない回次のupdated_at保持、並行保存の勝者1件、DB障害時のロールバック、DBのCHECK制約を検証する。FakeのUnit of Workで、回次の検証が書込み開始前に行われ、置換が一つの書込みでcommit・ロールバックされることも検証する。
+- `backend/tests/integration/test_course_catalog.py`：所属未設定、本人課程の分類・種別と課程外科目のplacement=null・並び順、分類一覧、区分（子孫を含む）・開講学部・学科・学期・検索語のAND、未知分類・不正な条件を検証する。
+- `backend/tests/e2e/test_grades_http.py`：実Go→Python→一時DBで認証必須、所属未設定409、絞り込み、所属保存後の旧revision409、Origin/CSRF、未知科目400・回次と成績記号の422、保存・再取得・全取消、ログアウト後401、別アカウント分離を検証する（I04〜I06・I09・I14・I15）。
 - `backend/tests/grades_test.go`・`courses_test.go`：外部入力の検証（重複・未知キー、型、範囲、記号と状態、Content-Type 415、本文上限413、クエリ）でPythonを呼ばないこと、UUID正規化、業務エラーの変換、内部応答の不正検出を検証する。
-- `backend/tests/test_module_boundaries.py`：科目モジュールがaccounts・gradesを参照しないこと、成績モジュールのdomain・applicationがinfrastructure・SQLModelを参照しないことを検証する。
+- `backend/tests/unit/test_module_boundaries.py`：科目モジュールがaccounts・gradesを参照しないこと、成績モジュールのdomain・applicationがinfrastructure・SQLModelを参照しないことを検証する。
 - `frontend/tests/grades.test.mjs`・`course-catalog.test.mjs`：成績・科目一覧のDTO変換と不正応答の拒否、全集合PUT・Cookie・CSRF・更新版、401/409/通信失敗/キャンセル、再履修の可否と回次の編集、修得状況・履修年度・学期・区分（子孫）・開講元・検索語の絞り込みを検証する。
 - S02画面の表示・操作（V02〜V04）は一時DBとブラウザーで確認した。範囲は[フロントエンドの構成](frontend_architecture.md)の検証範囲を参照する。
 

@@ -1,46 +1,34 @@
 # フロントエンドの構成
 
 バックエンドと同じ4層の責務・依存方向を維持する。
-domain・application・infrastructureは業務モジュールにまとめ、presentationはReactの役割ごとにsrc直下へ配置する。
+domain・application・infrastructureは業務モジュールにまとめ、presentationはReactの役割ごとにapps/web配下へ配置する。
 React・TypeScript・Viteを使用する。現在はユーザー名登録・復旧・ログイン画面、ログイン後の所属設定・成績入力と開発用科目一覧。卒業・修了判定と本人専用履歴も実装する。
 
 ## 配置
 
 ```text
 frontend/
-├── package.json / package-lock.json / tsconfig.json  # 共通の依存管理・型設定
 ├── src/
-│   ├── main.tsx                          # React起動
-│   ├── App.tsx                           # アプリ全体の画面配置
-│   ├── app/composition/createApplication.ts  # 設定・依存の組み立て
-│   ├── layouts/AppLayout.tsx             # 共通レイアウト
+│   ├── apps/web/
+│   │   ├── main.tsx / App.tsx
+│   │   ├── composition/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   └── layouts/
 │   ├── i18n/                             # 表示言語・英語リソース・エラー表示変換
-│   ├── pages/subjects/SubjectListPage.tsx # 画面構成
-│   ├── components/subjects/              # 科目専用の表示部品
-│   │   ├── ProgramSelector.tsx           # 課程選択
-│   │   ├── SubjectSummary.tsx            # 科目数サマリー
-│   │   ├── SubjectFilters.tsx            # 検索・絞り込み・並べ替え操作
-│   │   ├── SubjectTable.tsx              # 一覧表示
-│   │   └── labels.ts                     # 表示ラベル
-│   ├── hooks/
-│   │   ├── useRemote.ts                  # 業務共通の非同期状態・キャンセル
-│   │   └── subjects/
-│   │       ├── useSubjectList.ts         # 画面状態・操作・取得の連携
-│   │       └── errors.ts                 # 業務エラーから表示文への変換
-│   └── modules/subjects/
-│       ├── public.ts                     # UI・他モジュールへの公開契約
-│       ├── composition.ts                # 科目モジュールの具体実装の生成
-│       ├── domain/subject-list/          # 課程・科目・分類・開講時期のモデル
-│       ├── application/
-│       │   ├── errors/                   # 取得失敗のエラー契約
-│       │   └── subject-list/             # ユースケース・取得契約・検索・並べ替え
-│       └── infrastructure/subject-list/  # HTTP・DTO・モデル変換
-└── tests/                                # 契約・通信・依存境界テスト
+│   ├── modules/{accounts,profiles,grades,subjects,requirements}/
+│   │   ├── public.ts / composition.ts
+│   │   ├── domain/{entities,value_objects,services}/
+│   │   ├── application/{dto,use_cases,services,ports,queries,errors}/
+│   │   └── infrastructure/external_services/  # HTTP取得先、schemas/にDTO変換
+│   └── shared/infrastructure/                # 共通HTTP・DTO検証
+└── tests/{unit,contract}/                    # run.mjsで一括実行
 ```
 
 科目専用のUIもcomponents・hooks・pagesに置き、各ディレクトリ内でsubjectsにまとめる。
-共通部品は各ディレクトリの共通領域へ配置する。業務領域をmodules/subjects、一覧という操作を内部のsubject-listとする。
-翻訳は`i18n/`へ集約し、`App`の`I18nextProvider`から全画面へ渡す。画像素材・API生成コードなどは実装する時点で対応するディレクトリを追加する。
+共通部品は各ディレクトリの共通領域へ配置する。業務領域をmodules/subjectsとし、Application内は役割ごと、Domainはentities・value_objects・services、Infrastructureはexternal_servicesとそのschemasに分ける。
+翻訳は`i18n/`へ集約し、`apps/web/App.tsx`の`I18nextProvider`から全画面へ渡す。画像素材・API生成コードなどは実装する時点で対応するディレクトリを追加する。
 モジュールごとのpackage.jsonやロックは作らず、フロントエンド全体で依存管理する。
 
 ## 4層と依存境界
@@ -58,7 +46,7 @@ frontend/
 - UIはmodules/subjects/public.tsを通してモデル・ユースケースの型・検索・並べ替え・エラー契約を利用する。DTO・HTTP実装・内部ファイルを直接参照しない。
 - public.tsはdomainとapplicationの契約だけを明示的に公開し、HTTP実装・composition・UIを公開しない。
 - モジュールはappとUIを参照しない。他モジュールの利用はそのpublic.tsの公開契約に限定し、各層の依存制約も適用する。
-- モジュールのcompositionだけが内部の具体実装を生成する。app/compositionだけがそのcompositionを利用し、設定を渡す。
+- モジュールのcompositionだけが内部の具体実装を生成する。apps/web/compositionだけがそのcompositionを利用し、設定を渡す。
 - 業務共通のuseRemoteは科目モジュールを参照しない。HookはPage・表示部品を参照せず、表示部品はPageを参照しない。
 
 ## 表示・状態・通信
@@ -74,7 +62,7 @@ Pageは画面構成、各コンポーネントはpropsで受け取るデータ�
 
 HTTP失敗はinfrastructureでSubjectListErrorに変換する。404・409・5xx・その他HTTP失敗をコードで区別し、日本語detailを保持する。
 ネットワーク失敗とJSON解析失敗も区別し、キャンセルは変換せず伝播する。
-hooks/subjects/errors.tsがコードとdetailから原文の表示文を決め、共通表示部品が選択言語へ翻訳する。useRemoteはエラーをunknownとして保持し、業務固有の文言を持たない。
+apps/web/hooks/subjects/errors.tsがコードとdetailから原文の表示文を決め、共通表示部品が選択言語へ翻訳する。useRemoteはエラーをunknownとして保持し、業務固有の文言を持たない。
 正常JSONのDTO変換は型契約に基づき、実行時スキーマ検証は未導入。
 
 useRemoteはロード・成功・失敗、離脱時のキャンセル、古い応答の排除を担当する。
@@ -107,7 +95,7 @@ Python応答のタイムアウトによる日本語エラーと、サービス�
 
 ## アカウント認証の追加（2026-10-11）
 
-認証モジュールは `modules/accounts/`。バックエンドは `application/auth.go` と `infrastructure/auth_client.go`、Pythonは `grad_checker_accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `api/presentation/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `pages/accounts/AuthGate.tsx`、入力部品は `components/accounts/AuthForm.tsx`、状態管理は `hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
+認証モジュールは `modules/accounts/`。バックエンドは `application/ports/auth.go` と `infrastructure/external_services/auth_client.go`、Pythonは `modules/accounts/{domain,application,infrastructure}/` に配置する。外部HTTPとCookieは `apps/api/controllers/auth.go`、ブリッジアダプターは `go_bridge_auth.py`。画面は `apps/web/pages/accounts/AuthGate.tsx`、入力部品は `apps/web/components/accounts/AuthForm.tsx`、状態管理は `apps/web/hooks/accounts/useAuth.ts`。通信はaccountsモジュール内の取得契約を通し、アプリのcompositionで組み立てる。Pythonの入力・出力契約はPydanticを用い、dataclassは使用しない。
 
 再現手順と認証設定は[認証の開発手順](auth_development.md)を参照する。
 
@@ -118,7 +106,7 @@ Python応答のタイムアウトによる日本語エラーと、サービス�
 認証フォームは日本語で入力を検証し、エラーのある入力欄へフォーカスする。
 API・通信エラー時はユーザー名・パスワード・復旧コードの入力をメモリ内に保持し、再試行できる。
 成功後の画面遷移や認証画面の切替でフォームを破棄し、前画面のAPIエラーは切替時に解除する。
-復旧コードの表示とコピー・保管確認は `components/accounts/RecoveryCode.tsx` が担当する。
+復旧コードの表示とコピー・保管確認は `apps/web/components/accounts/RecoveryCode.tsx` が担当する。
 コピーに失敗した場合は手動コピーを案内する。ブラウザーストレージへは保存しない。
 
 `useAuth` は期限のタイマーに加え、画面へ戻った際にセッションを再取得する。
@@ -161,8 +149,8 @@ Chromiumで、一時SQLiteにCS学部4課程を投入し、Vite → Go → Pytho
 
 ## 本人の所属設定
 
-`modules/profiles/` のdomainに本人所属・カリキュラム選択肢、applicationにProfileUseCasesと取得・保存契約、infrastructureにHTTP通信とDTO変換を置く。公開契約はpublic.ts、具体実装の組立てはcomposition.tsとapp/compositionで行う。
-`pages/profiles/ProfilePage.tsx` が画面構成、`components/profiles/ProgramForm.tsx` が選択・表示、`hooks/profiles/useProfile.ts` が取得・保存・競合・未保存の状態を担当する。AuthGateからセッションのCSRFと期限切れ処理を渡す。アカウント切替時は本人画面を作り直し、離脱時には通信をキャンセルする。
+`modules/profiles/` のdomainに本人所属・カリキュラム選択肢、applicationにProfileUseCasesと取得・保存契約、infrastructureにHTTP通信とDTO変換を置く。公開契約はpublic.ts、具体実装の組立てはcomposition.tsとapps/web/compositionで行う。
+`apps/web/pages/profiles/ProfilePage.tsx` が画面構成、`apps/web/components/profiles/ProgramForm.tsx` が選択・表示、`apps/web/hooks/profiles/useProfile.ts` が取得・保存・競合・未保存の状態を担当する。AuthGateからセッションのCSRFと期限切れ処理を渡す。アカウント切替時は本人画面を作り直し、離脱時には通信をキャンセルする。
 初期取得は本人情報と選択肢を並列取得する。保存は成功応答でのみ保存済み状態を更新し、失敗時は選択を保持する。409後は再取得を要求し、未保存変更の破棄には確認を挟む。開発用科目一覧の閲覧対象は本人の保存済み所属とは独立している。
 
 ### 最新mainとの統合確認
@@ -175,13 +163,13 @@ Chromiumで、一時SQLiteにCS学部4課程を投入し、Vite → Go → Pytho
 
 | 場所 | 責務 |
 | --- | --- |
-| `modules/subjects/{domain,application,infrastructure}/course-catalog/` | 本人課程から見た科目・分類のモデル、取得契約、絞り込み、`/api/courses`・`/api/categories` の取得とDTO変換 |
+| `modules/subjects/domain/`・`application/`・`infrastructure/external_services/` | 本人課程から見た科目・分類のモデル、取得契約、絞り込み、`/api/courses`・`/api/categories` の取得とDTO変換 |
 | `modules/grades/domain/` | 成績記号・確定状態・履修回次のモデル、再履修の可否と修得状況 |
 | `modules/grades/application/` | 取得・保存の契約と `GradeError`、未保存の全集合を編集する純粋関数、成績による絞り込み |
 | `modules/grades/infrastructure/` | `/api/me/grades` の取得・保存とDTO変換 |
-| `hooks/grades/useGradeEntry.ts` | 科目と成績の並行取得、保存済み・未保存・表示対象の分離、保存・競合・再取得・キャンセル |
-| `components/grades/` | 絞り込み、科目表と回次の入力、表示ラベル |
-| `pages/grades/GradeEntryPage.tsx` | 成績入力画面の構成 |
+| `apps/web/hooks/grades/useGradeEntry.ts` | 科目と成績の並行取得、保存済み・未保存・表示対象の分離、保存・競合・再取得・キャンセル |
+| `apps/web/components/grades/` | 絞り込み、科目表と回次の入力、表示ラベル |
+| `apps/web/pages/grades/GradeEntryPage.tsx` | 成績入力画面の構成 |
 | `App.tsx` | ログイン後の画面切替と、所属・成績で共有する更新版の受渡し |
 
 再履修の可否と修得状況の区分は入力補助のためにフロントエンドのdomainにも置く。保存時の判定はバックエンドの業務ルールを正とし、卒業判定の規則は複製しない。
@@ -207,13 +195,13 @@ Firefox・Safari、キーボードだけでの全操作は今回の検証に含�
 
 | 場所 | 責務 |
 | --- | --- |
-| `components/StatusPanels.tsx` | 読み込み中・取得失敗と再試行・0件・入力エラーの表示 |
-| `components/SaveBar.tsx`・`ConfirmPanel.tsx` | 保存の失敗・状態・操作の並びと、破棄・全件取消の確認 |
-| `components/ScrollTable.tsx`・`FilterFields.tsx`・`PageHeading.tsx` | 横スクロールする表、検索欄と絞り込みの選択欄、画面見出し |
-| `components/subjects/labels.ts` | 課程名（学部 ／ 学科 ／ 専攻 ／ コース）、学期名、分類・開講元の区切り、学年共通開講の判定 |
-| `components/subjects/SubjectCells.tsx`・`NoMatchingSubjects.tsx` | 科目一覧と成績入力で共通の科目名・区分・種別・単位・開講学期・開講元のセルと検索結果0件 |
-| `hooks/useExclusiveAction.ts` | 保存・認証操作を一度に一つだけ実行し、中断した結果を反映しない |
-| `hooks/useUnsavedChangesWarning.ts`・`errorMessage.ts` | 未保存時の離脱確認、業務エラーの日本語メッセージの取り出し |
+| `apps/web/components/StatusPanels.tsx` | 読み込み中・取得失敗と再試行・0件・入力エラーの表示 |
+| `apps/web/components/SaveBar.tsx`・`ConfirmPanel.tsx` | 保存の失敗・状態・操作の並びと、破棄・全件取消の確認 |
+| `apps/web/components/ScrollTable.tsx`・`FilterFields.tsx`・`PageHeading.tsx` | 横スクロールする表、検索欄と絞り込みの選択欄、画面見出し |
+| `apps/web/components/subjects/labels.ts` | 課程名（学部 ／ 学科 ／ 専攻 ／ コース）、学期名、分類・開講元の区切り、学年共通開講の判定 |
+| `apps/web/components/subjects/SubjectCells.tsx`・`NoMatchingSubjects.tsx` | 科目一覧と成績入力で共通の科目名・区分・種別・単位・開講学期・開講元のセルと検索結果0件 |
+| `apps/web/hooks/useExclusiveAction.ts` | 保存・認証操作を一度に一つだけ実行し、中断した結果を反映しない |
+| `apps/web/hooks/useUnsavedChangesWarning.ts`・`errorMessage.ts` | 未保存時の離脱確認、業務エラーの日本語メッセージの取り出し |
 | `shared/infrastructure/http.ts` | Cookie・キャッシュ無効・CSRFの送信、JSON解析、detail抽出、通信失敗とキャンセルの区別 |
 | `shared/infrastructure/dtoReader.ts` | DTOの実行時検証。不正値は各モジュールの業務エラーへ変換する |
 
@@ -248,14 +236,14 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 
 `useCheckHistory` は一覧（1ページ20件）と選択中の過去の判定を `useRemote` で取得し、ページ切替・画面離脱で古い通信を中断する。401は認証画面へ戻す。
 チェック保存後は過去表示を閉じて先頭ページを取り直す。`GraduationCheckPanel` は最新表示と `PastCheckView`（「過去の判定」・判定日時・当時の課程・規則版・判定に使った成績）を切り替え、`CheckHistory` で一覧・ページ移動・取得中・失敗と再試行・0件を表示する。
-判定ラベルと日時の表記は `components/requirements/labels.ts` に集約する。共有・公開の操作は設けない。
+判定ラベルと日時の表記は `apps/web/components/requirements/labels.ts` に集約する。共有・公開の操作は設けない。
 
 
 ## マイページと共通ヘッダー（2026-10-16）
 
 `App.tsx` の `StudentScreens` が `useProfile` を呼び、初期画面の決定、所属・成績の共有更新版、保存済み所属の受渡しを担当する。初期画面は最初の本人所属取得後に一度だけ決め、以後は利用者の画面切替を優先する。`ProfilePage` はHookの状態・操作を受け取り、ユーザー名・所属の確認と編集を構成する。`useProfile` が編集状態も管理し、保存成功時だけ編集欄を閉じる。
 
-`AuthGate` は認証済みの場合にセッション・期限切れ処理・ログアウト操作・認証処理の状態を `StudentScreens` へ渡す。未認証の場合は `AppLayout` 内に認証画面を表示する。認証済みの `AppLayout` は `StudentScreens` が配置し、共通レイアウトに業務依存を追加せず `userMenu` スロットへ `components/accounts/UserMenu.tsx` を渡す。ログアウト失敗はメニューが閉じても本文前に表示する。
+`AuthGate` は認証済みの場合にセッション・期限切れ処理・ログアウト操作・認証処理の状態を `StudentScreens` へ渡す。未認証の場合は `AppLayout` 内に認証画面を表示する。認証済みの `AppLayout` は `StudentScreens` が配置し、共通レイアウトに業務依存を追加せず `userMenu` スロットへ `apps/web/components/accounts/UserMenu.tsx` を渡す。ログアウト失敗はメニューが閉じても本文前に表示する。
 
 `UserMenu` は通常のボタンとナビゲーションで構成し、開閉・外側クリック・Escape・フォーカス離脱を扱う。非表示中は `inert` と `aria-hidden` で操作・読み上げ対象から外す。画面切替では本文へ、編集開始では選択欄へ、表示中の保存成功では変更ボタンへフォーカスを移す。CSSの開閉トランジションは動きを減らす設定に対応する。
 
@@ -294,6 +282,31 @@ infrastructureは本人専用GETとDTO検証・変換を担当する。`public.t
 ## 2026年10月19日の全課程・修了判定拡張
 
 2026年度の所属選択はProgramCoverageで学位段階・キャンパス・整備状況・根拠を表示する。GraduationCheckPanelで課程別の非単位条件を入力し、requirements/public.tsの契約を通じて保存判定を呼ぶ。DTO検証は各モジュールのinfrastructureに保持し、Reactは修了規則を計算しない。未入力の判定保留と本人申告の参考判定を結果・履歴に表示する。成績表は100件ずつ表示し、検索・絞り込みと全件の入力状態を維持する。
+
+## 成績ルールと公開契約の境界
+
+成績の連番と再履修条件は `modules/grades/domain/attempts.ts` の純粋関数で扱う。編集用Applicationはその規則を呼び出し、`GradeDraftProblem` のコードを返す。`apps/web/hooks/grades/errors.ts` がコードを日本語の表示文言へ変換し、`useGradeEntry` が表示する。既存の年度範囲・メッセージ・保存操作を維持し、同じ業務条件をバックエンドでも検証する。
+
+モジュールをまたぐ参照は引き続き `public.ts` を使う。公開窓口を経由しても層の依存方向は変わらない。Domainから参照できるのは他モジュールのDomain由来の公開型だけとし、Applicationのユースケース・エラー・検索処理をDomainへ持ち込まない。境界テストは公開名のexport元も確認する。
+
+## 操作別UseCaseとApplication内の配置
+
+フロントエンドも `application/use_cases/<操作>UseCase.ts` の1操作1クラスとし、公開実行メソッドを `execute` に統一する。認証6操作、所属3操作、成績2操作、卒業要件・履歴5操作、科目3操作の合計19クラスを配置する。複数メソッドを持つUseCaseクラスや、複数の取得関数を返す旧ファクトリーは置かない。
+
+| ディレクトリ | 所有するもの |
+| --- | --- |
+| `use_cases/` | 取得・保存など、一つの操作と `execute` |
+| `dto/` | セッション・更新要求・取得結果などApplication固有の入出力型 |
+| `ports/` | 書込みを含むRepositoryの取得保存契約と、画面へ渡すUseCase集合のreadonlyな注入型 |
+| `queries/` | 科目一覧・カタログの読取り専用契約 |
+| `services/` | 検索・並べ替え・未保存成績の編集など、副作用のない共通処理 |
+| `errors/` | 取得・保存のエラー契約 |
+
+`AuthUseCases`・`ProfileUseCases`などの複数形の名前は、操作別インスタンスを参照するreadonlyな型だけに使う。実行処理は持たせない。Compositionが各クラスを生成し、画面用Hookは `useCases.login.execute(...)` や `useCases.saveGrades.execute(...)` を呼ぶ。取得関数をHookへ渡す場合は `useCallback` でインスタンスの呼出しを包み、`this`と関数の参照を安定させる。
+
+UseCaseとRepositoryの入力・出力、AbortSignal、Cookie・CSRF・成績版、失敗・キャンセルの扱いは維持する。UIは引き続き `public.ts` の公開契約だけを使い、HTTP実装を呼ばない。境界テストは役割別配置・各UseCaseの `execute`・Portに複数操作の実装クラスを置かないことを検査する。
+
+全体の配置原則と選択理由は[構成の全体像](architecture.md)と[配置の決定](decisions/0001-directory-layout.md)を参照する。各役割のディレクトリは実装があるモジュールだけに作る。
 
 ## 日本語・英語の表示
 

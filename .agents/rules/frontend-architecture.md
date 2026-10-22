@@ -1,6 +1,6 @@
 # フロントエンドのアーキテクチャルール
 
-対象は `frontend/`。React・TypeScript・Viteを使用し、バックエンドと同じ4層の責務・依存方向を守る。domain・application・infrastructureは業務モジュール内、presentationはsrc直下のUIディレクトリに配置する。
+対象は `frontend/`。React・TypeScript・Viteを使用し、バックエンドと同じ4層の責務・依存方向を守る。domain・application・infrastructureは業務モジュール内、presentationはapps/web内のUIディレクトリに配置する。
 科目一覧の設計意図は [フロントエンドの構成](../../docs/frontend_architecture.md) を参照する。
 
 [バックエンドの構成](../../docs/backend_architecture.md)に従い、ViteからGoの外部APIを呼び出す。
@@ -11,17 +11,17 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 | 場所（frontend/src 以下） | 責務 | 配置例 |
 | --- | --- | --- |
 | `modules/<業務領域>/domain/` | UI・通信形式に依存しない業務モデル | 課程、科目、分類経路、開講時期の型 |
-| `modules/<業務領域>/application/` | ユースケース、取得先の契約、検索・並べ替え処理 | `SubjectListRepository`、`SubjectListUseCases`、科目の絞り込み |
+| `modules/<業務領域>/application/` | ユースケース、取得先の契約、検索・並べ替え処理 | `use_cases/`、`dto/`、`ports/`、`services/`、`errors/`で役割別に配置 |
 | `modules/<業務領域>/infrastructure/` | HTTP通信、APIのDTO、ドメインモデルへの変換 | `HttpSubjectListRepository`、`dto.ts`、`mappers.ts` |
-| `pages/<業務領域>/` | 画面構成 | `SubjectListPage` |
-| `components/<業務領域>/` | 表示部品・表示ラベル・ユーザー操作 | `SubjectTable`、`SubjectFilters`、`ProgramSelector`、`SubjectSummary` |
-| `hooks/<業務領域>/` | 画面状態・操作とユースケースの連携・エラー表示変換 | `useSubjectList`、`errors.ts` |
-| `hooks/`・`components/`・`layouts/` | 業務に依存しない共通Hook・表示部品・レイアウト | `useRemote`、`useExclusiveAction`、`StatusPanels`、`SaveBar`、`AppLayout` |
-| `components/subjects/labels.ts`・`SubjectCells.tsx` | 画面をまたぐ科目・課程の表記と表のセル | `programLabel`、`OfferingsCell` |
+| `apps/web/pages/<業務領域>/` | 画面構成 | `SubjectListPage` |
+| `apps/web/components/<業務領域>/` | 表示部品・表示ラベル・ユーザー操作 | `SubjectTable`、`SubjectFilters`、`ProgramSelector`、`SubjectSummary` |
+| `apps/web/hooks/<業務領域>/` | 画面状態・操作とユースケースの連携・エラー表示変換 | `useSubjectList`、`errors.ts` |
+| `apps/web/hooks/`・`apps/web/components/`・`apps/web/layouts/` | 業務に依存しない共通Hook・表示部品・レイアウト | `useRemote`、`useExclusiveAction`、`StatusPanels`、`SaveBar`、`AppLayout` |
+| `apps/web/components/subjects/labels.ts`・`SubjectCells.tsx` | 画面をまたぐ科目・課程の表記と表のセル | `programLabel`、`OfferingsCell` |
 | `shared/infrastructure/` | 業務に依存しないHTTP通信とDTO検証 | `requestJson`、`fetchJson`、`createDtoReader` |
 | `modules/<業務領域>/public.ts` | UI・他モジュールへの公開契約 | モデル・ユースケースの型・検索・エラー |
 | `modules/<業務領域>/composition.ts` | モジュール内の具体実装の組み立て | HTTP取得先をユースケースへ注入 |
-| `app/composition/` | モジュールの組み立て・設定の受渡し | `createApplication` |
+| `apps/web/composition/` | モジュールの組み立て・設定の受渡し | `createApplication` |
 | `App.tsx` | アプリ全体の画面配置 | `AppLayout` 内に画面を配置 |
 | `main.tsx` | Reactの起動 | アプリを生成しReactへ渡す |
 | `i18n/` | presentation共通の表示言語・翻訳・文言の変換 | 初期言語、英語リソース、保存、既知detailの翻訳 |
@@ -34,21 +34,23 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 - `infrastructure` は `application` の契約を実装し、`domain` のモデルに変換する。`presentation` は参照しない。
 - `shared/infrastructure/` は各モジュールの `infrastructure` だけが利用する。`shared/` は自身の中だけを参照し、モジュール・UI・`app`・Reactに依存しない。業務エラーの型と日本語の文言は呼出し側のモジュールが渡す。
 - presentation（`pages`・`components`・`hooks`・`layouts`・`App.tsx`）はモジュールの `public.ts` を通してapplicationとdomainを利用する。具体的なHTTP取得先やAPIのDTOは参照しない。
-- 各モジュールの `composition.ts` でリポジトリとユースケースを生成する。`app/composition/` が設定を渡し、`main.tsx` がアプリを起動する。
-- モジュールは `app`・UIディレクトリ・`App.tsx`・`main.tsx` を参照しない。他モジュールの内部ファイルは参照せず、その `public.ts` に公開された契約を利用する。公開契約の利用にも各層の依存方向を適用する。
-- `public.ts` はdomain・applicationの契約だけを公開する。infrastructure・composition・UIは公開しない。`composition.ts` の利用は `app/composition/` に限定する。
+- 各モジュールの `composition.ts` でリポジトリとユースケースを生成する。`apps/web/composition/` が設定を渡し、`main.tsx` がアプリを起動する。
+- モジュールは `app`・UIディレクトリ・`App.tsx`・`main.tsx` を参照しない。他モジュールの内部ファイルは参照せず、その `public.ts` に公開された契約を利用する。公開契約の利用にも各層の依存方向を適用する。Domainから他モジュールの公開契約を参照するときはDomain由来の型だけに限定し、境界テストでexport元も検査する。
+- `public.ts` はdomain・applicationの契約だけを公開する。infrastructure・composition・UIは公開しない。`composition.ts` の利用は `apps/web/composition/` に限定する。
 - 業務共通のHook・表示部品は業務モジュールに依存させない。科目専用のUIは各ディレクトリ内の `subjects/` に置く。HookからPage・表示部品を参照せず、表示部品からPageを参照しない。
 
 ## 実装ルール
 
-- 新しい業務領域は `modules/<業務領域>/` に配置し、その内部にdomain・application・infrastructureと操作別のディレクトリを設ける。UIはsrc直下の対応するディレクトリに配置する。既存の科目一覧の構成を参考にする。
+- 新しい業務領域は `modules/<業務領域>/` に配置し、その内部にdomain・application・infrastructureと操作別のディレクトリを設ける。UIはapps/web内の対応するディレクトリに配置する。既存の科目一覧の構成を参考にする。
 - 依存定義・ロック・型設定は `frontend/` 直下に統一し、モジュールごとに重複させない。
+- 公開操作は`application/use_cases/<操作>UseCase.ts`の1操作1クラスとし、実行メソッドを`execute`に統一する。複数操作を持つUseCaseクラスは置かない。`AuthUseCases`などの集合型は`ports/`のreadonlyな注入用契約だけに使い、実装は持たせない。Compositionで操作ごとのインスタンスを作り、Hookから各`execute`を呼ぶ。
+- Application直下へファイルを並べず、入出力は`dto/`、書込みを含むRepository・注入型は`ports/`、読取り専用契約は`queries/`、検索・並べ替え・編集の共通処理は`services/`、エラーは`errors/`に分ける。未使用の役割の空ディレクトリや旧パスの互換用ファイルは残さない。
 - 単純な委譲でもユースケース境界を維持する。Pageは画面構成、画面用Hookは状態・操作・取得の連携、表示部品は個別の表示と操作を担当する。
 - applicationで取得失敗のエラー契約を定義し、infrastructureでHTTP・通信エラーから変換する。presentationで日本語detailとコードから表示を決め、選択言語へ翻訳する。キャンセルは変換せず、共通の非同期Hookに業務固有の文言を置かない。
 - コンポーネントやHookから直接 `fetch` しない。ユースケースと取得先の契約を通して取得する。
 - APIの `snake_case` と画面で使用するモデルの変換は `infrastructure` のmapperに集約する。コンポーネント内でDTOを変換しない。
-- 再利用する検索・並べ替え処理は `application` に置く。選択値や検索文字列など、ユーザー操作に伴う状態は `presentation` で管理する。
-- 表示ラベル・React固有の状態を `domain` へ入れない。業務ルールをJSX内へ埋め込まない。
+- 再利用する検索・並べ替え処理は `application/services/` に置く。選択値や検索文字列など、ユーザー操作に伴う状態は `presentation` で管理する。
+- 表示ラベル・React固有の状態を `domain` へ入れない。業務ルールをJSX内へ埋め込まない。成績の連番・再履修はDomainで判定し、編集入力の問題はApplicationがコードで返し、hooksで日本語の表示文言へ変換する。
 - 翻訳は`i18n/`とpresentationに閉じ、業務モジュールから参照しない。表示文言は翻訳リソースを使用し、科目・所属・分類・出典などの公式データは原文を保持する。Hookのエラー・通知は原文で保持して描画時に翻訳し、切替で入力や状態を初期化しない。既知detailは翻訳し、未知detailの意味は推測しない。
 - ロード中・成功・失敗を明示的に扱い、再試行できるようにする。課程切替や画面離脱時には不要な通信をキャンセルし、古いレスポンスで現在の画面を上書きしない。
 - 課程ごとの分類・必修区分、複数の開講時期、出典の注記、適用入学年度の未確認状態を保持する。未確認の情報を確認済みとして表示しない。
@@ -81,3 +83,10 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 - [要件定義](../../docs/RDD.md)
 
 設計文書に記載された機能がすべて実装済みであるとは扱わない。
+
+## Web入口と役割別配置
+
+- Reactの起動・アプリのcomposition・画面・部品・Hook・レイアウトは`src/apps/web/`へ集約する。業務は`src/modules/`、実際に共通の通信処理は`src/shared/`に置き、modulesからappsへ依存しない。
+- Domainは`entities/`・`value_objects/`・`services/`に分け、入出力の集合・検索結果・更新要求は`application/dto/`へ置く。APIのsnake_caseや検証処理は`infrastructure/external_services/schemas/`に保持する。
+- HTTP取得先は`infrastructure/external_services/`でApplication契約を実装する。DBを持たないフロントエンドにpersistenceやUoWを形式だけ追加しない。
+- テストは純粋な業務・編集・検索・境界の`tests/unit/`と、HTTP・DTOの`tests/contract/`へ分け、既存の`npm test`で一括実行する。
