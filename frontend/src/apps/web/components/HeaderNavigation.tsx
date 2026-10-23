@@ -1,19 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useId, useRef, useState } from "react";
-export function UserMenu({
-  loginName,
-  busy,
-  showProfile,
+import { HeaderButton } from "./HeaderButton.tsx";
+export function HeaderNavigation({
   showDashboard,
   showGrades,
-  logout,
 }: {
-  loginName: string;
-  busy: boolean;
-  showProfile: () => void;
   showDashboard: () => void;
   showGrades: () => void;
-  logout: () => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -35,7 +28,7 @@ export function UserMenu({
   }
   return (
     <div
-      className="user-menu"
+      className="navigation-menu"
       ref={root}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
@@ -48,24 +41,29 @@ export function UserMenu({
         }
       }}
     >
-      <button
-        type="button"
-        className="user-menu-trigger"
+      <HeaderButton
         ref={trigger}
-        aria-label={t("{{value0}}のユーザーメニュー", { value0: loginName })}
+        aria-label={open ? t("メニューを閉じる") : t("メニューを開く")}
+        title={open ? t("メニューを閉じる") : t("メニューを開く")}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="user-menu-name">{loginName}</span>
-        <span className="user-menu-chevron" aria-hidden="true">
-          ⌄
-        </span>
-      </button>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </HeaderButton>
       <nav
         id={id}
-        className="user-menu-panel"
-        aria-label={t("ユーザーメニュー")}
+        className="navigation-menu-panel"
+        aria-label={t("メインナビゲーション")}
         aria-hidden={!open}
         inert={!open}
         data-open={open}
@@ -87,25 +85,6 @@ export function UserMenu({
           }}
         >
           {t("成績入力")}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            close();
-            showProfile();
-          }}
-        >
-          {t("マイページ")}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            close();
-            logout();
-          }}
-        >
-          {busy ? t("ログアウト中…") : t("ログアウト")}
         </button>
       </nav>
     </div>

@@ -48,7 +48,6 @@ try {
       "src/i18n/messages.ts",
       "src/apps/web/components/accounts/AuthForm.tsx",
       "src/apps/web/components/requirements/GraduationResultView.tsx",
-      "src/apps/web/components/requirements/GraduationCheckPanel.tsx",
       "src/apps/web/components/profiles/ProgramCoverage.tsx",
       "src/apps/web/components/grades/GradeTable.tsx",
       "src/apps/web/components/FilterFields.tsx",

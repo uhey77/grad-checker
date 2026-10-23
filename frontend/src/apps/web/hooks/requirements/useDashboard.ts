@@ -34,46 +34,12 @@ export function useDashboard(
     [useCases, curriculumId, revision],
   );
   const summary = useRemote(key, load, attempt);
-  const current = summary.status === "ready" ? summary.data : null;
-  const loadDetail = useCallback(
-    async (signal: AbortSignal) => {
-      const result = await useCases.evaluate.execute(signal);
-      if (
-        !current ||
-        result.curriculum.id !== current.curriculum.id ||
-        result.dataRevision !== current.dataRevision ||
-        result.curriculum.revision !== current.curriculumRevision ||
-        Object.keys(result.ruleRevisions).length !==
-          Object.keys(current.ruleRevisions).length ||
-        Object.entries(current.ruleRevisions).some(
-          ([id, revision]) => result.ruleRevisions[id] !== revision,
-        )
-      )
-        throw new GraduationError(
-          409,
-          "概要の取得後に保存データが更新されています。概要を再取得してください。",
-        );
-      return result;
-    },
-    [useCases, current],
-  );
-  const detail = useRemote(
-    key && expanded && current ? key : null,
-    loadDetail,
-    attempt,
-  );
-  const failure =
-    summary.status === "error"
-      ? summary.error
-      : expanded && detail.status === "error"
-        ? detail.error
-        : null;
+  const failure = summary.status === "error" ? summary.error : null;
   useEffect(() => {
     if (failure instanceof GraduationError && failure.status === 401) expire();
   }, [failure, expire]);
   return {
     summary,
-    detail,
     expanded,
     toggleDetail: () => setExpanded((value) => !value),
     retry: () => setAttempt((value) => value + 1),
