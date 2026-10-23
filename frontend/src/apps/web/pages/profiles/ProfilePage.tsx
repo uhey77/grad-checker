@@ -26,14 +26,15 @@ export function ProfilePage({
   const { t } = useTranslation();
   const editor = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
-  const expanded = profile.editing || !profile.state?.profile.curriculumId;
+  const expanded = profile.editing;
+  const wasEditing = useRef(false);
   useEffect(() => {
     if (active && profile.editing)
       editor.current?.querySelector("select")?.focus();
+    if (active && !profile.editing && wasEditing.current)
+      editButton.current?.focus();
+    wasEditing.current = profile.editing;
   }, [active, profile.editing]);
-  useEffect(() => {
-    if (active && profile.notice) editButton.current?.focus();
-  }, [active, profile.notice]);
   return (
     <div className="profile-page">
       <button className="back-link" type="button" onClick={showDashboard}>
@@ -72,16 +73,19 @@ export function ProfilePage({
         >
           <div className="profile-section-heading">
             <h2 id="program-heading">{t("所属情報")}</h2>
-            <button
-              type="button"
-              ref={editButton}
-              aria-expanded={expanded}
-              aria-controls="program-editor"
-              disabled={expanded}
-              onClick={profile.edit}
-            >
-              {expanded ? t("編集中") : t("変更する")}
-            </button>
+            {!expanded && (
+              <button
+                type="button"
+                ref={editButton}
+                aria-expanded={expanded}
+                aria-controls="program-editor"
+                onClick={profile.edit}
+              >
+                {profile.state.profile.curriculumId
+                  ? t("変更する")
+                  : t("所属を設定")}
+              </button>
+            )}
           </div>
           <p className="saved-program">
             {profile.savedProgram
@@ -111,17 +115,10 @@ export function ProfilePage({
                   {t("選択できるカリキュラムが登録されていません。")}
                 </p>
               ) : null}
-              {profile.state.profile.curriculumId ? (
-                <p className="profile-help">
-                  {t(
-                    "所属を変更しても、保存した成績は削除されません。卒業要件への適用は変更後の課程に従います。",
-                  )}
-                </p>
-              ) : null}
               <ProgramForm {...profile} programs={profile.state.programs} />
             </div>
           </div>
-          {profile.state.profile.curriculumId ? (
+          {!expanded && profile.state.profile.curriculumId ? (
             <button
               className="profile-continue"
               type="button"

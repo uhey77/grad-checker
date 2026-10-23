@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { ProgramOption } from "../../../../modules/profiles/public.ts";
 import { ProgramCoverage } from "./ProgramCoverage.tsx";
-import { ConfirmPanel } from "../ConfirmPanel.tsx";
 import { SaveBar } from "../SaveBar.tsx";
 import { programLabel } from "../subjects/labels.ts";
 export function ProgramForm({
@@ -13,12 +12,9 @@ export function ProgramForm({
   conflict,
   error,
   notice,
-  confirmReload,
   choose,
   save,
-  retry,
-  confirmRetry,
-  cancelRetry,
+  cancel,
 }: {
   programs: ProgramOption[];
   chosenId: string;
@@ -28,12 +24,9 @@ export function ProgramForm({
   conflict: boolean;
   error: string;
   notice: string;
-  confirmReload: boolean;
   choose: (id: string) => void;
   save: () => Promise<void>;
-  retry: () => void;
-  confirmRetry: () => void;
-  cancelRetry: () => void;
+  cancel: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -45,7 +38,9 @@ export function ProgramForm({
       }}
     >
       <div>
-        <label htmlFor="profile-program">{t("学部・研究科・学科・専攻")}</label>
+        <label htmlFor="profile-program">
+          {t("学部・学科・専攻／研究科・専攻")}
+        </label>
         <select
           id="profile-program"
           value={chosenId}
@@ -77,20 +72,6 @@ export function ProgramForm({
         notice={notice}
         dirty={dirty}
         cleanStatus={chosenId ? "" : t("所属は未設定です。")}
-        confirmations={
-          confirmReload ? (
-            <ConfirmPanel
-              label={t("未保存変更の確認")}
-              message={t(
-                "未保存の選択を破棄して、保存済みの所属を再取得しますか？",
-              )}
-              confirmLabel={t("変更を破棄して再取得")}
-              cancelLabel={t("選択を続ける")}
-              onConfirm={confirmRetry}
-              onCancel={cancelRetry}
-            />
-          ) : null
-        }
         actions={
           <>
             <button
@@ -98,10 +79,10 @@ export function ProgramForm({
               className="primary-button"
               disabled={!selected || !dirty || busy || conflict}
             >
-              {busy ? t("保存中…") : t("所属を保存")}
+              {busy ? t("保存中…") : t("保存")}
             </button>
-            <button type="button" disabled={busy} onClick={retry}>
-              {t("保存済みの所属を再取得")}
+            <button type="button" disabled={busy} onClick={cancel}>
+              {t("キャンセル")}
             </button>
           </>
         }

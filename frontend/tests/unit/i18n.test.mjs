@@ -17,9 +17,6 @@ const { translateMessage } = await built("i18n/messages.js");
 const { offeringLabels } = await built(
   "apps/web/components/subjects/labels.js",
 );
-const { checkedAtLabel } = await built(
-  "apps/web/components/requirements/labels.js",
-);
 const { AuthForm } = await built("apps/web/components/accounts/AuthForm.js");
 const { ProgramCoverage } = await built(
   "apps/web/components/profiles/ProgramCoverage.js",
@@ -197,7 +194,7 @@ test("表示済みの検証エラーも選択言語で再表示し、未知のde
   );
 });
 
-test("英語の入力フォーム・成績・出典リンクを表示し、公式データとリンク先を維持する", () => {
+test("英語の入力フォーム・成績・課程の対応状況を表示し、公式データを維持する", () => {
   const i18n = createSiteI18n({ languages: ["en"] });
   const render = (component, props) =>
     renderToStaticMarkup(
@@ -219,10 +216,21 @@ test("英語の入力フォーム・成績・出典リンクを表示し、公�
       completionPolicy: null,
     },
   });
-  assert.match(coverage, /Unverified \(using academic year 2026 sources\)/);
-  assert.match(coverage, /href="https:\/\/example.com\/official.pdf"/);
-  assert.match(coverage, /Curriculum table<\/a>/);
-  assert.doesNotMatch(coverage, /\[object Object\]/);
+  assert.equal(coverage, "");
+  const unavailable = render(ProgramCoverage, {
+    program: {
+      completionPolicy: {
+        campus: "hachioji",
+        degreeLevel: "master",
+        catalogStatus: "verified",
+        requirementsStatus: "verified",
+        rulesStatus: "unverified",
+        unresolvedReasons: ["公式規則の未確認理由"],
+      },
+    },
+  });
+  assert.match(unavailable, /Evaluation is unavailable/);
+  assert.match(unavailable, /公式規則の未確認理由/);
   const course = {
     courseId: "c1",
     name: "日本語の公式科目名 <script>",
@@ -262,7 +270,7 @@ test("英語の入力フォーム・成績・出典リンクを表示し、公�
   assert.doesNotMatch(grades, /<script>/);
 });
 
-test("英語でも判定保留と出典・推薦の原文を保ち、日時と開講期を選択言語で表示する", (context) => {
+test("英語でも判定保留と出典・推薦の原文を保ち、開講期を選択言語で表示する", (context) => {
   globalThis.window = { matchMedia: () => ({ matches: true }) };
   context.after(() => {
     delete globalThis.window;
@@ -351,6 +359,4 @@ test("英語でも判定保留と出典・推薦の原文を保ち、日時と�
     "Year 1: First term, Second term",
   ]);
   assert.deepEqual(offeringLabels(offerings), ["1年次前期・後期"]);
-  const iso = "2026-10-20T10:20:30Z";
-  assert.notEqual(checkedAtLabel(iso, "en"), checkedAtLabel(iso, "ja"));
 });

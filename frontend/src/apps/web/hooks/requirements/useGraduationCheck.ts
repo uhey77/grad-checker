@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import {
   GraduationError,
   type GraduationUseCases,
-  type SavedCheck,
+  type GraduationResult,
   type CompletionAnswer,
 } from "../../../../modules/requirements/public.ts";
 import { errorMessage } from "../errorMessage.ts";
 import { useExclusiveAction } from "../useExclusiveAction.ts";
 
-// 保存済みの成績版で卒業要件を判定し、結果を本人の判定履歴に保存する。
+// 保存済みの成績版で卒業・修了要件を判定し、最新の結果を表示する。
 export function useGraduationCheck(
   useCases: GraduationUseCases,
   revision: number,
@@ -17,11 +17,10 @@ export function useGraduationCheck(
   active: boolean,
   blocked: boolean,
   expire: () => void,
-  saved: (check: SavedCheck) => void,
 ) {
   const [state, setState] = useState<{
     key: string;
-    check?: SavedCheck;
+    result?: GraduationResult;
     error?: string;
   } | null>(null);
   const { busy, run, abort, running } = useExclusiveAction();
@@ -36,8 +35,6 @@ export function useGraduationCheck(
       (signal) => useCases.createCheck.execute(revision, csrf, signal, answers),
       {
         onSuccess: (check) => {
-          // 履歴には保存されているため、表示中の課程と異なっても一覧は更新する。
-          saved(check);
           if (check.result.curriculum.id !== curriculumId) {
             setState({
               key,
@@ -46,7 +43,7 @@ export function useGraduationCheck(
             });
             return;
           }
-          setState({ key, check });
+          setState({ key, result: check.result });
         },
         onError: (error) => {
           if (error instanceof GraduationError && error.status === 401)
@@ -63,7 +60,7 @@ export function useGraduationCheck(
   return {
     busy,
     check,
-    saved: visible?.check,
+    result: visible?.result,
     error: visible?.error,
     reset: () => {
       abort();

@@ -1,10 +1,5 @@
 // 日本語のUI文言をキーにする。大学の名称・科目・出典データは翻訳しない。
 export const english = {
-  "根拠：<citation>{{document}}</citation>（{{pages}}）":
-    "Source: <citation>{{document}}</citation> ({{pages}})",
-  "最新の判定（<time>{{date}}</time>）を判定履歴に保存しました。":
-    "The latest evaluation (<time>{{date}}</time>) was saved to your history.",
-
   "{{value0}} 第{{value1}}回": "{{value0}}, attempt {{value1}}",
   "所属情報を読み込んでいます…": "Loading your program…",
   再試行: "Retry",
@@ -77,11 +72,6 @@ export const english = {
   未保存の変更あり: "Unsaved changes",
   成績入力の科目一覧: "Courses for grade entry",
   本人の成績入力: "Your grades",
-  "未確認（2026年度資料を基準に使用）":
-    "Unverified (using academic year 2026 sources)",
-  上限未指定: "No upper limit specified",
-  "{{value0}}年度〜{{value1}}": "Academic year {{value0}}–{{value1}}",
-  "適用入学年度：{{value0}}": "Applicable admission years: {{value0}}",
   八王子: "Hachioji",
   蒲田: "Kamata",
   学部: "Undergraduate",
@@ -95,52 +85,23 @@ export const english = {
     "Evaluation is unavailable until the following items are verified.",
   "他学部・他研究科の算入は対象と認定の確認が必要です。未登録の算入条件に依存する判定は停止します。":
     "Credits from other faculties or graduate schools require verification of eligibility and recognition. Evaluation is unavailable when required allocation rules are missing.",
-  教育課程表: "Curriculum table",
   課程の対応状況: "Program coverage",
-  "学部・研究科・学科・専攻":
-    "Faculty / graduate school / department / specialization",
+  "学部・学科・専攻／研究科・専攻":
+    "Faculty / department / specialization or graduate school / specialization",
   選択してください: "Please select",
   "保存済みの所属（選択肢にありません）":
     "Saved program (not in the available options)",
   "（判定準備中）": " (evaluation unavailable)",
   "所属は未設定です。": "Your program has not been set.",
   未保存変更の確認: "Confirm unsaved changes",
-  "未保存の選択を破棄して、保存済みの所属を再取得しますか？":
-    "Discard your unsaved selection and reload your saved program?",
   変更を破棄して再取得: "Discard changes and reload",
-  選択を続ける: "Keep editing",
-  所属を保存: "Save program",
-  保存済みの所属を再取得: "Reload saved program",
-  判定履歴: "Evaluation history",
-  "判定履歴を読み込んでいます…": "Loading evaluation history…",
-  判定履歴を取得できませんでした: "Could not load evaluation history",
-  判定履歴を再取得: "Reload evaluation history",
-  判定履歴はまだありません: "No evaluation history yet",
-  "要件チェックを実行すると、判定結果が履歴に保存されます。":
-    "Run a requirements check to save its result to your history.",
-  このページに判定履歴はありません: "No evaluations on this page",
-  "履歴の件数が変わった可能性があります。":
-    "The number of saved evaluations may have changed.",
-  最新の履歴を表示: "Show latest history",
-  判定日時: "Evaluated at",
-  課程: "Program",
-  規則版: "Rules revision",
+  保存: "Save",
+  キャンセル: "Cancel",
   判定: "Result",
   必要: "Required",
   修得: "Earned",
   算入: "Counted",
   不足: "Remaining",
-  詳細: "Details",
-  表示中: "Viewing",
-  表示: "View",
-  "{{value0}}の判定を表示": "View evaluation from {{value0}}",
-  "保存した判定の日時・課程・規則版・判定・総単位":
-    "Saved evaluations: date, program, rules revision, result, and total credits",
-  "全{{value0}}件中 {{value1}}〜{{value2}}件":
-    "{{value1}}–{{value2}} of {{value0}}",
-  新しい履歴: "Newer evaluations",
-  古い履歴: "Older evaluations",
-  判定履歴のページ: "Evaluation history pages",
   "おすすめ科目（全区分）": "Recommended courses (all categories)",
   "保存済みの成績を基に、不足条件を補える既知の未修得科目を表示します。 未修得必修、便覧の開講学期、科目IDの順です。 履修許可・時間割の適合・将来の開講・卒業要件の達成を保証しません。":
     "Based on your saved grades, these known courses may help meet outstanding requirements. They are ordered by unearned required courses, handbook term, and course ID. Enrollment permission, timetable compatibility, future availability, and fulfillment of graduation requirements are not guaranteed.",
@@ -161,16 +122,14 @@ export const english = {
   "保存済みの成績を使って判定します。": "Evaluations use your saved grades.",
   "単位以外の修了条件（本人申告）":
     "Non-credit completion requirements (self-reported)",
-  "大学の認定状況を確認して回答してください。未入力の条件があると判定を保留します。回答はこの判定の履歴に保存されます。":
-    "Check the university’s recognition status before answering. Unanswered requirements leave the result pending. Your answers are saved with this evaluation.",
+  "大学の認定状況を確認して回答してください。未入力の条件があると判定を保留します。":
+    "Check the university’s recognition status before answering. Unanswered requirements leave the result pending.",
   "未確認・未入力": "Unverified / unanswered",
   "達成（本人申告）": "Met (self-reported)",
   未達成: "Not met",
   "判定中…": "Evaluating…",
   修了要件をチェック: "Check degree completion requirements",
   卒業要件をチェック: "Check graduation requirements",
-  "判定するたびに、結果を本人だけが見られる判定履歴に保存します。":
-    "Each check is saved to your private evaluation history.",
   "修了要件を判定しています…": "Checking degree completion requirements…",
   "卒業要件を判定しています…": "Checking graduation requirements…",
   判定できませんでした: "Could not evaluate requirements",
@@ -219,20 +178,6 @@ export const english = {
   選択必修から選択への超過換算:
     "Excess credits transferred from required electives to electives",
   "{{value0}}：{{value1}}単位": "{{value0}}: {{value1}} credits",
-  最新の判定に戻る: "Back to latest evaluation",
-  "過去の判定を読み込んでいます…": "Loading past evaluation…",
-  過去の判定を表示できませんでした: "Could not display past evaluation",
-  過去の判定: "Past evaluation",
-  "保存時の成績と判定結果です。その後に成績や要件が更新されても、この内容は変わりません。":
-    "These are the grades and result at the time of saving. Later changes to grades or requirements do not change this record.",
-  "判定に使った成績（{{value0}}件）": "Grades used for evaluation ({{value0}})",
-  回次: "Attempt",
-  成績: "Grade",
-  科目名なし: "Course name unavailable",
-  判定に使った成績: "Grades used for evaluation",
-  判定時に保存されていた成績: "Saved grades at evaluation",
-  "判定時に保存されていた成績はありません。":
-    "No grades were saved at the time of evaluation.",
   条件に一致する科目がありません: "No matching courses",
   "検索語や絞り込み条件を変更してください。": "Change your search or filters.",
   すべての条件をクリア: "Clear all filters",
@@ -289,8 +234,6 @@ export const english = {
   選択肢にないカリキュラム: "Curriculum not in the available options",
   "選択できるカリキュラムが登録されていません。":
     "No selectable curricula have been registered.",
-  "所属を変更しても、保存した成績は削除されません。卒業要件への適用は変更後の課程に従います。":
-    "Changing your program does not delete saved grades. Graduation requirements will be evaluated under the new program.",
   成績入力へ進む: "Go to grades",
   所属: "Program",
   "所属を確認・変更": "View or change program",
@@ -369,9 +312,9 @@ export const english = {
   "所属情報を取得できません。": "Could not load your program.",
   "所属を保存しました。": "Program saved.",
   "所属を保存できません。": "Could not save your program.",
-  "判定履歴が選択されていません。": "No evaluation history selected.",
+  "所属情報が更新されています。キャンセルして最新の所属を確認してください。":
+    "Your program has changed. Cancel to load the latest saved program.",
   "判定履歴を取得できませんでした。": "Could not load evaluation history.",
-  "過去の判定を取得できませんでした。": "Could not load the past evaluation.",
   "所属または成績が更新されています。マイページと成績入力で保存済みデータを再取得してください。":
     "Your program or grades have changed. Reload saved data in My profile and Grades.",
   "概要の取得後に保存データが更新されています。概要を再取得してください。":

@@ -9,7 +9,6 @@ import { programLabel } from "../../components/subjects/labels.ts";
 import { GraduationOverview } from "../../components/requirements/GraduationOverview.tsx";
 import { GraduationResultView } from "../../components/requirements/GraduationResultView.tsx";
 import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel.tsx";
-import { useCheckHistory } from "../../hooks/requirements/useCheckHistory.ts";
 import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck.ts";
 export function DashboardPage({
   useCases,
@@ -42,7 +41,6 @@ export function DashboardPage({
   );
   const summary = dashboard.summary;
   const result = summary.status === "ready" ? summary.data : null;
-  const history = useCheckHistory(useCases, active && !!curriculumId, expire);
   const check = useGraduationCheck(
     useCases,
     result?.dataRevision ?? revision,
@@ -51,10 +49,6 @@ export function DashboardPage({
     active,
     !result,
     expire,
-    () => {
-      history.showLatest();
-      history.refresh();
-    },
   );
   const completionPolicy =
     savedProgram?.curriculumId === curriculumId
@@ -63,17 +57,17 @@ export function DashboardPage({
   const detail = useDashboardDetail(
     useCases,
     result,
-    active && dashboard.expanded && !check.saved && !history.detail,
+    active && dashboard.expanded && !check.result,
     expire,
   );
-  const displayedResult = check.saved?.result ?? result;
-  const categories = check.saved
-    ? check.saved.result.requirements.filter(
+  const displayedResult = check.result ?? result;
+  const categories = check.result
+    ? check.result.requirements.filter(
         (row) => row.kind === "classification_total",
       )
     : (result?.categories ?? []);
   const displayedDetail =
-    check.saved?.result ?? (detail.status === "ready" ? detail.data : null);
+    check.result ?? (detail.status === "ready" ? detail.data : null);
   function refresh() {
     check.reset();
     dashboard.retry();
@@ -118,9 +112,7 @@ export function DashboardPage({
           curriculumId={curriculumId}
           degreeLevel={completionPolicy?.degreeLevel}
           completionConditions={completionPolicy?.conditions}
-          saved={check.saved}
           error={check.error}
-          history={history}
         >
           {summary.status === "error" ? (
             <ErrorState
