@@ -2,7 +2,6 @@ import { I18nextProvider, useTranslation } from "react-i18next";
 import { siteI18n } from "../../i18n/setup.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Application } from "./composition/createApplication.ts";
-import { SubjectListPage } from "./pages/subjects/SubjectListPage.tsx";
 import { AppLayout } from "./layouts/AppLayout.tsx";
 import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate.tsx";
 import { ProfilePage } from "./pages/profiles/ProfilePage.tsx";
@@ -131,10 +130,6 @@ function StudentScreens({
           ) : null}
         </div>
       </main>
-      <details className="subject-preview">
-        <summary>{t("科目一覧（開発用）")}</summary>
-        <SubjectListPage useCases={application.subjects} />
-      </details>
     </AppLayout>
   );
 }

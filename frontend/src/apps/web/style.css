@@ -337,10 +337,6 @@ td .shared-years {
   width: 100%;
   min-width: 0;
 }
-.subject-preview > summary {
-  cursor: pointer;
-  padding: 16px 32px;
-}
 .sr-only {
   position: absolute;
   width: 1px;
@@ -833,14 +829,10 @@ tbody tr.earned-row:hover {
   min-width: 0;
   padding: 28px;
 }
-.category-progress-help,
 .category-progress-footnote {
   color: #53676f;
   font-size: 0.8rem;
   line-height: 1.7;
-}
-.category-progress-help {
-  margin: 8px 0 24px;
 }
 .category-progress-list {
   display: grid;

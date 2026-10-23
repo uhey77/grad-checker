@@ -1,4 +1,4 @@
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import type { GraduationUseCases } from "../../../../modules/requirements/public.ts";
 import type { ProgramOption } from "../../../../modules/profiles/public.ts";
 import { useDashboard } from "../../hooks/requirements/useDashboard.ts";
@@ -7,7 +7,6 @@ import { ErrorState, LoadingState } from "../../components/StatusPanels.tsx";
 import { programLabel } from "../../components/subjects/labels.ts";
 import { GraduationOverview } from "../../components/requirements/GraduationOverview.tsx";
 import { GraduationResultView } from "../../components/requirements/GraduationResultView.tsx";
-import { checkedAtLabel } from "../../components/requirements/labels.ts";
 export function DashboardPage({
   useCases,
   active,
@@ -27,7 +26,7 @@ export function DashboardPage({
   showProfile: () => void;
   showGrades: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const dashboard = useDashboard(
     useCases,
     active,
@@ -91,20 +90,6 @@ export function DashboardPage({
               {t("概要を再取得")}
             </button>
           </div>
-          <p>
-            {t(
-              "保存済みの成績に基づく単位要件の確認です。大学による正式な卒業・修了認定ではありません。",
-            )}
-          </p>
-          <p>
-            <Trans
-              i18nKey="未保存の入力は反映されません。<time>{{date}}</time> 時点"
-              values={{
-                date: checkedAtLabel(result.evaluatedAt, i18n.resolvedLanguage),
-              }}
-              components={{ time: <time dateTime={result.evaluatedAt} /> }}
-            />
-          </p>
           {result.gradeCount === 0 && (
             <p role="status">
               {t(
