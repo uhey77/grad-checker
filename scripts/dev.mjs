@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const windows = process.platform === "win32";
@@ -8,6 +9,7 @@ const backendOnly = process.argv.includes("--backend-only");
 const subjectListPreview =
   !backendOnly || process.argv.includes("--subject-list-preview");
 const servers = [];
+const startupController = new AbortController();
 let stopping = false;
 
 function terminate(server, signal) {
@@ -29,6 +31,7 @@ function terminate(server, signal) {
 async function stop(code) {
   if (stopping) return;
   stopping = true;
+  startupController.abort();
   for (const server of servers) terminate(server, "SIGTERM");
   let timer;
   await Promise.race([
@@ -67,6 +70,35 @@ function start(name, command, args, directory, environment = {}) {
   });
 }
 
+async function waitForBackend() {
+  const url = "http://127.0.0.1:8000/api/auth/config";
+  const timeout = AbortSignal.timeout(120_000);
+  const signal = AbortSignal.any([startupController.signal, timeout]);
+  console.log("バックエンドの起動完了を待っています…");
+  while (!signal.aborted) {
+    try {
+      // GoからPythonへのブリッジ通信も成功するまで待つ。
+      const response = await fetch(url, {
+        signal: AbortSignal.any([signal, AbortSignal.timeout(1000)]),
+        redirect: "error",
+      });
+      await response.body?.cancel();
+      if (response.ok && !signal.aborted) return;
+    } catch {
+      // 接続拒否やリクエストのタイムアウトは起動中として再試行する。
+    }
+    try {
+      await delay(250, undefined, { signal });
+    } catch {
+      break;
+    }
+  }
+  if (!stopping)
+    throw new Error(
+      `バックエンドの起動が120秒以内に完了しませんでした: ${url}`,
+    );
+}
+
 process.on("SIGINT", () => void stop(0));
 process.on("SIGTERM", () => void stop(0));
 
@@ -102,10 +134,20 @@ start(
   ],
   "backend/",
 );
-if (!backendOnly)
-  start(
-    "フロントエンド",
-    "npm",
-    ["run", "dev", "--", "--port", "5173", "--strictPort"],
-    "frontend/",
-  );
+if (!backendOnly) {
+  try {
+    await waitForBackend();
+    if (!stopping) {
+      console.log("バックエンドの起動が完了しました。Viteを起動します。");
+      start(
+        "フロントエンド",
+        "npm",
+        ["run", "dev", "--", "--port", "5173", "--strictPort"],
+        "frontend/",
+      );
+    }
+  } catch (error) {
+    console.error(error.message);
+    await stop(1);
+  }
+}
