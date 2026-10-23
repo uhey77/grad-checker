@@ -12,6 +12,16 @@
 
 コマンドは`backend/`から実行する。Pythonは環境ファイルを自動ロードしないため、実行環境の方法でGit管理外の設定を読み込んでおく。
 
+## 整合したSQLiteバックアップ
+
+書込みを停止したうえで、`SOURCE_PATH`と未使用の`BACKUP_PATH`を設定して実行する。
+
+```sh
+uv run --locked python -m scripts.backup_sqlite --source "$SOURCE_PATH" --destination "$BACKUP_PATH"
+```
+
+移行元を`mode=ro`で開き、backup APIでWALのcommit済み内容も保存する。元DBを変更せず、一つの読取りスナップショットとコピー後のquick_check・外部キー検査を行う。既存の保存先は上書きせず、バックアップは所有者だけが読める0600で作成する。成功ログへ内容や個人情報を出力しない。
+
 ## スキーマ作成（データ移行・Seedと独立）
 
 ```sh
