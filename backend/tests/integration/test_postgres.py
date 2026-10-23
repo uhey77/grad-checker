@@ -362,3 +362,30 @@ def test_schema_initialization_rejects_existing_schema(postgres_engine):
         initialize_schema(postgres_engine, apply=True)
     with postgres_engine.connect() as connection:
         assert len(inspect(connection).get_table_names()) == len(TABLES)
+
+
+def test_migration_settings_failure_does_not_print_credentials(tmp_path):
+    password = uuid4().hex
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "migrations.postgres",
+            "--source",
+            str(tmp_path / "source.db"),
+        ],
+        cwd=BACKEND,
+        env={
+            **os.environ,
+            "DIRECT_DATABASE_URL": f"postgresql://test:{password}@localhost/test",
+            "PUBLIC_ORIGIN": "invalid-origin",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1
+    assert "移行できませんでした" in result.stdout
+    assert password not in result.stdout + result.stderr
+    assert "postgresql" not in result.stdout + result.stderr
+    assert not result.stderr

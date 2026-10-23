@@ -110,7 +110,10 @@ def migrate(source: Path, target: Engine, *, apply: bool = False) -> dict[str, i
             validate_database_schema(destination)
             # スキーマ作成は別コマンド。既存行への上書き・追記はしない。
             for table in TABLES:
-                if destination.execute(select(table).limit(1)).first() is not None:
+                if (
+                    destination.execute(select(1).select_from(table).limit(1)).first()
+                    is not None
+                ):
                     raise RuntimeError(
                         "移行先に既存データがあります。空のDBを指定してください。"
                     )
@@ -144,12 +147,12 @@ def main() -> int:
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--apply", action="store_true", help="省略時は読み取り確認のみ")
     args = parser.parse_args()
-    url = Settings().direct_database_url
-    if not url:
-        print("DIRECT_DATABASE_URLを設定してください。")
-        return 1
     engine = None
     try:
+        url = Settings().direct_database_url
+        if not url:
+            print("DIRECT_DATABASE_URLを設定してください。")
+            return 1
         engine = create_database_engine(url)
         counts = migrate(args.source, engine, apply=args.apply)
         print(json.dumps({"applied": args.apply, "rows": counts}, ensure_ascii=False))
