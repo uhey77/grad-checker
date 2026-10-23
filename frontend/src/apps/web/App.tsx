@@ -122,7 +122,6 @@ function StudentScreens({
               expire={expire}
               latestRevision={latestRevision}
               reportRevision={reportRevision}
-              savedProgram={profile.savedProgram ?? null}
               showProfile={() => setScreen("profile")}
               showDashboard={() => setScreen("dashboard")}
             />

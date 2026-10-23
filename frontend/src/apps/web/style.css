@@ -505,14 +505,6 @@ input[aria-invalid="true"] {
 }
 
 /* 成績入力画面。修得状況は色と文字を併記する。 */
-.grade-context p {
-  margin: 4px 0 0;
-}
-.list-heading > .grade-context {
-  display: block;
-  flex-shrink: 1;
-  font-size: 12px;
-}
 .grade-filters {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

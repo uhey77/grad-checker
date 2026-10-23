@@ -8,7 +8,6 @@ import {
   takenYears,
   type GradeUseCases,
 } from "../../../../modules/grades/public.ts";
-import type { ProgramOption } from "../../../../modules/profiles/public.ts";
 import { useGradeEntry } from "../../hooks/grades/useGradeEntry.ts";
 import { GradeFilters } from "../../components/grades/GradeFilters.tsx";
 import { GradeTable } from "../../components/grades/GradeTable.tsx";
@@ -16,7 +15,6 @@ import { ConfirmPanel } from "../../components/ConfirmPanel.tsx";
 import { PageHeading } from "../../components/PageHeading.tsx";
 import { SaveBar } from "../../components/SaveBar.tsx";
 import { ErrorState, LoadingState } from "../../components/StatusPanels.tsx";
-import { programLabel } from "../../components/subjects/labels.ts";
 export function GradeEntryPage({
   catalogUseCases,
   gradeUseCases,
@@ -24,7 +22,6 @@ export function GradeEntryPage({
   expire,
   latestRevision,
   reportRevision,
-  savedProgram,
   showProfile,
   showDashboard,
 }: {
@@ -34,8 +31,6 @@ export function GradeEntryPage({
   expire: () => void;
   latestRevision: number;
   reportRevision: (revision: number) => void;
-  // 所属設定で保存済みの所属。科目一覧と同じ課程の場合だけ見出しに使う。
-  savedProgram: ProgramOption | null;
   showProfile: () => void;
   showDashboard: () => void;
 }) {
@@ -50,11 +45,6 @@ export function GradeEntryPage({
   );
   const data = entry.data;
   const curriculum = data?.catalog.curriculum;
-  const entered = new Set(entry.draft.map((g) => g.courseId)).size;
-  const curriculumLabel =
-    curriculum && savedProgram?.curriculumId === curriculum.curriculumId
-      ? programLabel(savedProgram)
-      : curriculum?.name;
   return (
     <div className="grade-page">
       <button type="button" className="back-link" onClick={showDashboard}>
@@ -84,23 +74,6 @@ export function GradeEntryPage({
           className="panel subject-list-panel"
           aria-label={t("成績入力")}
         >
-          <div className="list-heading">
-            <div className="grade-context">
-              <h2>
-                {t("本人の課程：{{value0}}", { value0: curriculumLabel })}
-              </h2>
-              <p>
-                {t(
-                  "表示 {{value0}} 件／全 {{value1}} 件・成績入力済み {{value2}} 科目",
-                  {
-                    value0: entry.visibleCourses.length,
-                    value1: data.catalog.courses.length,
-                    value2: entered,
-                  },
-                )}
-              </p>
-            </div>
-          </div>
           <GradeFilters
             filters={entry.filters}
             categories={data.catalog.categories}

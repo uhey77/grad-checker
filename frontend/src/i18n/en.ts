@@ -271,9 +271,6 @@ export const english = {
   "← ダッシュボードへ戻る": "← Back to dashboard",
   マイページで所属を設定: "Set your program in My profile",
   "科目と成績を読み込んでいます…": "Loading courses and grades…",
-  "本人の課程：{{value0}}": "Your program: {{value0}}",
-  "表示 {{value0}} 件／全 {{value1}} 件・成績入力済み {{value2}} 科目":
-    "Showing {{value0}} of {{value1}} courses; grades entered for {{value2}} courses",
   "保存済みの成績を表示しています。": "Showing your saved grades.",
   成績の全件取消の確認: "Confirm clearing all grades",
   "保存済みの成績をすべて取り消します。この操作はアプリ内の自己申告データだけを変更します。":
