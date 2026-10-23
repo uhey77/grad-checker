@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Index
+from sqlalchemy import CheckConstraint, Index, column
 from sqlmodel import Field, SQLModel
 
 from modules.accounts.infrastructure.persistence.models.models import Student  # noqa: F401
@@ -10,6 +10,8 @@ from modules.subjects.infrastructure.persistence.models.subject_models import (
     integer_check,
     text_check,
 )
+from shared.infrastructure.persistence.expressions import ValidJson
+from shared.infrastructure.persistence.types import UtcDateTime
 
 # 外部キーの参照先を同じメタデータへ登録する。
 
@@ -19,8 +21,8 @@ class CheckResultRecord(SQLModel, table=True):
     __table_args__ = (
         # 本人の履歴を作成日時の降順・同時刻はID順で読む。
         Index("ix_check_results_student_created", "student_id", "created_at", "id"),
-        CheckConstraint("json_valid(input_json)"),
-        CheckConstraint("json_valid(result_json)"),
+        CheckConstraint(ValidJson(column("input_json"))),
+        CheckConstraint(ValidJson(column("result_json"))),
         text_check("curriculum_code"),
         integer_check("curriculum_revision", minimum=1),
         integer_check("data_revision"),
@@ -32,7 +34,7 @@ class CheckResultRecord(SQLModel, table=True):
     curriculum_code: str
     curriculum_revision: int
     data_revision: int
-    created_at: datetime
+    created_at: datetime = Field(sa_type=UtcDateTime)
 
 
 CHECK_TABLES = [SQLModel.metadata.tables[CheckResultRecord.__tablename__]]

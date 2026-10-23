@@ -19,6 +19,9 @@ class Settings(BaseSettings):
         default=f"sqlite:///{DEFAULT_DATABASE_PATH}",
         validation_alias="DATABASE_URL",
     )
+    database_url_unpooled: str | None = Field(
+        default=None, validation_alias="DATABASE_URL_UNPOOLED"
+    )
     auth_session_hours: int = Field(
         default=24, ge=1, validation_alias="AUTH_SESSION_HOURS"
     )

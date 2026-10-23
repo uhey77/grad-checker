@@ -4,7 +4,7 @@ from datetime import UTC
 from uuid import UUID
 
 from pydantic import TypeAdapter, ValidationError
-from sqlalchemy import func
+from sqlalchemy import JSON, String, cast, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, col, select
 
@@ -82,14 +82,23 @@ class SqliteCheckRepository(CheckRepository):
 
     def list_page(self, student_id: str, page: CheckPage) -> list[CheckSummary]:
         # 一覧では結果JSONのうち要約に使う項目だけを読み出す。
+        summary = func.json_extract(
+            CheckResultRecord.result_json, "$.result", "$.curriculum", "$.total"
+        )
+        if self.db.get_bind().dialect.name == "postgresql":
+            result = cast(CheckResultRecord.result_json, JSON)
+            summary = cast(
+                func.json_build_array(
+                    result["result"], result["curriculum"], result["total"]
+                ),
+                String,
+            )
         rows = self.db.exec(
             select(
                 CheckResultRecord.id,
                 CheckResultRecord.created_at,
                 CheckResultRecord.data_revision,
-                func.json_extract(
-                    CheckResultRecord.result_json, "$.result", "$.curriculum", "$.total"
-                ),
+                summary,
             )
             .where(col(CheckResultRecord.student_id) == student_id)
             .order_by(

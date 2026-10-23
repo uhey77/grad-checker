@@ -1,6 +1,6 @@
 """要件・判定履歴のスキーマと、照合済みのCS2026規則改訂を適用する。"""
 
-from sqlalchemy import Engine, inspect, text
+from sqlalchemy import Connection, Engine, inspect, text
 from sqlmodel import SQLModel
 
 from migrations.cs_2026_revision import (
@@ -15,10 +15,31 @@ from modules.requirements.infrastructure.persistence.models.models import (
 )
 
 
+def install_check_trigger(connection: Connection) -> None:
+    if connection.dialect.name == "sqlite":
+        connection.execute(text(IMMUTABLE_TRIGGER))
+        return
+    connection.execute(
+        text(
+            "CREATE FUNCTION reject_check_result_update() RETURNS trigger "
+            "LANGUAGE plpgsql AS $$ BEGIN "
+            "RAISE EXCEPTION 'check_results are immutable' USING ERRCODE = '23514'; "
+            "END $$"
+        )
+    )
+    connection.execute(
+        text(
+            "CREATE TRIGGER check_results_immutable BEFORE UPDATE ON check_results "
+            "FOR EACH ROW EXECUTE FUNCTION reject_check_result_update()"
+        )
+    )
+
+
 def create_requirement_schema(engine: Engine) -> None:
     SQLModel.metadata.create_all(engine, tables=REQUIREMENT_TABLES + CHECK_TABLES)
     with engine.begin() as connection:
-        connection.execute(text(IMMUTABLE_TRIGGER))
+        if connection.dialect.name == "sqlite":
+            install_check_trigger(connection)
         if "allocation_policy" not in {
             col["name"] for col in inspect(connection).get_columns("credit_rules")
         }:

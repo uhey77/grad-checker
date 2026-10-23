@@ -21,6 +21,7 @@ from apps.bridge.controllers.go_bridge_subject_list import (
 )
 from apps.bridge.middleware.errors import invalid_go_bridge_call
 from apps.settings import Settings
+from migrations.postgres import validate_database_schema
 from modules.accounts.infrastructure.external_services.passwords import ArgonPasswords
 from modules.accounts.infrastructure.persistence.schema import create_account_schema
 from modules.grades.infrastructure.persistence.schema import create_grade_schema
@@ -40,10 +41,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
-            create_database_schema(engine)
-            create_account_schema(engine)
-            create_grade_schema(engine)
-            create_requirement_schema(engine)
+            if engine.dialect.name == "postgresql":
+                # 本番起動でDDL・既存データ改訂を実行しない。
+                with engine.connect() as connection:
+                    validate_database_schema(connection)
+            else:
+                create_database_schema(engine)
+                create_account_schema(engine)
+                create_grade_schema(engine)
+                create_requirement_schema(engine)
             application.state.database_engine = engine
             application.state.settings = runtime_settings
             application.state.passwords = ArgonPasswords()

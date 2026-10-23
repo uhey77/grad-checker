@@ -3,7 +3,8 @@
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, update
-from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session, col, select
 
@@ -35,6 +36,11 @@ class SqliteAccountRepository(AccountRepository):
 
     def take_attempt(self, key: str, now: datetime, window: int, limit: int) -> None:
         # UPSERTを先に行い、並行要求も同じ書込みロックで直列化する。
+        insert = (
+            postgres_insert
+            if self.db.get_bind().dialect.name == "postgresql"
+            else sqlite_insert
+        )
         self.db.connection().execute(
             insert(AuthAttempt)
             .values(
