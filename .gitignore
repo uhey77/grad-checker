@@ -1,6 +1,9 @@
 node_modules/
 frontend/dist/
 *.local
+.env
+.env.*
+!.env.example
 references/*
 .venv/
 __pycache__/

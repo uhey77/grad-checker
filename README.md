@@ -20,3 +20,5 @@ make setup
 
 利用できるコマンドと説明は、リポジトリのルートで `task` または `make` を実行して確認してください。
 コマンドの定義は [Taskfile.yml](Taskfile.yml) または [Makefile](Makefile) を参照してください。
+
+SQLiteからNeon PostgreSQLへの接続・データ移行・検証は、[移行手順](backend/migrations/README.md)を参照してください。本番への切替は自動では行いません。

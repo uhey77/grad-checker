@@ -38,7 +38,7 @@
 - Pythonの業務モジュールではDomainを含めdataclassを使用しない。Applicationの入出力DTOはPydantic、Domainの値オブジェクトはPydanticの`BaseModel`・`RootModel`で表し、原則`strict=True`・`frozen=True`・`extra="forbid"`とする。Domain内で完結する制約をvalidatorに置き、DB・認可・外部処理は持ち込まない。Goの取得契約には既存科目モデルに従うJSONデータを使用できる。ブリッジ通信の包絡形式はGoの`infrastructure`とPythonのブリッジアダプターに閉じ込める。
 - `infrastructure` は `application` の契約を実装し、`domain` の概念を利用できる。`presentation` は参照しない。
 - `presentation` はユースケースを呼び出す。業務判断やSQLクエリをルーターへ追加しない。
-- PythonのAPI・他モジュールは各業務パッケージの`public.py`から業務契約を参照する。公開窓口はdomain・applicationのみを公開し、ORM・SQL・具体的なリポジトリを公開しない。共有SQLiteの横断参照は既存infrastructureに限り、domain・applicationへ広げない。
+- PythonのAPI・他モジュールは各業務パッケージの`public.py`から業務契約を参照する。公開窓口はdomain・applicationのみを公開し、ORM・SQL・具体的なリポジトリを公開しない。共有DBの横断参照は既存infrastructureに限り、domain・applicationへ広げない。
 - 認証・判定・履歴の現在時刻はABCの`Clock`を注入する。UTCの`SystemClock`はComposition Rootで選択する。UseCase・UoWは呼出しごと、Sessionはread/writeごとに生成し、並行する要求でUoWを共有しない。
 - Goは`apps/api/main.go`、Pythonは`apps/bridge/main.py`・`composition.py`とCLIの入口で具体的な依存関係を組み立てる。
 - Pythonのブリッジアダプターは`Depends`で操作別UseCaseを受け取り、`execute`を呼んで結果または業務エラーコードを返す。`presentation`から設定・DB・`infrastructure`を参照しない。具体的な生成はComposition Rootに集約する。
@@ -65,7 +65,10 @@
 - 開発用科目一覧APIはGoの起動引数で明示的に有効化し、既定では無効とする。Pythonサービスはループバックで起動し、外部`/api`ルートを作らない。学生向けAPIを追加するときは開発用APIと役割・契約を分ける。
 - GoへDBモデル・SQLクエリ・卒業判定・推薦ルールを複製しない。Pythonはブリッジ通信の形を防御的に検証するが、外部入力の日本語エラー変換はGoに集約する。
 - 集約・値オブジェクト・共通基底クラスは、対応する業務処理や共通責務が必要になった時点で導入する。
-- ユースケースのトランザクション範囲は、メモリ上のリポジトリを持つFakeのUnit of Workでcommitとロールバックを検証する。DBの制約・ロック・並行処理は一時SQLiteで検証する。
+- ユースケースのトランザクション範囲は、メモリ上のリポジトリを持つFakeのUnit of Workでcommitとロールバックを検証する。DBの制約・ロック・並行処理は一時SQLiteとローカルPostgreSQLの専用スキーマで検証する。
+- 永続化は既存SQLModel / SQLAlchemyを維持し、SQLiteとPostgreSQL（Neon）に対応する。接続・型・トランザクションの差はsharedのinfrastructure、SQL式・UPSERT・トリガーの差は各永続化実装に閉じる。PostgreSQLドライバーは同期psycopg 3を使用する。
+- PostgreSQLのreadはREPEATABLE READ、writeはREAD COMMITTEDとトランザクション単位の共通advisory lockを使用する。SQLiteのBEGIN IMMEDIATEと同じ書込み直列化を維持し、版の照合から更新・判定保存までを保護する。セッション単位ロックは使用しない。DBの日時はUTCのtimezoneなし日時へ正規化して保存する。
+- PostgreSQLの通常起動は接続・スキーマ確認のみとし、DDL・既存データ改訂を自動実行しない。SQLiteの既存開発用初期化は維持する。SQLiteからの移行は`migrations/postgres.py`で管理し、読み取り専用の移行元と空の移行先だけを扱い、スキーマ作成・全件コピー・全カラム照合を一つのトランザクションで行う。通常の接続はDATABASE_URL、移行は直接接続のDATABASE_URL_UNPOOLEDを使用する。
 - Python・Goのテストは`backend/tests/`に配置する。`api/`・`modules/`の実装層にGoの`*_test.go`を置かない。Goのテストは対象パッケージをimportし、公開契約から検証する。
 
 認証はアプリ専用のユーザー名とパスワードを使用し、メールアドレス・大学ドメイン制限・SMTPを導入しない。ユーザー名は半角英数字・アンダースコアの3〜32文字を小文字に正規化する。復旧コードはハッシュのみをDB保存し、再設定時のコード更新・パスワード更新・全セッション失効は一つのトランザクションで行う。本人のデータは変更されないアカウントIDに紐づける。
@@ -90,6 +93,7 @@ GoがPATHにない場合は結合テストがスキップされるため、完�
 
 - [OpenAPI](../../backend/apps/api/controllers/apidocs/openapi.json)
 - [シードデータの説明](../../backend/seeds/README.md)
+- [Neon PostgreSQLへの移行手順](../../backend/migrations/README.md)
 
 設計文書に記載された機能がすべて実装済みであるとは扱わない。
 
