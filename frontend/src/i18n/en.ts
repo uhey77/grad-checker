@@ -305,12 +305,10 @@ export const english = {
   "卒業・修了要件の概要を読み込んでいます…": "Loading requirements overview…",
   "最新の卒業・修了要件":
     "Latest graduation and degree completion requirements",
-  概要を再取得: "Reload overview",
   "保存済みの成績は0件です。成績入力から修得状況を保存してください。":
     "No grades have been saved. Save your course completion status on the Grades screen.",
   条件別の詳細を閉じる: "Hide requirement details",
   条件別の詳細を表示: "Show requirement details",
-  概要から再取得: "Reload from overview",
   "卒業要件の詳細を読み込んでいます…": "Loading requirement details…",
   "最新の卒業・修了要件概要": "Latest requirements overview",
   "卒業・修了要件": "Graduation and degree completion requirements",

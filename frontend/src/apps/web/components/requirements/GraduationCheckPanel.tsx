@@ -27,7 +27,6 @@ export function GraduationCheckPanel({
   saved,
   error,
   history,
-  refresh,
   children,
   completionConditions = [],
   curriculumId = "",
@@ -44,7 +43,6 @@ export function GraduationCheckPanel({
   }[];
   saved?: SavedCheck;
   error?: string;
-  refresh: () => void;
   children: ReactNode;
   history: {
     page: Remote<{
@@ -82,14 +80,7 @@ export function GraduationCheckPanel({
       className="panel graduation-check"
       aria-label={t("卒業・修了要件")}
     >
-      <div className="dashboard-actions">
-        <h2>{history.detail ? t("過去の判定") : t("最新の卒業・修了要件")}</h2>
-        {!history.detail && (
-          <button type="button" disabled={busy} onClick={refresh}>
-            {t("概要を再取得")}
-          </button>
-        )}
-      </div>
+      <h2>{history.detail ? t("過去の判定") : t("最新の卒業・修了要件")}</h2>
       {history.detail ? (
         <PastCheckView
           detail={history.detail}

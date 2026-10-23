@@ -121,7 +121,6 @@ export function DashboardPage({
           saved={check.saved}
           error={check.error}
           history={history}
-          refresh={refresh}
         >
           {summary.status === "error" ? (
             <ErrorState
@@ -168,7 +167,7 @@ export function DashboardPage({
                   ) : detail.status === "error" ? (
                     <ErrorState
                       message={dashboard.message(detail.error)}
-                      actionLabel={t("概要から再取得")}
+                      actionLabel={t("再試行")}
                       onAction={refresh}
                     />
                   ) : (
