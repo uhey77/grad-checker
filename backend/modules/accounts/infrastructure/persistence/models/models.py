@@ -6,6 +6,8 @@ from uuid import uuid4
 from sqlalchemy import CheckConstraint
 from sqlmodel import Field, SQLModel
 
+from shared.infrastructure.persistence.types import UtcDateTime
+
 
 class Student(SQLModel, table=True):
     __tablename__ = "students"
@@ -17,7 +19,7 @@ class Student(SQLModel, table=True):
     admission_year: int | None = None
     name: str | None = None
     data_revision: int = 0
-    created_at: datetime
+    created_at: datetime = Field(sa_type=UtcDateTime)
 
 
 class Credential(SQLModel, table=True):
@@ -26,7 +28,7 @@ class Credential(SQLModel, table=True):
     password_hash: str
     recovery_code_hash: str | None = None
     is_active: bool = True
-    password_updated_at: datetime
+    password_updated_at: datetime = Field(sa_type=UtcDateTime)
 
 
 class AuthSession(SQLModel, table=True):
@@ -35,16 +37,16 @@ class AuthSession(SQLModel, table=True):
     student_id: str = Field(foreign_key="students.id")
     token_hash: str = Field(unique=True)
     csrf_token_hash: str
-    created_at: datetime
-    last_seen_at: datetime
-    expires_at: datetime
-    revoked_at: datetime | None = None
+    created_at: datetime = Field(sa_type=UtcDateTime)
+    last_seen_at: datetime = Field(sa_type=UtcDateTime)
+    expires_at: datetime = Field(sa_type=UtcDateTime)
+    revoked_at: datetime | None = Field(default=None, sa_type=UtcDateTime)
 
 
 class AuthAttempt(SQLModel, table=True):
     __tablename__ = "auth_attempts"
     key: str = Field(primary_key=True)
-    window_started_at: datetime
+    window_started_at: datetime = Field(sa_type=UtcDateTime)
     count: int
 
 

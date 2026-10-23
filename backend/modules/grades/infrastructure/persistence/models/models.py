@@ -6,12 +6,17 @@ from uuid import uuid4
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
+from modules.subjects.infrastructure.persistence.models.subject_models import (
+    integer_check,
+)
+from shared.infrastructure.persistence.types import UtcDateTime
+
 
 class GradeAttemptRecord(SQLModel, table=True):
     __tablename__ = "grade_attempts"
     __table_args__ = (
         UniqueConstraint("student_id", "course_id", "attempt_no"),
-        CheckConstraint("typeof(attempt_no) = 'integer' AND attempt_no >= 1"),
+        integer_check("attempt_no", 1),
         CheckConstraint("result_status IN ('finalized', 'pending')"),
         CheckConstraint(
             "grade_code IS NULL OR grade_code IN ('S', 'A', 'B', 'C', 'D', 'X')"
@@ -20,10 +25,7 @@ class GradeAttemptRecord(SQLModel, table=True):
             "(result_status = 'finalized' AND grade_code IS NOT NULL) "
             "OR (result_status = 'pending' AND grade_code IS NULL)"
         ),
-        CheckConstraint(
-            "academic_year IS NULL "
-            "OR (typeof(academic_year) = 'integer' AND academic_year >= 1)"
-        ),
+        integer_check("academic_year", 1, True),
         CheckConstraint("term_code IS NULL OR term_code IN ('first', 'second')"),
     )
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
@@ -35,7 +37,7 @@ class GradeAttemptRecord(SQLModel, table=True):
     grade_code: str | None = None
     academic_year: int | None = None
     term_code: str | None = None
-    updated_at: datetime
+    updated_at: datetime = Field(sa_type=UtcDateTime)
 
 
 GRADE_TABLES = [SQLModel.metadata.tables[GradeAttemptRecord.__tablename__]]
