@@ -1,6 +1,6 @@
 import { I18nextProvider, useTranslation } from "react-i18next";
 import { siteI18n } from "../../i18n/setup.ts";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { Application } from "./composition/createApplication.ts";
 import { AppLayout } from "./layouts/AppLayout.tsx";
 import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate.tsx";
@@ -32,7 +32,6 @@ function StudentScreens({
 }) {
   const { t } = useTranslation();
   const [screen, setScreen] = useState<Screen | null>(null);
-  const main = useRef<HTMLElement>(null);
   // 所属と成績は同じ更新版を共有する。片方の保存をもう片方の再取得に使う。
   const [latestRevision, setLatestRevision] = useState(0);
   const reportRevision = useCallback(
@@ -51,11 +50,9 @@ function StudentScreens({
   if (screen === null && profile.state) {
     setScreen("dashboard");
   }
-  useEffect(() => {
-    if (screen) main.current?.focus();
-  }, [screen]);
   return (
     <AppLayout
+      screenKey={screen}
       navigation={
         <HeaderNavigation
           showDashboard={() => setScreen("dashboard")}
@@ -69,65 +66,57 @@ function StudentScreens({
           <FormError>{auth.error}</FormError>
         </div>
       ) : null}
-      <main id="main-content" tabIndex={-1} ref={main}>
-        {screen === null && !profile.error ? (
-          <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
-        ) : null}
-        <div hidden={screen !== "dashboard"}>
-          {screen !== null ? (
-            !profile.state ? (
-              profile.error ? (
-                <ErrorState
-                  message={profile.error}
-                  actionLabel={t("再試行")}
-                  onAction={profile.retry}
-                />
-              ) : (
-                <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
-              )
-            ) : (
-              <DashboardPage
-                useCases={application.requirements}
-                csrf={csrf}
-                active={screen === "dashboard" && !!profile.state}
-                revision={latestRevision}
-                curriculumId={profile.state?.profile.curriculumId ?? null}
-                savedProgram={profile.savedProgram ?? null}
-                expire={expire}
-                showProfile={() => setScreen("profile")}
-                showGrades={() => setScreen("grades")}
+      {screen === null && !profile.error ? (
+        <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
+      ) : null}
+      <div hidden={screen !== "dashboard"}>
+        {screen !== null ? (
+          !profile.state ? (
+            profile.error ? (
+              <ErrorState
+                message={profile.error}
+                actionLabel={t("再試行")}
+                onAction={profile.retry}
               />
+            ) : (
+              <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
             )
-          ) : null}
-        </div>
-        <div
-          hidden={screen !== "profile" && !(screen === null && profile.error)}
-        >
-          <ProfilePage
-            profile={profile}
-            loginName={loginName}
-            active={screen === "profile"}
-            showGrades={() => setScreen("grades")}
-            showDashboard={() => setScreen("dashboard")}
-            logout={auth.logout}
-            authBusy={auth.busy}
-          />
-        </div>
-        <div hidden={screen !== "grades"}>
-          {screen !== null ? (
-            <GradeEntryPage
-              catalogUseCases={application.courseCatalog}
-              gradeUseCases={application.grades}
-              csrf={csrf}
+          ) : (
+            <DashboardPage
+              useCases={application.requirements}
+              active={screen === "dashboard" && !!profile.state}
+              revision={latestRevision}
+              curriculumId={profile.state?.profile.curriculumId ?? null}
               expire={expire}
-              latestRevision={latestRevision}
-              reportRevision={reportRevision}
               showProfile={() => setScreen("profile")}
-              showDashboard={() => setScreen("dashboard")}
             />
-          ) : null}
-        </div>
-      </main>
+          )
+        ) : null}
+      </div>
+      <div hidden={screen !== "profile" && !(screen === null && profile.error)}>
+        <ProfilePage
+          profile={profile}
+          loginName={loginName}
+          active={screen === "profile"}
+          showDashboard={() => setScreen("dashboard")}
+          logout={auth.logout}
+          authBusy={auth.busy}
+        />
+      </div>
+      <div hidden={screen !== "grades"}>
+        {screen !== null ? (
+          <GradeEntryPage
+            catalogUseCases={application.courseCatalog}
+            gradeUseCases={application.grades}
+            csrf={csrf}
+            expire={expire}
+            latestRevision={latestRevision}
+            reportRevision={reportRevision}
+            showProfile={() => setScreen("profile")}
+            showDashboard={() => setScreen("dashboard")}
+          />
+        ) : null}
+      </div>
     </AppLayout>
   );
 }

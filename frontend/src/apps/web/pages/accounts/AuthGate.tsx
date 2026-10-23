@@ -46,21 +46,17 @@ export function AuthGate({
   if (auth.status === "loading")
     return (
       <AppLayout>
-        <main id="main-content">
-          <LoadingState>{t("ログイン状態を確認しています…")}</LoadingState>
-        </main>
+        <LoadingState>{t("ログイン状態を確認しています…")}</LoadingState>
       </AppLayout>
     );
   if (auth.status === "error" || !auth.policy)
     return (
       <AppLayout>
-        <main id="main-content">
-          <ErrorState
-            message={auth.error}
-            actionLabel={t("再試行")}
-            onAction={auth.retry}
-          />
-        </main>
+        <ErrorState
+          message={auth.error}
+          actionLabel={t("再試行")}
+          onAction={auth.retry}
+        />
       </AppLayout>
     );
   if (auth.session)
@@ -78,94 +74,90 @@ export function AuthGate({
     );
   };
   return (
-    <AppLayout>
-      <main id="main-content" className="auth-page">
-        <section className="auth-card">
-          <h1 ref={heading} tabIndex={-1}>
-            {recoveryCode
-              ? t("復旧コードを保管してください")
-              : mode === "register"
-                ? t("新規登録")
+    <AppLayout contentClassName="auth-page">
+      <section className="auth-card">
+        <h1 ref={heading} tabIndex={-1}>
+          {recoveryCode
+            ? t("復旧コードを保管してください")
+            : mode === "register"
+              ? t("新規登録")
+              : mode === "recover"
+                ? t("パスワードの再設定")
+                : t("ログイン")}
+        </h1>
+        {notice ? <p role="status">{t(notice)}</p> : null}
+        {recoveryCode ? (
+          <RecoveryCode
+            code={recoveryCode}
+            proceed={() => {
+              setRecoveryCode("");
+              switchMode("login");
+              setNotice(t("ユーザー名とパスワードでログインしてください。"));
+            }}
+          />
+        ) : (
+          <>
+            {auth.error ? <FormError>{auth.error}</FormError> : null}
+            <p className="auth-help">
+              {mode === "register"
+                ? t(
+                    "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。",
+                  )
                 : mode === "recover"
-                  ? t("パスワードの再設定")
-                  : t("ログイン")}
-          </h1>
-          {notice ? <p role="status">{t(notice)}</p> : null}
-          {recoveryCode ? (
-            <RecoveryCode
-              code={recoveryCode}
-              proceed={() => {
-                setRecoveryCode("");
-                switchMode("login");
-                setNotice(t("ユーザー名とパスワードでログインしてください。"));
+                  ? t(
+                      "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。",
+                    )
+                  : t("アプリ専用のユーザー名とパスワードを入力してください。")}
+            </p>
+            <AuthForm
+              key={mode}
+              mode={mode}
+              policy={auth.policy}
+              busy={auth.busy}
+              submit={(loginName, password, code) => {
+                setNotice("");
+                if (mode === "register")
+                  void auth.register(loginName, password, showRecovery);
+                else if (mode === "recover")
+                  void auth.recover(loginName, code, password, showRecovery);
+                else void auth.login(loginName, password);
               }}
             />
-          ) : (
-            <>
-              {auth.error ? <FormError>{auth.error}</FormError> : null}
-              <p className="auth-help">
-                {mode === "register"
-                  ? t(
-                      "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。",
-                    )
-                  : mode === "recover"
-                    ? t(
-                        "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。",
-                      )
-                    : t(
-                        "アプリ専用のユーザー名とパスワードを入力してください。",
-                      )}
-              </p>
-              <AuthForm
-                key={mode}
-                mode={mode}
-                policy={auth.policy}
-                busy={auth.busy}
-                submit={(loginName, password, code) => {
-                  setNotice("");
-                  if (mode === "register")
-                    void auth.register(loginName, password, showRecovery);
-                  else if (mode === "recover")
-                    void auth.recover(loginName, code, password, showRecovery);
-                  else void auth.login(loginName, password);
-                }}
-              />
-              {mode === "login" ? (
-                <>
-                  <button
-                    className="auth-switch"
-                    disabled={auth.busy}
-                    onClick={() => {
-                      switchMode("register");
-                    }}
-                  >
-                    {t("新規登録")}
-                  </button>
-                  <button
-                    className="auth-switch"
-                    disabled={auth.busy}
-                    onClick={() => {
-                      switchMode("recover");
-                    }}
-                  >
-                    {t("パスワードを忘れた場合")}
-                  </button>
-                </>
-              ) : (
+            {mode === "login" ? (
+              <>
                 <button
                   className="auth-switch"
                   disabled={auth.busy}
                   onClick={() => {
-                    switchMode("login");
+                    switchMode("register");
                   }}
                 >
-                  {t("ログインへ戻る")}
+                  {t("新規登録")}
                 </button>
-              )}
-            </>
-          )}
-        </section>
-      </main>
+                <button
+                  className="auth-switch"
+                  disabled={auth.busy}
+                  onClick={() => {
+                    switchMode("recover");
+                  }}
+                >
+                  {t("パスワードを忘れた場合")}
+                </button>
+              </>
+            ) : (
+              <button
+                className="auth-switch"
+                disabled={auth.busy}
+                onClick={() => {
+                  switchMode("login");
+                }}
+              >
+                {t("ログインへ戻る")}
+              </button>
+            )}
+          </>
+        )}
+      </section>
     </AppLayout>
   );
 }

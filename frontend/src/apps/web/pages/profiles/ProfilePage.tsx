@@ -10,7 +10,6 @@ export function ProfilePage({
   profile,
   loginName,
   active,
-  showGrades,
   showDashboard,
   logout,
   authBusy,
@@ -18,7 +17,6 @@ export function ProfilePage({
   profile: ReturnType<typeof useProfile>;
   loginName: string;
   active: boolean;
-  showGrades: () => void;
   showDashboard: () => void;
   logout: () => void;
   authBusy: boolean;
@@ -118,15 +116,6 @@ export function ProfilePage({
               <ProgramForm {...profile} programs={profile.state.programs} />
             </div>
           </div>
-          {!expanded && profile.state.profile.curriculumId ? (
-            <button
-              className="profile-continue"
-              type="button"
-              onClick={showGrades}
-            >
-              {t("成績入力へ進む")}
-            </button>
-          ) : null}
         </section>
       )}
     </div>

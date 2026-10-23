@@ -1,35 +1,29 @@
 import { useTranslation } from "react-i18next";
 import type { GraduationUseCases } from "../../../../modules/requirements/public.ts";
-import type { ProgramOption } from "../../../../modules/profiles/public.ts";
 import { useDashboard } from "../../hooks/requirements/useDashboard.ts";
 import { useDashboardDetail } from "../../hooks/requirements/useDashboardDetail.ts";
 import { PageHeading } from "../../components/PageHeading.tsx";
-import { ErrorState, LoadingState } from "../../components/StatusPanels.tsx";
-import { programLabel } from "../../components/subjects/labels.ts";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../components/StatusPanels.tsx";
 import { GraduationOverview } from "../../components/requirements/GraduationOverview.tsx";
 import { GraduationResultView } from "../../components/requirements/GraduationResultView.tsx";
-import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel.tsx";
-import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck.ts";
 export function DashboardPage({
   useCases,
-  csrf,
   active,
   revision,
   curriculumId,
-  savedProgram,
   expire,
   showProfile,
-  showGrades,
 }: {
   useCases: GraduationUseCases;
-  csrf: string;
   active: boolean;
   revision: number;
   curriculumId: string | null;
-  savedProgram: ProgramOption | null;
   expire: () => void;
   showProfile: () => void;
-  showGrades: () => void;
 }) {
   const { t } = useTranslation();
   const dashboard = useDashboard(
@@ -41,87 +35,38 @@ export function DashboardPage({
   );
   const summary = dashboard.summary;
   const result = summary.status === "ready" ? summary.data : null;
-  const check = useGraduationCheck(
-    useCases,
-    result?.dataRevision ?? revision,
-    curriculumId ?? "",
-    csrf,
-    active,
-    !result,
-    expire,
-  );
-  const completionPolicy =
-    savedProgram?.curriculumId === curriculumId
-      ? savedProgram.completionPolicy
-      : undefined;
   const detail = useDashboardDetail(
     useCases,
     result,
-    active && dashboard.expanded && !check.result,
+    active && dashboard.expanded,
     expire,
   );
-  const displayedResult = check.result ?? result;
-  const categories = check.result
-    ? check.result.requirements.filter(
-        (row) => row.kind === "classification_total",
-      )
-    : (result?.categories ?? []);
-  const displayedDetail =
-    check.result ?? (detail.status === "ready" ? detail.data : null);
-  function refresh() {
-    check.reset();
-    dashboard.retry();
-  }
+  const displayedDetail = detail.status === "ready" ? detail.data : null;
   return (
     <div className="dashboard-page">
       <PageHeading title={t("ダッシュボード")} />
-      <section className="panel dashboard-context" aria-label={t("所属と操作")}>
-        <h2>{t("所属")}</h2>
-        <p>
-          {savedProgram
-            ? programLabel(savedProgram)
-            : curriculumId
-              ? t("選択肢にないカリキュラム")
-              : t("所属は未設定です。")}
-        </p>
-        <div className="dashboard-actions">
-          <button type="button" onClick={showProfile}>
-            {curriculumId ? t("所属を確認・変更") : t("所属を設定")}
-          </button>
-          <button
-            type="button"
-            className="primary-button"
-            disabled={!curriculumId}
-            onClick={showGrades}
-          >
-            {t("成績入力へ進む")}
-          </button>
-        </div>
-      </section>
       {!curriculumId ? (
-        <p role="status">
-          {t(
+        <EmptyState
+          title={t("所属は未設定です。")}
+          message={t(
             "マイページで所属を保存すると、卒業・修了要件の概要を確認できます。",
           )}
-        </p>
+          actionLabel={t("所属を設定")}
+          onAction={showProfile}
+        />
       ) : (
-        <GraduationCheckPanel
-          busy={check.busy}
-          blocked={!result}
-          check={(answers) => void check.check(answers)}
-          curriculumId={curriculumId}
-          degreeLevel={completionPolicy?.degreeLevel}
-          completionConditions={completionPolicy?.conditions}
-          error={check.error}
+        <section
+          className="panel requirements-panel"
+          aria-label={t("卒業・修了要件")}
         >
           {summary.status === "error" ? (
             <ErrorState
               title={t("概要を取得できませんでした")}
               message={dashboard.message(summary.error)}
               actionLabel={t("再試行")}
-              onAction={refresh}
+              onAction={dashboard.retry}
             />
-          ) : !displayedResult ? (
+          ) : !result ? (
             <LoadingState>
               {t("卒業・修了要件の概要を読み込んでいます…")}
             </LoadingState>
@@ -135,9 +80,9 @@ export function DashboardPage({
                 </p>
               )}
               <GraduationOverview
-                key={displayedResult.evaluatedAt}
-                result={displayedResult}
-                categories={categories}
+                key={result.evaluatedAt}
+                result={result}
+                categories={result.categories}
               />
               <button
                 type="button"
@@ -160,7 +105,7 @@ export function DashboardPage({
                     <ErrorState
                       message={dashboard.message(detail.error)}
                       actionLabel={t("再試行")}
-                      onAction={refresh}
+                      onAction={dashboard.retry}
                     />
                   ) : (
                     <LoadingState>
@@ -171,7 +116,7 @@ export function DashboardPage({
               )}
             </>
           )}
-        </GraduationCheckPanel>
+        </section>
       )}
     </div>
   );

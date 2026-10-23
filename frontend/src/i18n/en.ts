@@ -119,21 +119,10 @@ export const english = {
     "Candidates for outstanding requirements, terms, completion status at evaluation, and reasons",
   修了要件チェック: "Degree completion check",
   卒業要件チェック: "Graduation requirements check",
-  "保存済みの成績を使って判定します。": "Evaluations use your saved grades.",
   "単位以外の修了条件（本人申告）":
     "Non-credit completion requirements (self-reported)",
-  "大学の認定状況を確認して回答してください。未入力の条件があると判定を保留します。":
-    "Check the university’s recognition status before answering. Unanswered requirements leave the result pending.",
-  "未確認・未入力": "Unverified / unanswered",
   "達成（本人申告）": "Met (self-reported)",
   未達成: "Not met",
-  "判定中…": "Evaluating…",
-  修了要件をチェック: "Check degree completion requirements",
-  卒業要件をチェック: "Check graduation requirements",
-  "修了要件を判定しています…": "Checking degree completion requirements…",
-  "卒業要件を判定しています…": "Checking graduation requirements…",
-  判定できませんでした: "Could not evaluate requirements",
-  判定を再試行: "Retry evaluation",
   総単位の充足率: "Total credit progress",
   " / {{value0}} 単位": " / {{value0}} credits",
   "総単位の充足率 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位":
@@ -234,17 +223,11 @@ export const english = {
   選択肢にないカリキュラム: "Curriculum not in the available options",
   "選択できるカリキュラムが登録されていません。":
     "No selectable curricula have been registered.",
-  成績入力へ進む: "Go to grades",
-  所属: "Program",
-  "所属を確認・変更": "View or change program",
   所属を設定: "Set program",
-  所属と操作: "Program and actions",
   "マイページで所属を保存すると、卒業・修了要件の概要を確認できます。":
     "Save your program in My profile to view an overview of graduation or degree completion requirements.",
   概要を取得できませんでした: "Could not load overview",
   "卒業・修了要件の概要を読み込んでいます…": "Loading requirements overview…",
-  "最新の卒業・修了要件":
-    "Latest graduation and degree completion requirements",
   "保存済みの成績は0件です。成績入力から修得状況を保存してください。":
     "No grades have been saved. Save your course completion status on the Grades screen.",
   条件別の詳細を閉じる: "Hide requirement details",

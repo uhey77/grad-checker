@@ -6,7 +6,7 @@ import {
 } from "../../../../modules/requirements/public.ts";
 import { useRemote } from "../useRemote.ts";
 
-// 保存した判定に詳細がある場合は再取得せず、概要だけのときに同じ版の詳細を読む。
+// 詳細を開いたときに、表示中の概要と同じ版の結果を取得する。
 export function useDashboardDetail(
   useCases: GraduationUseCases,
   current: DashboardResult | null,

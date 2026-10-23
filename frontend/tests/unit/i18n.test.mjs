@@ -312,8 +312,7 @@ test("英語でも判定保留と出典・推薦の原文を保ち、開講期�
       createElement(GraduationResultView, { result }),
     ),
   );
-  assert.match(markup, /Degree completion requirements/);
-  assert.match(markup, /Pending/);
+  assert.doesNotMatch(markup, /class="judgment /);
   assert.match(markup, /Unverified \/ pending/);
   assert.match(markup, /学位論文の審査/);
   assert.match(markup, /href="https:\/\/example.com\/rules.pdf"/);

@@ -4,7 +4,6 @@ import type {
   RequirementResult,
 } from "../../../../modules/requirements/public.ts";
 import { GraduationInfographic } from "./GraduationInfographic.tsx";
-import { judgmentLabels } from "./labels.ts";
 export function GraduationOverview({
   result,
   categories,
@@ -18,19 +17,6 @@ export function GraduationOverview({
   const { t } = useTranslation();
   return (
     <>
-      <p className={`judgment ${result.result}`} role="status">
-        {result.degreeLevel && result.degreeLevel !== "bachelor"
-          ? t("修了要件")
-          : t("卒業要件")}
-        ：{t(judgmentLabels[result.result])}
-      </p>
-      {result.degreeLevel && result.degreeLevel !== "bachelor" && (
-        <p className="source-note" role="note">
-          {t(
-            "本人申告に基づく参考判定です。正式な修了認定は大学が行います。単位条件の達成だけでは修了を意味しません。",
-          )}
-        </p>
-      )}
       <GraduationInfographic result={result} categories={categories} />
       <dl className="credit-summary">
         <div>
@@ -50,6 +36,13 @@ export function GraduationOverview({
           <dd>{result.total.shortage}</dd>
         </div>
       </dl>
+      {result.degreeLevel && result.degreeLevel !== "bachelor" && (
+        <p className="source-note" role="note">
+          {t(
+            "本人申告に基づく参考判定です。正式な修了認定は大学が行います。単位条件の達成だけでは修了を意味しません。",
+          )}
+        </p>
+      )}
       {result.warnings.includes("provisional_external_allocation") && (
         <p className="source-note" role="note">
           {t(
