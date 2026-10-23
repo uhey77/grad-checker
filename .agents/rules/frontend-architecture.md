@@ -87,3 +87,8 @@ Pythonのブリッジ通信を画面から直接呼ばない。ブリッジ通�
 - Domainは`entities/`・`value_objects/`・`services/`に分け、入出力の集合・検索結果・更新要求は`application/dto/`へ置く。APIのsnake_caseや検証処理は`infrastructure/external_services/schemas/`に保持する。
 - HTTP取得先は`infrastructure/external_services/`でApplication契約を実装する。DBを持たないフロントエンドにpersistenceやUoWを形式だけ追加しない。
 - テストは純粋な業務・編集・検索・境界の`tests/unit/`と、HTTP・DTOの`tests/contract/`へ分け、既存の`npm test`で一括実行する。
+
+## 本番ホスティング
+
+- 既存Vercelプロジェクト（Root Directory: frontend、Node.js 24）を再利用する。`vercel.mjs`が非機密のCLOUD_RUN_API_ORIGINから`/api`のHTTPS中継先を構成する。Reactの取得先は相対`/api`を維持し、VITE_*へDB認証情報を渡さない。
+- API中継はSPAフォールバックより先に評価し、`/api`をindex.htmlに書き換えない。APIはno-store、画面はCSP等のセキュリティヘッダーを設定する。Git連携による無承認公開は無効化し、GitHub Actionsのproduction承認ゲートからテスト済みの本番用ビルドをpromoteする。
