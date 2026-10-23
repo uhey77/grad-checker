@@ -6,7 +6,7 @@ import { AppLayout } from "./layouts/AppLayout.tsx";
 import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate.tsx";
 import { ProfilePage } from "./pages/profiles/ProfilePage.tsx";
 import { GradeEntryPage } from "./pages/grades/GradeEntryPage.tsx";
-import { UserMenu } from "./components/accounts/UserMenu.tsx";
+import { HeaderNavigation } from "./components/HeaderNavigation.tsx";
 import {
   ErrorState,
   FormError,
@@ -55,14 +55,12 @@ function StudentScreens({
   }, [screen]);
   return (
     <AppLayout
-      userMenu={
-        <UserMenu
+      navigation={
+        <HeaderNavigation
           loginName={loginName}
-          busy={auth.busy}
           showDashboard={() => setScreen("dashboard")}
           showGrades={() => setScreen("grades")}
           showProfile={() => setScreen("profile")}
-          logout={auth.logout}
         />
       }
     >
@@ -110,6 +108,8 @@ function StudentScreens({
             active={screen === "profile"}
             showGrades={() => setScreen("grades")}
             showDashboard={() => setScreen("dashboard")}
+            logout={auth.logout}
+            authBusy={auth.busy}
           />
         </div>
         <div hidden={screen !== "grades"}>

@@ -3,10 +3,10 @@ import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 export function AppLayout({
   children,
-  userMenu,
+  navigation,
 }: {
   children: ReactNode;
-  userMenu?: ReactNode;
+  navigation?: ReactNode;
 }) {
   const { t } = useTranslation();
   return (
@@ -19,7 +19,7 @@ export function AppLayout({
           <span className="brand">{t("卒業要件チェッカー")}</span>
           <div className="header-controls">
             <LanguageSwitcher />
-            {userMenu}
+            {navigation}
           </div>
         </div>
       </header>

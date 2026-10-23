@@ -12,12 +12,16 @@ export function ProfilePage({
   active,
   showGrades,
   showDashboard,
+  logout,
+  authBusy,
 }: {
   profile: ReturnType<typeof useProfile>;
   loginName: string;
   active: boolean;
   showGrades: () => void;
   showDashboard: () => void;
+  logout: () => void;
+  authBusy: boolean;
 }) {
   const { t } = useTranslation();
   const editor = useRef<HTMLDivElement>(null);
@@ -40,7 +44,12 @@ export function ProfilePage({
         className="panel profile-panel"
         aria-labelledby="account-heading"
       >
-        <h2 id="account-heading">{t("アカウント情報")}</h2>
+        <div className="profile-section-heading">
+          <h2 id="account-heading">{t("アカウント情報")}</h2>
+          <button type="button" disabled={authBusy} onClick={logout}>
+            {authBusy ? t("ログアウト中…") : t("ログアウト")}
+          </button>
+        </div>
         <dl className="account-details">
           <dt>{t("ユーザー名")}</dt>
           <dd>{loginName}</dd>

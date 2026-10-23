@@ -929,32 +929,35 @@ tbody tr.earned-row:hover {
   }
 }
 
-/* 個人設定への入口をヘッダー右上にまとめる。 */
-.user-menu {
-  position: relative;
-  flex-shrink: 0;
-  max-width: 45%;
-}
-.user-menu-trigger {
+/* マイページへの入口と画面移動のメニューをヘッダー右上に置く。 */
+.profile-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
-  max-width: 100%;
-  min-height: 44px;
+  max-width: clamp(80px, 15vw, 180px);
+  min-width: 0;
+  min-height: 48px;
   border-radius: 8px;
+  font-size: 14px;
 }
-.user-menu-name {
+.profile-trigger-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.user-menu-chevron {
-  transition: transform 180ms ease;
+.navigation-menu {
+  position: relative;
+  flex-shrink: 0;
 }
-.user-menu-trigger[aria-expanded="true"] .user-menu-chevron {
-  transform: rotate(180deg);
+.navigation-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 8px;
 }
-.user-menu-panel {
+.navigation-menu-panel {
   position: absolute;
   z-index: 5;
   top: calc(100% + 8px);
@@ -974,13 +977,13 @@ tbody tr.earned-row:hover {
     transform 180ms ease,
     visibility 0s linear 180ms;
 }
-.user-menu-panel[data-open="true"] {
+.navigation-menu-panel[data-open="true"] {
   transition-delay: 0s;
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
-.user-menu-panel button {
+.navigation-menu-panel button {
   display: block;
   width: 100%;
   min-height: 44px;
@@ -988,7 +991,7 @@ tbody tr.earned-row:hover {
   text-align: left;
   font-size: 14px;
 }
-.user-menu-panel button + button {
+.navigation-menu-panel button + button {
   margin-top: 4px;
   border-top: 1px solid #e6ebed;
 }
@@ -1088,8 +1091,7 @@ tbody tr.earned-row:hover {
   .graduation-infographic {
     animation: none;
   }
-  .user-menu-panel,
-  .user-menu-chevron,
+  .navigation-menu-panel,
   .profile-editor {
     transition: none;
   }
@@ -1111,7 +1113,8 @@ tbody tr.earned-row:hover {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
+  max-width: 100%;
+  margin-left: auto;
   justify-content: flex-end;
 }
 .language-switcher {
