@@ -295,7 +295,7 @@ export const english = {
   "所属を変更しても、保存した成績は削除されません。卒業要件への適用は変更後の課程に従います。":
     "Changing your program does not delete saved grades. Graduation requirements will be evaluated under the new program.",
   成績入力へ進む: "Go to grades",
-  本人の所属: "Your program",
+  所属: "Program",
   "所属を確認・変更": "View or change program",
   所属を設定: "Set program",
   所属と操作: "Program and actions",

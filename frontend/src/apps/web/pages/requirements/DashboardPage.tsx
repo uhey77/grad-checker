@@ -40,7 +40,7 @@ export function DashboardPage({
     <div className="dashboard-page">
       <PageHeading title={t("ダッシュボード")} />
       <section className="panel dashboard-context" aria-label={t("所属と操作")}>
-        <h2>{t("本人の所属")}</h2>
+        <h2>{t("所属")}</h2>
         <p>
           {savedProgram
             ? programLabel(savedProgram)
