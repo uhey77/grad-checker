@@ -49,7 +49,11 @@ def auth_services(tmp_path, request):
     logs = []
     environment = {
         **os.environ,
-        "DATABASE_URL": f"sqlite:///{tmp_path / 'auth.db'}",
+        "DATABASE_URL": (
+            request.getfixturevalue("service_database_url")
+            if "service_database_url" in request.fixturenames
+            else f"sqlite:///{tmp_path / 'auth.db'}"
+        ),
         "PUBLIC_ORIGIN": ORIGIN,
     }
     try:
