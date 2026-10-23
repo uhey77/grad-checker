@@ -4,9 +4,11 @@ import type { ReactNode } from "react";
 export function AppLayout({
   children,
   navigation,
+  profileAction,
 }: {
   children: ReactNode;
   navigation?: ReactNode;
+  profileAction?: ReactNode;
 }) {
   const { t } = useTranslation();
   return (
@@ -16,10 +18,13 @@ export function AppLayout({
       </a>
       <header className="site-header">
         <div className="header-inner">
-          <span className="brand">{t("卒業要件チェッカー")}</span>
+          <div className="header-brand">
+            {navigation}
+            <span className="brand">{t("卒業要件チェッカー")}</span>
+          </div>
           <div className="header-controls">
             <LanguageSwitcher />
-            {navigation}
+            {profileAction}
           </div>
         </div>
       </header>

@@ -7,6 +7,7 @@ import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate.tsx";
 import { ProfilePage } from "./pages/profiles/ProfilePage.tsx";
 import { GradeEntryPage } from "./pages/grades/GradeEntryPage.tsx";
 import { HeaderNavigation } from "./components/HeaderNavigation.tsx";
+import { ProfileButton } from "./components/ProfileButton.tsx";
 import {
   ErrorState,
   FormError,
@@ -57,12 +58,11 @@ function StudentScreens({
     <AppLayout
       navigation={
         <HeaderNavigation
-          loginName={loginName}
           showDashboard={() => setScreen("dashboard")}
           showGrades={() => setScreen("grades")}
-          showProfile={() => setScreen("profile")}
         />
       }
+      profileAction={<ProfileButton showProfile={() => setScreen("profile")} />}
     >
       {auth.error ? (
         <div className="auth-message">

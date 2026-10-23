@@ -90,6 +90,7 @@ select:focus-visible,
   border-bottom: 1px solid #e1e7e9;
 }
 .header-inner {
+  position: relative;
   max-width: 1360px;
   margin: auto;
   padding: 20px 32px;
@@ -102,6 +103,12 @@ select:focus-visible,
   font-weight: 700;
   font-size: 17px;
   letter-spacing: 0.02em;
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
 }
 main {
   max-width: 1360px;
@@ -929,39 +936,16 @@ tbody tr.earned-row:hover {
   }
 }
 
-/* マイページへの入口と画面移動のメニューをヘッダー右上に置く。 */
-.profile-trigger {
-  display: flex;
-  align-items: center;
-  max-width: clamp(80px, 15vw, 180px);
-  min-width: 0;
-  min-height: 48px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.profile-trigger-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* 画面移動は左側、マイページへの入口は右側に置く。 */
 .navigation-menu {
   position: relative;
   flex-shrink: 0;
-}
-.navigation-menu-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  border-radius: 8px;
 }
 .navigation-menu-panel {
   position: absolute;
   z-index: 5;
   top: calc(100% + 8px);
-  right: 0;
+  left: 0;
   width: 200px;
   max-width: calc(100vw - 32px);
   padding: 6px;
@@ -1117,7 +1101,7 @@ tbody tr.earned-row:hover {
   margin-left: auto;
   justify-content: flex-end;
 }
-.language-switcher {
+.header-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1132,6 +1116,10 @@ tbody tr.earned-row:hover {
   font-weight: 600;
   line-height: 1;
 }
+.header-button > svg {
+  width: 24px;
+  height: 24px;
+}
 @media (max-width: 600px) {
   .header-inner {
     flex-wrap: wrap;
@@ -1139,5 +1127,11 @@ tbody tr.earned-row:hover {
   }
   .header-controls {
     gap: 0.5rem;
+  }
+  .navigation-menu {
+    position: static;
+  }
+  .navigation-menu-panel {
+    left: 16px;
   }
 }

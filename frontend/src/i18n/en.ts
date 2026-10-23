@@ -34,7 +34,6 @@ export const english = {
     "If you lose both your code and password, you cannot recover your account.",
   復旧コードを保管しました: "I have saved my recovery code",
   ログインへ進む: "Continue to login",
-  "{{value0}}のマイページ": "My profile for {{value0}}",
   メニューを開く: "Open menu",
   メニューを閉じる: "Close menu",
   ダッシュボード: "Dashboard",
