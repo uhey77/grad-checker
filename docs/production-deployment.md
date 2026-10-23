@@ -97,6 +97,8 @@ docker run --rm -p 127.0.0.1:8080:8080 --memory=512m --cpus=1 \
 | `database-connectivity.yml` | mainの承認済み手動実行だけで、既存GitHub Secretsのpooled/direct接続を読み取りSELECT 1で確認。DDLなし |
 | `graduation-benchmark.yml` | 既存の合成データ性能検証 |
 
+Cloud Run更新とVercel公開は別ジョブ・別runnerで実行する。WIFのid-token権限とGCP認証ファイルをフロントエンドの依存インストール・ビルドへ渡さない。両ジョブにproduction environmentを指定し、それぞれ承認ポリシーを検証する。
+
 PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのPostgreSQLは合成データ専用である。Actionsは確認したcommit SHAに固定する。デプロイは直列化し、実行中の本番更新を新しいpushで強制キャンセルしない。失敗時は後続のVercel昇格等へ進まない。
 
 本番CDを有効化する前に、GitHubの`production` environmentへrequired reviewerを1人以上設定し、deployment branch policyをcustomで`main`のbranchだけに制限する。CDはこのポリシーをAPIで検証し、不足・読み取り不可ならWIFより前に停止する。GitHubの契約でrequired reviewerを利用できない場合はCDを有効化せず、同等の承認設計を別途決める。

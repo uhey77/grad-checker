@@ -11,8 +11,10 @@ concurrency:
 jobs:
   ci:
     uses: ./.github/workflows/check.yml
-  deploy:
+  backend:
     needs: ci
+    outputs:
+      api_origin: ${{ steps.cloud_run.outputs.api_origin }}
     # 初回公開承認前は未設定のまま。environmentのrequired reviewersも別途必須。
     if: github.ref == 'refs/heads/main' && vars.PRODUCTION_DEPLOY_ENABLED == 'true'
     environment: production
@@ -29,9 +31,6 @@ jobs:
       GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
       GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
       GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
-      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-      VERCEL_CLI_VERSION: '65.2.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
@@ -50,8 +49,6 @@ jobs:
           test "$GCP_CLOUD_RUN_SERVICE" = grad-checker-api
           test "$GCP_SERVICE_ACCOUNT" = grad-checker-deployer@grad-checker-512505.iam.gserviceaccount.com
           test "$GCP_WIF_PROVIDER" = projects/602914367926/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-          test "$VERCEL_ORG_ID" = team_tZDGBnNdyZxvlZvkV86h6SGv
-          test "$VERCEL_PROJECT_ID" = prj_QgFMi1xMYgrYLGPI1Yi9h0kdkNzW
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           project_id: ${{ vars.GCP_PROJECT_ID }}
@@ -71,14 +68,41 @@ jobs:
           docker push "$image"
           echo "DEPLOY_IMAGE=$image" >> "$GITHUB_ENV"
       - name: Deploy Cloud Run without migrations or IAM changes
+        id: cloud_run
         run: |
           set -euo pipefail
           python scripts/deployment/render_cloud_run.py > "$RUNNER_TEMP/cloud-run.yaml"
           gcloud run services replace "$RUNNER_TEMP/cloud-run.yaml" --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --quiet
           api_origin=$(gcloud run services describe "$GCP_CLOUD_RUN_SERVICE" --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --format='value(status.url)')
           CLOUD_RUN_API_ORIGIN="$api_origin" node --input-type=module -e 'const u=new URL(process.env.CLOUD_RUN_API_ORIGIN); if(u.protocol!=="https:" || !u.hostname.endsWith(".run.app")) process.exit(1)'
-          echo "CLOUD_RUN_API_ORIGIN=$api_origin" >> "$GITHUB_ENV"
+          echo "api_origin=$api_origin" >> "$GITHUB_OUTPUT"
           curl --fail --retry 12 --retry-delay 5 --retry-all-errors "$api_origin/api/ready"
+  frontend:
+    needs: backend
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_CLI_VERSION: '65.2.0'
+      CLOUD_RUN_API_ORIGIN: ${{ needs.backend.outputs.api_origin }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - name: Verify approval policy before frontend publication
+        run: node scripts/deployment/check-release-policy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Validate fixed Vercel target
+        run: |
+          test "$VERCEL_ORG_ID" = team_tZDGBnNdyZxvlZvkV86h6SGv
+          test "$VERCEL_PROJECT_ID" = prj_QgFMi1xMYgrYLGPI1Yi9h0kdkNzW
       - name: Install fixed Vercel CLI
         run: npm install -g "vercel@$VERCEL_CLI_VERSION"
       - name: Inspect existing Vercel target without creating a project
