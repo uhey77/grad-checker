@@ -111,7 +111,9 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       - name: Pull existing Vercel project settings
-        run: vercel pull --yes --environment=production
+        run: |
+          umask 077
+          vercel pull --yes --environment=production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       - name: Reject server credentials and check target before frontend build

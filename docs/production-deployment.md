@@ -97,6 +97,8 @@ docker run --rm -p 127.0.0.1:8080:8080 --memory=512m --cpus=1 \
 | `database-connectivity.yml` | mainの承認済み手動実行だけで、既存GitHub Secretsのpooled/direct接続を読み取りSELECT 1で確認。DDLなし |
 | `graduation-benchmark.yml` | 既存の合成データ性能検証 |
 
+Vercelの本番用ビルド後は、生成された`.vercel/output/config.json`を検査してAPI中継・SPAの除外条件・no-storeを確認してからstageする。`vercel pull`はumask 077で実行し、取得した環境ファイルをartifactへ含めない。
+
 Cloud Run更新とVercel公開は別ジョブ・別runnerで実行する。WIFのid-token権限とGCP認証ファイルをフロントエンドの依存インストール・ビルドへ渡さない。両ジョブにproduction environmentを指定し、それぞれ承認ポリシーを検証する。
 
 PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのPostgreSQLは合成データ専用である。Actionsは確認したcommit SHAに固定する。デプロイは直列化し、実行中の本番更新を新しいpushで強制キャンセルしない。失敗時は後続のVercel昇格等へ進まない。
@@ -111,7 +113,7 @@ PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのP
 2. [DB移行手順](../backend/migrations/README.md)を隔離環境で実行し、件数・内容・認証・成績・判定を照合する。本番DDL、データコピー、Seedはそれぞれ影響確認と承認を必要とする。DBが空でも、承認なしに初期化しない。
 3. Secret Managerの通常接続とDirect接続が対象DBを指し、TLS設定を保持していることを確認する。Runtime SAは通常接続Secretだけを読める状態にする。
 4. 承認済みのmain SHAをタグにしたイメージを既存Artifact Registryへbuild/pushする。`DEPLOY_IMAGE`にそのイメージ参照を設定し、`python scripts/deployment/render_cloud_run.py`でレビュー用マニフェストを作る。
-5. 管理者がそのマニフェストで初回のCloud Runを作成する。`gcloud run services replace`は初回サービスを非公開で作成し、通常CDはIAMを変更しない。現状サービス未作成なので、通常CDは既存サービス確認で安全に停止する。
+5. 管理者がそのマニフェストで初回のCloud Runを作成する。`gcloud run services replace`は初回サービスを非公開で作成し、通常CDはIAMを変更しない。初回サービス未作成という提示条件では、通常CDは既存サービス確認で安全に停止する。現在の存在確認・IAM確認には、認証済みのGCP環境での読み取り監査が必要である。
 6. 初回公開の承認後に、管理者が当該サービスへallUsersの`roles/run.invoker`を設定するか、Invoker IAM checkを無効化する。必要な`run.services.setIamPolicy`はDeployerの通常のrun.developerには含まれない。Deployerに広いrun.adminを追加せず、管理者が一度だけ設定する方針とする。
 7. Cloud RunのReady、`/api/ready`、`/api/health`、Secret注入、ログの機密情報非露出を確認する。
 8. Vercelの既存Project/Org ID、Root Directory、Node.js、build/installコマンド、Git自動デプロイ無効、CLOUD_RUN_API_ORIGINを確認する。接続済みプラグインがチーム権限不足の403を返す場合は、正しいチームへのアクセス許可を完了してから再確認する。新しいプロジェクトで代用しない。
