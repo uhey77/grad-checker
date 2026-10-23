@@ -1,4 +1,4 @@
-"""SQLite接続の生成と接続ごとの外部キー設定。"""
+"""SQLite / PostgreSQL接続の生成。接続文字列はログへ出さない。"""
 
 from pathlib import Path
 from sqlite3 import Connection
@@ -10,8 +10,17 @@ from sqlmodel import create_engine
 
 def create_database_engine(database_url: str) -> Engine:
     url = make_url(database_url)
+    if url.get_backend_name() == "postgresql":
+        # Neonが渡す通常のpostgresql URLも、既存の同期SQLModelで利用する。
+        return create_engine(
+            url.set(drivername="postgresql+psycopg"),
+            pool_pre_ping=True,
+            isolation_level="READ COMMITTED",
+            connect_args={"connect_timeout": 10, "prepare_threshold": None},
+            hide_parameters=True,
+        )
     if url.get_backend_name() != "sqlite":
-        raise ValueError("現在対応しているデータベースはSQLiteのみです。")
+        raise ValueError("対応データベースはSQLiteとPostgreSQLです。")
 
     if url.database and url.database != ":memory:":
         Path(url.database).parent.mkdir(parents=True, exist_ok=True)

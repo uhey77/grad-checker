@@ -1,0 +1,37 @@
+name: Database connectivity (read only)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: production-database-connectivity
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - run: node scripts/deployment/check-release-policy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with: {version: '0.13.1'}
+      - run: uv python install && uv sync --locked
+        working-directory: backend
+      - name: Check pooled GitHub Secret without reading application data
+        run: uv run --locked python -m scripts.check_database --connection-only
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Check direct GitHub Secret in isolated read-only step
+        run: uv run --locked python -m scripts.check_database --connection-only
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}

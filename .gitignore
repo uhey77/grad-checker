@@ -1,6 +1,9 @@
 node_modules/
 frontend/dist/
 *.local
+.env
+.env.*
+!.env.example
 references/*
 .venv/
 __pycache__/
@@ -11,3 +14,6 @@ __pycache__/
 backend/data/
 
 .DS_Store
+
+.vercel/
+gha-creds-*.json

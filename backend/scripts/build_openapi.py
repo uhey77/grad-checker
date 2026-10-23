@@ -223,7 +223,7 @@ def build_document() -> dict:  # noqa: PLR0915
                 "ユーザー名またはパスワードを確認してください。",
             ]
         if (
-            path != "/api/health"
+            path not in {"/api/health", "/api/ready"}
             and not path.startswith("/api/dev/")
             and not any(p.get("in") == "query" for p in parameters or [])
         ):
@@ -265,7 +265,8 @@ def build_document() -> dict:  # noqa: PLR0915
                 "未知・重複・空のクエリは拒否する。"
                 if parameters and method == "get"
                 else "クエリは使用しない（指定すると422）。"
-                if path != "/api/health" and not path.startswith("/api/dev/")
+                if path not in {"/api/health", "/api/ready"}
+                and not path.startswith("/api/dev/")
                 else "クエリは使用しない（実装は無視する）。"
             ),
             "tags": [
@@ -319,6 +320,19 @@ def build_document() -> dict:  # noqa: PLR0915
         "Health",
         public=True,
         description="Python・DBの稼働を保証しない。",
+    )
+    schemas["Readiness"] = obj(status={"type": "string", "enum": ["ok", "unavailable"]})
+    operation(
+        "/api/ready",
+        "get",
+        "readiness",
+        "Go・Python・DBの準備確認",
+        "Readiness",
+        public=True,
+        description="DB接続文字列・内部エラーは返さない。",
+    )
+    paths["/api/ready"]["get"]["responses"]["503"] = response(
+        "Readiness", "依存サービスが準備できていない。"
     )
     operation(
         "/api/auth/config",

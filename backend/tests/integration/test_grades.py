@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from apps.bridge.main import create_app
 from apps.settings import Settings
@@ -232,7 +233,7 @@ def test_database_rejects_inconsistent_grade_rows(grades_app):
     for index, (number, status, grade) in enumerate(
         [(1, "finalized", None), (1, "pending", "A"), (0, "finalized", "A")]
     ):
-        with pytest.raises(Exception, match="CHECK"):
+        with pytest.raises(IntegrityError):
             with app.state.database_engine.begin() as connection:
                 connection.execute(
                     insert,

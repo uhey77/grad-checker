@@ -47,6 +47,60 @@
         }
       }
     },
+    "/api/ready": {
+      "get": {
+        "operationId": "readiness",
+        "summary": "Go・Python・DBの準備確認",
+        "description": "DB接続文字列・内部エラーは返さない。\n\nクエリは使用しない（実装は無視する）。",
+        "tags": [
+          "学生API"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "成功。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/healthError405"
+          },
+          "503": {
+            "description": "依存サービスが準備できていない。",
+            "headers": {
+              "Cache-Control": {
+                "description": "保存を禁止する。",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/config": {
       "get": {
         "operationId": "authConfig",
@@ -4056,6 +4110,22 @@
         "required": [
           "expected_revision",
           "grades"
+        ],
+        "additionalProperties": false
+      },
+      "Readiness": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ]
+          }
+        },
+        "required": [
+          "status"
         ],
         "additionalProperties": false
       }

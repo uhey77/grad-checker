@@ -11,6 +11,7 @@ dependencies = [
     "sqlalchemy>=2.0,<3.0",
     "uvicorn>=0.41.0,<1.0",
     "argon2-cffi>=25.1,<26",
+    "psycopg[binary]>=3.3,<4",
 ]
 
 [build-system]
@@ -27,6 +28,7 @@ dev = [
     "openapi-spec-validator>=0.7,<0.9",
     "pre-commit>=4.6.2,<5",
     "pytest>=9.0.2,<10.0",
+    "pyyaml>=6.0.3,<7",
     "ruff>=0.17.0,<0.18",
     "ty>=0.0.86",
 ]

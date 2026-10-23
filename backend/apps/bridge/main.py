@@ -15,12 +15,14 @@ from apps.bridge.controllers.go_bridge_evaluation import (
     router as bridge_evaluation_router,
 )
 from apps.bridge.controllers.go_bridge_grades import router as bridge_grades_router
+from apps.bridge.controllers.go_bridge_health import router as health_router
 from apps.bridge.controllers.go_bridge_profile import router as bridge_profile_router
 from apps.bridge.controllers.go_bridge_subject_list import (
     router as bridge_subject_list_router,
 )
 from apps.bridge.middleware.errors import invalid_go_bridge_call
 from apps.settings import Settings
+from migrations.postgres import validate_database_schema
 from modules.accounts.infrastructure.external_services.passwords import ArgonPasswords
 from modules.accounts.infrastructure.persistence.schema import create_account_schema
 from modules.grades.infrastructure.persistence.schema import create_grade_schema
@@ -29,6 +31,7 @@ from modules.requirements.infrastructure.persistence.schema import (
 )
 from modules.subjects.infrastructure.persistence.database import create_database_schema
 from shared.infrastructure.persistence.database import create_database_engine
+from shared.infrastructure.persistence.health import database_ready
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -40,11 +43,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
-            create_database_schema(engine)
-            create_account_schema(engine)
-            create_grade_schema(engine)
-            create_requirement_schema(engine)
+            if engine.dialect.name == "postgresql":
+                # 本番起動でDDL・既存データ改訂を実行しない。
+                with engine.connect() as connection:
+                    validate_database_schema(connection)
+            else:
+                create_database_schema(engine)
+                create_account_schema(engine)
+                create_grade_schema(engine)
+                create_requirement_schema(engine)
             application.state.database_engine = engine
+            application.state.database_probe = lambda: database_ready(engine)
             application.state.settings = runtime_settings
             application.state.passwords = ArgonPasswords()
             for dependency, factory in build_dependencies(
@@ -70,6 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.add_exception_handler(RequestValidationError, invalid_go_bridge_call)
 
+    application.include_router(health_router)
     application.include_router(bridge_subject_list_router)
     application.include_router(bridge_auth_router)
     application.include_router(bridge_profile_router)

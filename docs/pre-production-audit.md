@@ -1,0 +1,123 @@
+# PR #75 本番移行前の監査
+
+監査日: 2026-10-23（日本時間）。対象は`feat/production-deployment`。本番公開可能と判定する前の、実測済み項目と未確認項目を区別する。本番デプロイ、mainへのマージ、本番DBのDDL・データ変更、PRODUCTION_DEPLOY_ENABLEDの変更は行っていない。
+
+## Vercel
+
+| 項目 | 実環境の結果 |
+| --- | --- |
+| Project / Org | `prj_QgFMi1xMYgrYLGPI1Yi9h0kdkNzW` / `team_tZDGBnNdyZxvlZvkV86h6SGv` |
+| Project / owner scope | `grad-checker` / `kanade3256s-projects` |
+| Root / Node / Framework | `frontend` / `24.x` / `vite` |
+| Build / Install / Output override | `npm run build` / `npm ci` / `null`（Vite既定dist） |
+| Git | `link: null`、`createDeployments: disabled`、`disableRepositoryDispatchEvents: true` |
+| ローカルCLI | 65.2.0のproject inspectと固定Project IDへのGETが成功 |
+| GitHub Secret | [手動監査39925387272](https://github.com/uhey77/grad-checker/actions/runs/39925387272)で既存VERCEL_TOKENのGETが成功 |
+| 公式プラグイン | 同じteam/projectへのGETは403。team一覧も空。`saml=false`、`ssoEnforced=false` |
+
+403は公式プラグイン接続の対象チーム認可に局在している。CLIとGitHub Secretの対象チームへのアクセスは成功しているため、プロジェクト削除・新規作成・トークン交換を解決策として実施していない。エラーの回復指示は`authorize_team_access`だが、このセッションにはそのツールが公開されていない。プラグイン側で対象teamの認可リンクを発行可能にする対応が必要。再接続やSSOが原因だとは断定しない。
+
+既存設定を`vercel pull --environment=production`で取得し、公開せず`vercel build --prod`を実行した。install auditは0 vulnerabilities、ビルドは成功。`vercel.mjs`から生成された`.vercel/output/config.json`にAPIの外部rewrite、API/assetsを除外したSPA fallback、API no-storeが存在することを検証した。未作成のCloud Runの代わりに検証用`https://grad-checker-audit.invalid.run.app`をビルド時だけ使用したため、実サービスへの疎通は証明していない。Git自動公開無効は実プロジェクト設定とソース設定を別々に確認した。
+
+手動トークン監査は既存Check workflowの`workflow_dispatch`だけから実行する。監査モード、既知の作業ブランチ、repository、手動指定した完全SHAとgithub.shaの一致を必須にし、PR/再利用可能CIでは実行しない。固定URLのGETだけを行い、Tokenの出力・artifact化・外部への持ち出し、WIF、DB Secret、deployを行わない。監査時は通常テストジョブをskipする。通常PRのCIは引き続き本番Secretを使わない。
+
+## GitHubと承認ゲート
+
+- 認証アカウントは`kanade3256`、repository permissionはWrite。Admin/Maintainはない。
+- environment一覧は0件、`production` GETは404。Required reviewersとmain制限は未構成。
+- 既存のGCP/VERCEL Variablesはワークフローの固定ターゲットと一致。DATABASE_URL、DIRECT_DATABASE_URL、VERCEL_TOKENは登録済み（値は取得していない）。PRODUCTION_DEPLOY_ENABLEDは未設定のまま。
+- deploy backendはmainかつ有効化フラグがtrueの場合だけproduction environmentで動作し、ポリシー検査の後にWIFを実行する。frontendはbackend成功に依存し、別runner・production environment・再検査を使いid-token権限を持たない。
+- database-connectivityはmainの手動実行、production environment、ポリシー検査を経てからDB Secretを使用する。SELECT 1のみでDDL・Seedをしない。
+- environmentがない状態でworkflowを動かして暗黙作成することや、WIFのmain条件を緩和することは行っていない。
+
+管理者の最小操作はSettings → Environments → `production`の作成、Required reviewersを1人以上、Deployment branches and tagsをSelectedでbranch `main`だけにすること。独立したレビューにする場合はPrevent self-reviewを有効化し、管理者bypassも無効にする。対応する契約機能が利用できない場合は公開を有効にせず承認方式を決める。この監査段階ではPRODUCTION_DEPLOY_ENABLEDを変更しない。Writeアカウントへのrepository Admin付与は不要。
+
+## Google Cloud
+
+GCPの静的設定監査は完了。根拠は、2026-10-23（日本時間）にユーザーが認証済みGoogle Cloud Shellで確認した以下の結果。このエージェント環境での実認証・実行検証を示すものではない。
+
+| 項目 | 確認結果 |
+| --- | --- |
+| GCP Project | `grad-checker-512505` |
+| Artifact Registry | `grad-checker`（`asia-northeast1`）が存在 |
+| Cloud Run | 現時点でサービス未作成 |
+| WIF Provider | `github-provider`が存在 |
+| WIF条件 | `uhey77/grad-checker`の`main`限定 |
+| Runtime SA | 存在・有効 |
+| Deployer SA | 存在・有効 |
+| DeployerのCloud Run権限 | `roles/run.developer` |
+| Artifact Registry IAM | Deployerに`roles/artifactregistry.writer` |
+| Runtime SA IAM | Deployerに`roles/iam.serviceAccountUser` |
+| WIF IAM | Deployerに`roles/iam.workloadIdentityUser` |
+| 通常DB Secret | Version 1がenabled、Runtime SAに`secretAccessor` |
+| Direct DB Secret | Version 1がenabled、Secret単位のIAMバインディングなし |
+
+Direct DB Secretの確認はSecret単位のIAMバインディングがないことまでで、上位階層から継承される権限の不存在を示すものではない。Secret値は本監査文書へ記録しない。Direct SecretはWebに渡さない。
+
+以下は静的設定監査の完了とは分けて、未検証のまま管理する。
+
+- GitHub ActionsからのWIFの実認証。
+- 本番DBへの接続。
+- 通常DB Secret・Direct DB Secretの値が指す実際の接続先。
+- Cloud Runの起動、Secret取得、readinessと実サービスへの疎通（サービス未作成）。
+
+このエージェント環境で以前行った読み取りAPI呼出しは、Cloud RunとSecret metadataが401、Artifact Registry・WIF Provider・Service Accountが403で認証できなかった。これらはリソース不存在や権限不足の証拠ではなく、今回の認証済みCloud Shellによる静的設定確認で更新した。WIF条件の緩和、鍵作成、Secret値の取得、本番リソースの作成・変更は今回行っていない。
+
+## NeonとSQLite
+
+Neon公式プラグインで既存project `plain-smoke-97118898`、Freeプラン、PostgreSQL 18、Singapore regionを確認。開始時に存在したのはproduction `br-calm-water-a1uug5fd`だけで、publicテーブルは0だった。
+
+ユーザーの個別承認後に`rehearsal/pr-75`（`br-delicate-sky-a1cmdbb8`）を作成した。computeは0.25 CU固定、期限は2026-10-24 17:36:03 JST。Freeプランではsuspend interval指定がHTTP 412で拒否されたため、ブランチ未作成を確認してからinterval指定を省いて作成し、既定値を維持した。プラン変更はない。共有compute/storage/転送枠を消費する。料金・枠は[Neon公式プラン](https://neon.com/docs/introduction/plans)を参照。
+
+Neon CLIはブラウザー認証がタイムアウトし、ローカルcallbackが手元のブラウザーから到達できなかった。認証済み公式プラグインで継続した。MCPが返したpooled接続から、取得済みcompute metadataにあるdirect hostへ切り替えて移行した。資格情報は権限0600のGit管理外一時ファイルに保存し、引数・ログへ実値を渡していない。
+
+元SQLiteはbackup APIでWALを含む整合したバックアップにした。元の11テーブルには既存データ881行があり、卒業要件・履歴関連7テーブルがないため、未加工バックアップは移行前スキーマ検査で拒否された。別の作業コピーに既存のSQLite初期化処理を適用して不足テーブルを追加し、元の11テーブルの全行・全カラムが変化していないことを照合した。元DBと最初のバックアップは変更していない。
+
+実データに卒業要件と判定履歴がないため、移行成功だけでは本番用卒業要件データの準備完了を意味しない。必要な出典付き規則データの確認・importは本番書込みとして別承認が必要で、今回自動投入していない。認証・成績・判定・履歴の業務動作は別スキーマの合成データで追加検証する。
+
+### リハーサル実行結果
+
+- 実バックアップ881行を18テーブルへコピーし、全テーブル・全カラムを照合してcommitした。スキーマ作成とデータ移行のread-only planも成功した。
+- 再実行は既存データを検出して拒否し、拒否前後の全テーブル内容が一致した。
+- 元のバックアップのSHA-256は不変。pooled接続でPythonの起動・readinessも成功した。クライアントのTLSはpsycopgのssl_in_useで確認した（Neon proxyの内側を示すpg_stat_sslだけではクライアントTLSの判定にならなかった）。
+- 別スキーマの合成データで既存の移行互換性テストを実行し、認証情報・セッション・CSRF・成績・保存済み判定履歴の移行保持を確認した。
+- 別スキーマの実Go → Python → Neon HTTP試験で登録・ログイン・復旧・セッション失効が成功した。
+- 別スキーマの実HTTP試験で成績保存、卒業判定pass、履歴保存・一覧・読取り、版競合409、別ユーザーからの履歴アクセス404を確認した。
+- 最後にproductionのpublicテーブルが引き続き0であることを公式プラグインで確認した。本番へDDL・Seed・データコピーを行っていない。
+
+移行後の実データ件数：
+
+| テーブル | 行数 |
+| --- | ---: |
+| academic_programs / curricula | 6 / 4 |
+| classifications / courses | 68 / 131 |
+| course_offerings / curriculum_courses | 161 / 498 |
+| students / student_credentials / auth_sessions / auth_attempts | 1 / 1 / 1 / 4 |
+| grade_attempts | 6 |
+| graduation_requirements / requirement_scopes / credit_rules | 0 / 0 / 0 |
+| credit_rule_courses / credit_rule_limits / completion_policies / check_results | 0 / 0 / 0 / 0 |
+
+共有用の成果物には資格情報・個人情報・バックアップDBを含めていない。接続用一時ファイルは試験後に削除する。バックアップはGit管理外の権限0600ファイルで保持し、隔離Neonブランチは指定期限で失効する。
+
+## 変更と検証
+
+- Vercelの実ビルド出力をstage前に検証するスクリプトと正常/誤配信の回帰テスト。
+- 既存GitHub Secretによる固定Project/Orgへの手動GET監査と、対象不一致・自動公開有効・403を拒否するテスト。
+- SQLite backup APIによるスナップショット作成。WAL、既存保存先の保護、元ファイル未作成、外部キー不正の4テストが成功。
+- Cloud RunのSecret参照・資源上限・probe、WIF前の承認ゲート、DB接続試験のmain/Secret制限、監査の手動/完全SHA制限、イメージ固定ターゲットの5契約テストが成功。
+- Nodeデプロイ関連テスト14件とactionlintが成功。既存プロジェクト設定を使用したVercel CLI 65.2.0の本番用ローカルビルドと生成routes検証も成功。
+- 既存のStarlette TestClient/httpx非推奨警告とuv-buildのバージョン範囲に関する警告は残るが、今回の検証失敗ではない。
+
+## 初回公開までの順序
+
+1. このPRの差分・CI・監査結果を確認する。mainへのマージは禁止のまま維持する。
+2. 管理者がGitHub productionのreviewer/main制限を設定する。GCPの静的設定監査は完了済み。WIF実認証・本番DB接続・Secret値の接続先・Cloud Run起動は未検証として後続で確認する。Vercel公式プラグインのteam認可は別に解決する。CLI/Actionsによる対象確認は成功済み。
+3. 本番に必要な卒業要件データ、移行元バックアップ、移行先、照合結果、所要時間を確認する。実アカウントのパスワードや復旧コードは収集しない。
+4. mainへのマージ、DBの初期DDL、データコピー、必要な規則importをそれぞれ影響とともに提示し、個別の本番承認を得る。
+5. 承認後のmainでWIFを検証し、承認されたSHAイメージを既存Registryへpushする。初回Cloud Runマニフェストをレビューする。実サービス作成は今回行わない。
+6. 初回サービスは非公開で作成し、Runtime SA・通常Secret version 1・TLS・readiness・起動ログを確認する。Vercelの通常rewriteは認証付きCloud Run呼出しを付与しないため、公開APIとしてのInvoker IAM設定は別承認後に管理者が一度だけ行う。run.developerのDeployerへ広いrun.adminを付けて代用しない。
+7. Vercelの実Cloud Run originでビルドし、未昇格deploymentでAPI中継・SPAを確認する。本番公開、有効化フラグの変更、promoteは別の明示承認後に行う。
+8. HTTPSブラウザーでCookie/CSRF、登録・復旧・ログイン、成績の編集、卒業判定、本人限定履歴、再デプロイ後の保持を確認する。試験用データ書込みも承認された範囲に限る。
+9. 異常時は対応する既知の正常Cloud Run revision/Vercel production deploymentへアプリだけを戻す。DBは削除・初期化せず差分を保全する。初回公開で正常revisionがない場合は公開停止を判断し、DBを残して原因を調査する。
+
+マニフェストの1CPU・512MiB・min 0/max 1・concurrency 4・request-based・startup boost無効、通常Secretのみ、起動ready/liveness分離は契約テストで検証している。GCPの静的設定・IAMは認証済みCloud Shellで確認済み。実クラウドのAPI validation、WIF実認証と実行時のIAM成立、Secret値の接続先、本番DB接続、Cloud Run起動は未検証。最小0/最大1でも費用上限は保証しない。Cloud Runのリクエスト・起動/処理時間・転送、Registry保存量、Secretアクセス、ログ量が費用要因であり、[Cloud Run公式料金](https://cloud.google.com/run/pricing)と請求アカウントの利用枠を初回作成前に確認する。今回はCloud Run/Registry/IAM/Budgetの作成・変更を行っていない。
