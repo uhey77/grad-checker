@@ -34,35 +34,34 @@
 
 ## Google Cloud
 
-この環境にはgcloud、GCPのApplication Default Credentials、OIC manifestがない。固定リソースへの読み取りAPIを実際に呼んだ結果は次のとおり。認証できない結果なので、リソース不存在やdeployer権限不足と解釈しない。
+GCPの静的設定監査は完了。根拠は、2026-10-23（日本時間）にユーザーが認証済みGoogle Cloud Shellで確認した以下の結果。このエージェント環境での実認証・実行検証を示すものではない。
 
-| リソース | HTTP結果 | 判定 |
-| --- | --- | --- |
-| Cloud Run `grad-checker-api` | 401 UNAUTHENTICATED | 存在・設定を未確認 |
-| Artifact Registry `grad-checker` | 403 PERMISSION_DENIED | 未確認 |
-| WIF Provider `github-provider` | 403 PERMISSION_DENIED | main条件を未確認、変更なし |
-| Runtime / Deployer Service Account | 各403 PERMISSION_DENIED | 存在・IAMを未確認 |
-| 通常 / Direct Secretのmetadata | 各401 UNAUTHENTICATED | version・IAMを未確認。Secret値のaccessは未実行 |
+| 項目 | 確認結果 |
+| --- | --- |
+| GCP Project | `grad-checker-512505` |
+| Artifact Registry | `grad-checker`（`asia-northeast1`）が存在 |
+| Cloud Run | 現時点でサービス未作成 |
+| WIF Provider | `github-provider`が存在 |
+| WIF条件 | `uhey77/grad-checker`の`main`限定 |
+| Runtime SA | 存在・有効 |
+| Deployer SA | 存在・有効 |
+| DeployerのCloud Run権限 | `roles/run.developer` |
+| Artifact Registry IAM | Deployerに`roles/artifactregistry.writer` |
+| Runtime SA IAM | Deployerに`roles/iam.serviceAccountUser` |
+| WIF IAM | Deployerに`roles/iam.workloadIdentityUser` |
+| 通常DB Secret | Version 1がenabled、Runtime SAに`secretAccessor` |
+| Direct DB Secret | Version 1がenabled、Secret単位のIAMバインディングなし |
 
-管理者は既存の認証済みCloud Shell等で次の読み取りを行う。鍵作成、WIF条件の緩和、Secret値の共有は不要。
+Direct DB Secretの確認はSecret単位のIAMバインディングがないことまでで、上位階層から継承される権限の不存在を示すものではない。Secret値は本監査文書へ記録しない。Direct SecretはWebに渡さない。
 
-```sh
-gcloud run services describe grad-checker-api --project grad-checker-512505 --region asia-northeast1
-gcloud artifacts repositories describe grad-checker --project grad-checker-512505 --location asia-northeast1
-gcloud iam workload-identity-pools providers describe github-provider \
-  --project grad-checker-512505 --location global --workload-identity-pool github-pool \
-  --format='json(name,disabled,attributeCondition,attributeMapping,oidc)'
-gcloud iam service-accounts describe grad-checker-runtime@grad-checker-512505.iam.gserviceaccount.com --project grad-checker-512505
-gcloud iam service-accounts get-iam-policy grad-checker-deployer@grad-checker-512505.iam.gserviceaccount.com --project grad-checker-512505
-gcloud secrets describe grad-checker-database-url --project grad-checker-512505
-gcloud secrets versions describe 1 --secret grad-checker-database-url --project grad-checker-512505
-gcloud secrets get-iam-policy grad-checker-database-url --project grad-checker-512505
-gcloud secrets describe grad-checker-direct-database-url --project grad-checker-512505
-gcloud secrets versions describe 1 --secret grad-checker-direct-database-url --project grad-checker-512505
-gcloud secrets get-iam-policy grad-checker-direct-database-url --project grad-checker-512505
-```
+以下は静的設定監査の完了とは分けて、未検証のまま管理する。
 
-Cloud Run describeは環境変数の実値を含み得るため、出力を公開しない。監査共有時はSecretの参照先、資源設定、サービス状態など必要な非機密項目だけを抜き出す。プロジェクトIAMとArtifact Registry IAMも管理者が確認し、Deployerのrun.developer/artifactregistry.writer、Runtime SAに対するiam.serviceAccountUser、GitHubの対象repository/mainだけに限定したworkloadIdentityUserを照合する。Runtimeには通常Secret単位のAccessorだけを与え、Direct SecretはWebに渡さない。既存の認証環境で読み取り結果を得る方が、エージェントへ広い管理権限を付けるより小さい操作で済む。
+- GitHub ActionsからのWIFの実認証。
+- 本番DBへの接続。
+- 通常DB Secret・Direct DB Secretの値が指す実際の接続先。
+- Cloud Runの起動、Secret取得、readinessと実サービスへの疎通（サービス未作成）。
+
+このエージェント環境で以前行った読み取りAPI呼出しは、Cloud RunとSecret metadataが401、Artifact Registry・WIF Provider・Service Accountが403で認証できなかった。これらはリソース不存在や権限不足の証拠ではなく、今回の認証済みCloud Shellによる静的設定確認で更新した。WIF条件の緩和、鍵作成、Secret値の取得、本番リソースの作成・変更は今回行っていない。
 
 ## NeonとSQLite
 
@@ -112,7 +111,7 @@ Neon CLIはブラウザー認証がタイムアウトし、ローカルcallback�
 ## 初回公開までの順序
 
 1. このPRの差分・CI・監査結果を確認する。mainへのマージは禁止のまま維持する。
-2. 管理者がGitHub productionのreviewer/main制限を設定し、GCPリソース・WIF・Secret参照/IAMを読み取り確認する。Vercel公式プラグインのteam認可は別に解決する。CLI/Actionsによる対象確認は成功済み。
+2. 管理者がGitHub productionのreviewer/main制限を設定する。GCPの静的設定監査は完了済み。WIF実認証・本番DB接続・Secret値の接続先・Cloud Run起動は未検証として後続で確認する。Vercel公式プラグインのteam認可は別に解決する。CLI/Actionsによる対象確認は成功済み。
 3. 本番に必要な卒業要件データ、移行元バックアップ、移行先、照合結果、所要時間を確認する。実アカウントのパスワードや復旧コードは収集しない。
 4. mainへのマージ、DBの初期DDL、データコピー、必要な規則importをそれぞれ影響とともに提示し、個別の本番承認を得る。
 5. 承認後のmainでWIFを検証し、承認されたSHAイメージを既存Registryへpushする。初回Cloud Runマニフェストをレビューする。実サービス作成は今回行わない。
@@ -121,4 +120,4 @@ Neon CLIはブラウザー認証がタイムアウトし、ローカルcallback�
 8. HTTPSブラウザーでCookie/CSRF、登録・復旧・ログイン、成績の編集、卒業判定、本人限定履歴、再デプロイ後の保持を確認する。試験用データ書込みも承認された範囲に限る。
 9. 異常時は対応する既知の正常Cloud Run revision/Vercel production deploymentへアプリだけを戻す。DBは削除・初期化せず差分を保全する。初回公開で正常revisionがない場合は公開停止を判断し、DBを残して原因を調査する。
 
-マニフェストの1CPU・512MiB・min 0/max 1・concurrency 4・request-based・startup boost無効、通常Secretのみ、起動ready/liveness分離は契約テストで検証している。実クラウドのAPI validationとIAM成立はGCP認証がないため未確認。最小0/最大1でも費用上限は保証しない。Cloud Runのリクエスト・起動/処理時間・転送、Registry保存量、Secretアクセス、ログ量が費用要因であり、[Cloud Run公式料金](https://cloud.google.com/run/pricing)と請求アカウントの利用枠を初回作成前に確認する。今回はCloud Run/Registry/IAM/Budgetの作成・変更を行っていない。
+マニフェストの1CPU・512MiB・min 0/max 1・concurrency 4・request-based・startup boost無効、通常Secretのみ、起動ready/liveness分離は契約テストで検証している。GCPの静的設定・IAMは認証済みCloud Shellで確認済み。実クラウドのAPI validation、WIF実認証と実行時のIAM成立、Secret値の接続先、本番DB接続、Cloud Run起動は未検証。最小0/最大1でも費用上限は保証しない。Cloud Runのリクエスト・起動/処理時間・転送、Registry保存量、Secretアクセス、ログ量が費用要因であり、[Cloud Run公式料金](https://cloud.google.com/run/pricing)と請求アカウントの利用枠を初回作成前に確認する。今回はCloud Run/Registry/IAM/Budgetの作成・変更を行っていない。
