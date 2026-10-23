@@ -1,24 +1,23 @@
 import { useTranslation } from "react-i18next";
 
 export function LanguageSwitcher() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
+  const targetLanguage = i18n.resolvedLanguage === "en" ? "ja" : "en";
+  const label =
+    targetLanguage === "ja" ? "日本語に切り替える" : "Switch to English";
+
   return (
-    <label className="language-switcher">
-      <span>{t("言語")}</span>
-      <select
-        aria-label={t("言語")}
-        value={i18n.resolvedLanguage ?? "ja"}
-        onChange={(event) => {
-          void i18n.changeLanguage(event.target.value);
-        }}
-      >
-        <option value="ja" lang="ja">
-          日本語
-        </option>
-        <option value="en" lang="en">
-          English
-        </option>
-      </select>
-    </label>
+    <button
+      type="button"
+      className="language-switcher"
+      lang={targetLanguage}
+      aria-label={label}
+      title={label}
+      onClick={() => {
+        void i18n.changeLanguage(targetLanguage);
+      }}
+    >
+      {targetLanguage.toUpperCase()}
+    </button>
   );
 }
