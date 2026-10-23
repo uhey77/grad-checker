@@ -1,103 +1,64 @@
 name: Check
-
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+  workflow_dispatch:
 permissions:
   contents: read
-
 concurrency:
-  group: check-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  changes:
-    name: Detect check changes
-    permissions:
-      contents: read
-      pull-requests: read
-    uses: ./.github/workflows/changes.yml
-
   backend:
-    name: Backend / ${{ matrix.check }}
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - check: api-docs
-            target: api-docs-check
-          - check: lint
-            target: backend-lint
-          - check: format-check
-            target: backend-format-check
-          - check: typecheck
-            target: backend-typecheck
-          - check: test
-            target: backend-test
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: grad_checker_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 12
+    env:
+      TEST_POSTGRES_URL: postgresql://postgres@127.0.0.1:5432/grad_checker_test
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v10.3.0
-        with:
-          working-directory: backend
-          enable-cache: true
-          cache-dependency-glob: "backend/uv.lock"
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.mod
-
-      - name: Install Python
-        run: uv python install
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: {node-version: '24'}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with: {go-version: '1.25.x'}
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with: {version: '0.13.1'}
+      - run: uv python install && uv sync --locked
         working-directory: backend
-
-      - name: Install dependencies
-        run: make backend-install
-
-      - name: Run check
-        run: make ${{ matrix.target }}
-
+      - run: make backend-check
+      - run: make backend-test
   frontend:
-    name: Frontend / ${{ matrix.check }}
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        check: [lint, typecheck, format-check, test]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: make frontend-install
-
-      - name: Run check
-        run: make frontend-${{ matrix.check }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24', cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+        working-directory: frontend
+      - run: make frontend-check frontend-test build
+      - run: node --test scripts/deployment/test-*.mjs
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with: {version: '0.13.1'}
+      - run: uv python install && uv sync --locked
+        working-directory: backend
+      - run: docker build -t grad-checker-production:test .
+      - run: uv run --locked --project backend python scripts/deployment/test_container.py
