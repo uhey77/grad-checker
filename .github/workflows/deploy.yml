@@ -118,6 +118,8 @@ jobs:
         run: node scripts/deployment/verify-frontend-env.mjs
       - name: Build Vercel production output
         run: vercel build --prod
+      - name: Verify compiled Vercel routing before staging
+        run: node scripts/deployment/verify-vercel-output.mjs
       - name: Stage Vercel production deployment
         id: stage
         shell: bash
