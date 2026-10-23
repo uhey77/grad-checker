@@ -4,6 +4,15 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
   workflow_dispatch:
+    inputs:
+      audit_vercel:
+        description: Run only the explicitly requested read-only Vercel token audit
+        type: boolean
+        default: false
+      expected_sha:
+        description: Exact reviewed commit SHA (required for the token audit)
+        type: string
+        required: false
 permissions:
   contents: read
 concurrency:
@@ -11,6 +20,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   backend:
+    if: github.event_name != 'workflow_dispatch' || !inputs.audit_vercel
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -39,6 +49,7 @@ jobs:
       - run: make backend-check
       - run: make backend-test
   frontend:
+    if: github.event_name != 'workflow_dispatch' || !inputs.audit_vercel
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -51,6 +62,7 @@ jobs:
       - run: make frontend-check frontend-test build
       - run: node --test scripts/deployment/test-*.mjs
   container:
+    if: github.event_name != 'workflow_dispatch' || !inputs.audit_vercel
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -62,3 +74,19 @@ jobs:
         working-directory: backend
       - run: docker build -t grad-checker-production:test .
       - run: uv run --locked --project backend python scripts/deployment/test_container.py
+  vercel-audit:
+    # PR・workflow_callでは実行しない。WIF・DB Secret・公開コマンドも使わない。
+    if: github.event_name == 'workflow_dispatch' && inputs.audit_vercel && github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/feat/production-deployment' && github.sha == inputs.expected_sha
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - name: Read only the fixed Vercel project with the existing GitHub Secret
+        run: node scripts/deployment/audit-vercel-project.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
