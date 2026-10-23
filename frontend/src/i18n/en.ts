@@ -4,15 +4,10 @@ export const english = {
     "Source: <citation>{{document}}</citation> ({{pages}})",
   "最新の判定（<time>{{date}}</time>）を判定履歴に保存しました。":
     "The latest evaluation (<time>{{date}}</time>) was saved to your history.",
-  "未保存の入力は反映されません。<time>{{date}}</time> 時点":
-    "Unsaved entries are not included. As of <time>{{date}}</time>.",
-  "総単位の不足は <strong>{{credits}}単位</strong>":
-    "Remaining total credits: <strong>{{credits}} credits</strong>",
 
   "{{value0}} 第{{value1}}回": "{{value0}}, attempt {{value1}}",
   "所属情報を読み込んでいます…": "Loading your program…",
   再試行: "Retry",
-  "科目一覧（開発用）": "Course list (development)",
   "保存中…": "Saving…",
   "未保存の変更があります。保存するまで他の画面には反映されません。":
     "You have unsaved changes. Save them to update other screens.",
@@ -187,8 +182,6 @@ export const english = {
   "{{value0}}単位": "{{value0}} credits",
   総単位の条件を満たしています: "Total credit requirement met",
   区分別の単位: "Credits by category",
-  "各区分に算入される単位を表示しています。":
-    "Credits counted toward each category are shown below.",
   合計達成: "Total met",
   "あと{{value0}}単位": "{{value0}} credits remaining",
   "算入{{value0}}単位、必要{{value1}}単位、不足{{value2}}単位":
@@ -313,8 +306,6 @@ export const english = {
   "最新の卒業・修了要件":
     "Latest graduation and degree completion requirements",
   概要を再取得: "Reload overview",
-  "保存済みの成績に基づく単位要件の確認です。大学による正式な卒業・修了認定ではありません。":
-    "This checks credit requirements using your saved grades. The university makes the official graduation or degree completion decision.",
   "保存済みの成績は0件です。成績入力から修得状況を保存してください。":
     "No grades have been saved. Save your course completion status on the Grades screen.",
   条件別の詳細を閉じる: "Hide requirement details",

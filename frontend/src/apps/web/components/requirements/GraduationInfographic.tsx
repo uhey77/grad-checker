@@ -1,4 +1,4 @@
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useEntranceProgress } from "../../hooks/useEntranceProgress.ts";
 import type {
   GraduationResult,
@@ -66,23 +66,14 @@ export function GraduationInfographic({
             </span>
           </div>
         </div>
-        <p className="credit-orbit-caption">
-          {total.shortage > 0 ? (
-            <Trans
-              i18nKey="総単位の不足は <strong>{{credits}}単位</strong>"
-              values={{ credits: total.shortage }}
-              components={{ strong: <strong /> }}
-            />
-          ) : (
+        {total.shortage === 0 && (
+          <p className="credit-orbit-caption">
             <strong>{t("総単位の条件を満たしています")}</strong>
-          )}
-        </p>
+          </p>
+        )}
       </div>
       <div className="category-progress-panel">
         <h3>{t("区分別の単位")}</h3>
-        <p className="category-progress-help">
-          {t("各区分に算入される単位を表示しています。")}
-        </p>
         <div className="category-progress-list">
           {categories.map((row, index) => {
             const delay = Math.min(index, 4) * 0.1;
