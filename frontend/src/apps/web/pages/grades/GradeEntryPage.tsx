@@ -17,15 +17,9 @@ import { PageHeading } from "../../components/PageHeading.tsx";
 import { SaveBar } from "../../components/SaveBar.tsx";
 import { ErrorState, LoadingState } from "../../components/StatusPanels.tsx";
 import { programLabel } from "../../components/subjects/labels.ts";
-import type { GraduationUseCases } from "../../../../modules/requirements/public.ts";
-import { useCheckHistory } from "../../hooks/requirements/useCheckHistory.ts";
-import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck.ts";
-import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel.tsx";
 export function GradeEntryPage({
   catalogUseCases,
   gradeUseCases,
-  graduationUseCases,
-  active,
   csrf,
   expire,
   latestRevision,
@@ -36,8 +30,6 @@ export function GradeEntryPage({
 }: {
   catalogUseCases: CourseCatalogUseCases;
   gradeUseCases: GradeUseCases;
-  graduationUseCases: GraduationUseCases;
-  active: boolean;
   csrf: string;
   expire: () => void;
   latestRevision: number;
@@ -58,27 +50,6 @@ export function GradeEntryPage({
   );
   const data = entry.data;
   const curriculum = data?.catalog.curriculum;
-  const checkBlocked =
-    !data ||
-    entry.dirty ||
-    entry.busy ||
-    entry.conflict ||
-    latestRevision > data.saved.dataRevision;
-  const history = useCheckHistory(graduationUseCases, active && !!data, expire);
-  const check = useGraduationCheck(
-    graduationUseCases,
-    data?.saved.dataRevision ?? 0,
-    curriculum?.curriculumId ?? "",
-    csrf,
-    active,
-    checkBlocked,
-    expire,
-    () => {
-      // 保存した判定を最新として表示し、履歴の先頭ページを取り直す。
-      history.showLatest();
-      history.refresh();
-    },
-  );
   const entered = new Set(entry.draft.map((g) => g.courseId)).size;
   const curriculumLabel =
     curriculum && savedProgram?.curriculumId === curriculum.curriculumId
@@ -90,24 +61,6 @@ export function GradeEntryPage({
         {t("← ダッシュボードへ戻る")}
       </button>
       <PageHeading title={t("成績入力")} />
-      {data && (
-        <GraduationCheckPanel
-          busy={check.busy}
-          blocked={checkBlocked}
-          dirty={entry.dirty}
-          check={(answers) => void check.check(answers)}
-          curriculumId={curriculum?.curriculumId}
-          degreeLevel={savedProgram?.completionPolicy?.degreeLevel}
-          completionConditions={
-            savedProgram?.curriculumId === curriculum?.curriculumId
-              ? savedProgram?.completionPolicy?.conditions
-              : []
-          }
-          saved={check.saved}
-          error={check.error}
-          history={history}
-        />
-      )}
       {!data ? (
         entry.loadError ? (
           entry.programMissing ? (

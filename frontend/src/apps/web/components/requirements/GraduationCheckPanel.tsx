@@ -1,5 +1,5 @@
 import { Trans, useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { CompletionAnswer } from "../../../../modules/requirements/public.ts";
 import type {
   CheckPage,
@@ -7,7 +7,6 @@ import type {
 } from "../../../../modules/requirements/public.ts";
 import { ErrorState, LoadingState } from "../StatusPanels.tsx";
 import { CheckHistory } from "./CheckHistory.tsx";
-import { GraduationResultView } from "./GraduationResultView.tsx";
 import { PastCheckView } from "./PastCheckView.tsx";
 import { checkedAtLabel } from "./labels.ts";
 type Remote<T> =
@@ -24,18 +23,18 @@ type Remote<T> =
 export function GraduationCheckPanel({
   busy,
   blocked,
-  dirty,
   check,
   saved,
   error,
   history,
+  refresh,
+  children,
   completionConditions = [],
   curriculumId = "",
   degreeLevel = "bachelor",
 }: {
   busy: boolean;
   blocked: boolean;
-  dirty: boolean;
   check: (answers?: CompletionAnswer[]) => void;
   curriculumId?: string;
   degreeLevel?: "bachelor" | "master" | "doctoral";
@@ -45,6 +44,8 @@ export function GraduationCheckPanel({
   }[];
   saved?: SavedCheck;
   error?: string;
+  refresh: () => void;
+  children: ReactNode;
   history: {
     page: Remote<{
       data: CheckPage;
@@ -79,9 +80,16 @@ export function GraduationCheckPanel({
   return (
     <section
       className="panel graduation-check"
-      aria-label={isGraduate ? t("修了要件チェック") : t("卒業要件チェック")}
+      aria-label={t("卒業・修了要件")}
     >
-      <h2>{isGraduate ? t("修了要件チェック") : t("卒業要件チェック")}</h2>
+      <div className="dashboard-actions">
+        <h2>{history.detail ? t("過去の判定") : t("最新の卒業・修了要件")}</h2>
+        {!history.detail && (
+          <button type="button" disabled={busy} onClick={refresh}>
+            {t("概要を再取得")}
+          </button>
+        )}
+      </div>
       {history.detail ? (
         <PastCheckView
           detail={history.detail}
@@ -90,13 +98,7 @@ export function GraduationCheckPanel({
         />
       ) : (
         <>
-          {dirty && (
-            <p>
-              {t(
-                "未保存の変更があります。成績を保存してから判定してください。",
-              )}
-            </p>
-          )}
+          <p>{t("保存済みの成績を使って判定します。")}</p>
           {completionConditions.length > 0 && (
             <fieldset disabled={busy || blocked}>
               <legend>{t("単位以外の修了条件（本人申告）")}</legend>
@@ -163,22 +165,17 @@ export function GraduationCheckPanel({
             />
           )}
           {saved && (
-            <>
-              <p className="check-saved" role="status">
-                <Trans
-                  i18nKey="最新の判定（<time>{{date}}</time>）を判定履歴に保存しました。"
-                  values={{
-                    date: checkedAtLabel(
-                      saved.createdAt,
-                      i18n.resolvedLanguage,
-                    ),
-                  }}
-                  components={{ time: <time dateTime={saved.createdAt} /> }}
-                />
-              </p>
-              <GraduationResultView result={saved.result} />
-            </>
+            <p className="check-saved" role="status">
+              <Trans
+                i18nKey="最新の判定（<time>{{date}}</time>）を判定履歴に保存しました。"
+                values={{
+                  date: checkedAtLabel(saved.createdAt, i18n.resolvedLanguage),
+                }}
+                components={{ time: <time dateTime={saved.createdAt} /> }}
+              />
+            </p>
           )}
+          {children}
         </>
       )}
       <CheckHistory

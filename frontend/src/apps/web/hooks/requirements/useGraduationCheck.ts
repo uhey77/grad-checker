@@ -26,7 +26,7 @@ export function useGraduationCheck(
   } | null>(null);
   const { busy, run, abort, running } = useExclusiveAction();
   const key = `${curriculumId}:${revision}`;
-  // 所属・成績の変更、未保存の編集、画面離脱は進行中の判定を中断する。
+  // 所属・保存済み成績の変更、概要の再取得、画面離脱は進行中の判定を中断する。
   useEffect(() => () => abort(), [key, active, blocked, abort]);
 
   async function check(answers?: CompletionAnswer[]) {
@@ -60,5 +60,14 @@ export function useGraduationCheck(
     );
   }
   const visible = active && !blocked && state?.key === key ? state : null;
-  return { busy, check, saved: visible?.check, error: visible?.error };
+  return {
+    busy,
+    check,
+    saved: visible?.check,
+    error: visible?.error,
+    reset: () => {
+      abort();
+      setState(null);
+    },
+  };
 }

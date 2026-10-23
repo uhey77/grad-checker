@@ -73,9 +73,9 @@ function StudentScreens({
         {screen === null && !profile.error ? (
           <LoadingState>{t("所属情報を読み込んでいます…")}</LoadingState>
         ) : null}
-        {screen === "dashboard" && (
-          <div>
-            {!profile.state ? (
+        <div hidden={screen !== "dashboard"}>
+          {screen !== null ? (
+            !profile.state ? (
               profile.error ? (
                 <ErrorState
                   message={profile.error}
@@ -88,6 +88,7 @@ function StudentScreens({
             ) : (
               <DashboardPage
                 useCases={application.requirements}
+                csrf={csrf}
                 active={screen === "dashboard" && !!profile.state}
                 revision={latestRevision}
                 curriculumId={profile.state?.profile.curriculumId ?? null}
@@ -96,9 +97,9 @@ function StudentScreens({
                 showProfile={() => setScreen("profile")}
                 showGrades={() => setScreen("grades")}
               />
-            )}
-          </div>
-        )}
+            )
+          ) : null}
+        </div>
         <div
           hidden={screen !== "profile" && !(screen === null && profile.error)}
         >
@@ -117,8 +118,6 @@ function StudentScreens({
             <GradeEntryPage
               catalogUseCases={application.courseCatalog}
               gradeUseCases={application.grades}
-              graduationUseCases={application.requirements}
-              active={screen === "grades"}
               csrf={csrf}
               expire={expire}
               latestRevision={latestRevision}

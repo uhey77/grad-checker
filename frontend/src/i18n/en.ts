@@ -158,8 +158,7 @@ export const english = {
     "Candidates for outstanding requirements, terms, completion status at evaluation, and reasons",
   修了要件チェック: "Degree completion check",
   卒業要件チェック: "Graduation requirements check",
-  "未保存の変更があります。成績を保存してから判定してください。":
-    "You have unsaved changes. Save your grades before running a check.",
+  "保存済みの成績を使って判定します。": "Evaluations use your saved grades.",
   "単位以外の修了条件（本人申告）":
     "Non-credit completion requirements (self-reported)",
   "大学の認定状況を確認して回答してください。未入力の条件があると判定を保留します。回答はこの判定の履歴に保存されます。":
@@ -314,6 +313,7 @@ export const english = {
   概要から再取得: "Reload from overview",
   "卒業要件の詳細を読み込んでいます…": "Loading requirement details…",
   "最新の卒業・修了要件概要": "Latest requirements overview",
+  "卒業・修了要件": "Graduation and degree completion requirements",
   一覧を読み込めませんでした: "Could not load course list",
   科目データが登録されていません: "No course data registered",
   "時間をおいて再読み込みしてください。": "Please wait and reload.",
