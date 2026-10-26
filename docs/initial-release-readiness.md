@@ -116,3 +116,23 @@ Vercelの通常rewriteはCloud RunのInvoker認証を付けない。将来APIを
 - 公開後はCloud Run Ready / 5xx / latency / memory / OOM、Neon接続・compute、Vercel API中継エラー、GCP Billing/Registry/Secretアクセス/ログ量を確認する。ログ本文やCookie・SQLパラメーター・資格情報は成果物に貼り付けない。
 
 公開全体の承認依頼は、GitHub Secrets監査の順序解決、最新CI、対象main SHA・イメージdigest、公開権限主体、Vercel stage結果が揃った時点で操作ごとに行う。Cloud Shell監査はpass報告を受領済み。個別承認Aの順序変更は明示承認後に実施済みで、mainマージと読取り監査は完了した。Cloud Run作成・image push・公開IAM・Vercel昇格・有効化フラグ変更は承認に含めず、未実施のまま維持する。
+
+## 一括承認後の初回構築（2026-10-26）
+
+PR #76は承認されたHEAD `c453bd32df466896aab60b6a6779c652f4dbcc37` の最新CI成功後にDraft解除・マージ済み。
+マージコミットは `c1c6cf3f7e47e59c874329ebdf8aa54566e98d49`。
+ユーザーは初回構築、必要最小限の公開Invoker、Vercel stage・検証後の本番昇格まで一括承認した。
+GitHub `production` 環境の承認ゲートは引き続き維持する。
+
+`Initial private production service` はmainの完全SHA指定による手動実行専用。
+CIと隔離TLS PostgreSQLでのイメージ試験に成功してからWIF認証し、既存サービスがない場合に限って
+Registryへpushし、digest固定manifestで非公開サービスを原子的に作成する。
+本番Secretは通常DB用の既存version 1のみで、DIRECT_DATABASE_URL・DDL・Seed・移行は使わない。
+自動公開フラグが無効であることを確認し、IAM変更とVercel操作は含まない。
+作成失敗後の再実行は既存サービス検出で停止するため、原因・revision・digestを確認してから復旧方法を判断する。
+作成済みサービスやRegistryイメージを自動削除しない。失敗を成功として扱わない。
+
+費用確認の基準はCloud Runのrequest-based billing、1 vCPU / 512 MiB、min 0 / max 1、concurrency 4。
+無料枠を他サービスと共有するため、無料とは断定しない。
+予算通知は課金停止や費用上限を保証しない。実際の請求通貨、通知先、予算IAMを確認できた場合に設定する。
+本番公開、認証済みreadiness、データ不変性、ブラウザー受入の成否は実行後に別途記録し、現時点では未完了。
