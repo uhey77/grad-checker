@@ -1,23 +1,29 @@
 # 初回公開の準備と承認対象（2026-10-26）
 
-Phase 1・2の実測結果と、Phase 3へ進む条件を管理する。本番DDL・SQLite移行・シードは再実行しない。旧SQLiteへの書込み再開は禁止。mainマージ、Cloud Run作成・公開、Vercel昇格、デプロイ有効化は未実施。
+PR #75のmainマージと読取り監査は完了した。本番DDL・SQLite移行・シードは再実行しない。旧SQLiteへの書込み再開は禁止。Cloud Run作成・公開、Vercel昇格、デプロイ有効化は未実施。
+
+現在のPhase 1は「PR #76の別途承認後のマージ」と「そのmainを使う非公開Cloud Run初回構築」である。image push・サービス作成は、対象SHA・digest固定方針・費用・設定を提示した後の別途承認まで行わない。公開IAM・allUsers付与・Vercel接続/公開はPhase 1に含めない。以下の旧公開手順は将来の別承認用として区別する。
+
+## マージ後の状態
+
+ユーザーの個別承認AによりPR #75をmainへマージ済み。公開フラグは未設定を維持し、読取り監査も成功した。最新結果とレビューの根拠は[マージ後の読取り監査](post-merge-readonly-audit.md)を参照する。以下は初回公開前の準備記録として保持する。
 
 ## 現在の判定
 
 | 項目 | 結果 |
 | --- | --- |
-| PR #75 | 準備コードhead `23dcc9c4da71ff7e8f304a3f9dc818d79e88c541`はMERGEABLE/CLEAN。通常CIのbackend/frontend/container/benchmarkは全成功（Check run 40260257412、benchmark run 40260260319）。手動Vercel Secret監査40260703227も成功 |
+| PR #75 | 最終head `f35a19b2a46b2f98ee9048e51bd82f36d64ddadb`の通常CI成功後、承認によりmain `8718b6ccd8cbde37085a05a135f94d60cf8a512f`へマージ済み。最新HEADの証跡は[マージ後監査](post-merge-readonly-audit.md)に記録。手動Vercel Secret監査40260703227も成功 |
 | production承認 | reviewer `uhey77`、mainのbranch 1件のみ、管理者bypass無効、Prevent self-review無効。実APIと既存ポリシースクリプトで再確認 |
 | Neon本番 | project `plain-smoke-97118898` / production `br-calm-water-a1uug5fd` / DB `grad-checker`。全18テーブルをSELECTで再集計し、[移行記録](production-neon-migration-2026-10-26.md)の各件数・合計1,738行と一致 |
 | Neon接続 | 公式接続機能で取得した資格情報を画面・ログ・ファイルへ保存せず検査。直接/pooledともTLS・スキーマ・18テーブル/1,738行を確認。GitHub/Secret Managerに保存された接続値の証明とは区別する |
-| GitHub Secrets | DATABASE_URL / DIRECT_DATABASE_URL / VERCEL_TOKENは登録済み。production environment secretsに上書きはない。DB接続値はREST APIで取得できず、DB Secretsの保存接続先は未実証。VERCEL_TOKENによる固定Project GETは[手動監査](https://github.com/uhey77/grad-checker/actions/runs/40260703227)で成功 |
-| GCP | この実行環境にgcloud・GCP認証はない。ユーザーが認証済みCloud Shellで23dcc9cのmetadata/IAM監査とSecret Manager接続先監査を実行し、両方passと報告した。これはユーザー実行の結果であり、エージェントによるGCP実行ではない。ActionsのWIF実認証は未実施 |
+| GitHub Secrets | DATABASE_URL / DIRECT_DATABASE_URL / VERCEL_TOKENは登録済み。production environment secretsに上書きはない。DB接続値そのものはREST APIで取得せず、main 8718b6cの読取り監査40269546985で両DB Secretsの本番接続先・TLS・18テーブル/1738行を実証した。VERCEL_TOKENによる固定Project GETは[手動監査](https://github.com/uhey77/grad-checker/actions/runs/40260703227)で成功 |
+| GCP | この実行環境にgcloud・GCP認証はない。ユーザーが認証済みCloud Shellで23dcc9cのmetadata/IAM監査とSecret Manager接続先監査を実行し、両方passと報告した。これはユーザー実行の結果であり、エージェントによるGCP実行ではない。ActionsのWIF実認証はmain 8718b6cの読取り監査40269546985で成功 |
 | Vercel公式接続 | チーム認可をユーザーが完了し、同じ接続で対象Project/production deploymentのGETが成功。以前の403は解消 |
 | Vercel固定対象 | CLI/APIでProject `prj_QgFMi1xMYgrYLGPI1Yi9h0kdkNzW` / Team `team_tZDGBnNdyZxvlZvkV86h6SGv`、Root frontend、Node 24.x、Vite、build `npm run build` / install `npm ci`を確認。Git linkなし、自動deploy無効 |
 | 実API rewrite | ソースと回帰テストでAPI優先・SPA除外・no-storeを確認。現在の公開画面は旧初期deploymentで、実Cloud Runへのrewrite/readinessは未成立。初回サービスの実URL取得後に生成ビルド出力とstageで検証する |
 | 公開フラグ | PRODUCTION_DEPLOY_ENABLEDは未設定を維持。初回操作を既存deploy.ymlの一括処理で代用しない |
 
-[GitHubのSecret取得API](https://docs.github.com/en/rest/actions/secrets#get-a-repository-secret)は値を返さない。main限定のproduction environmentを緩和せず、マージ前にそのmain用workflowから既存GitHub Secretsを検証することはできない。したがって「Secret照合完了後に初めてmainマージ」という順序は現在の保護設定と両立しない。別途承認されたmainマージ後に公開フラグを未設定のまま読取り監査を行うか、既存の同等に保護された監査経路を用意する必要がある。今回、例外としてマージしたり保護を緩めたりしていない。
+[GitHubのSecret取得API](https://docs.github.com/en/rest/actions/secrets#get-a-repository-secret)は値を返さない。main限定のproduction environmentを緩和せず、マージ前にそのmain用workflowから既存GitHub Secretsを検証することはできない。この制約に対し、ユーザーが「mainマージ後に公開フラグ未設定で読取り監査する」順序を明示承認し、PR #75で実行済み。保護ルールは緩めていない。PR #76のマージ承認や、image push・クラウド構築の承認まで取得済みという意味ではない。
 
 ## ローカル暗号化バックアップ
 
@@ -67,28 +73,32 @@ uvがなければ既存の方法で`uv==0.13.1`を用意する。Python 3.15はu
 2. 成功後、別runner・production再承認でWIF実認証を行い、固定の既存RegistryとCloud Run inventoryを読む。DB SecretをWIF jobへ渡さない。
 3. image push、サービス作成、公開IAM、Vercel deploy/promote、有効化フラグ変更は行わない。
 
-Cloud ShellのSecret Manager監査とActionsのGitHub Secrets監査が両方成功して初めて、保存された接続先の一致を確認済みとする。Secret Manager側はユーザー実行のpass報告を受領済み。GitHub DB Secrets側はmainマージとproduction承認後の実行待ち。
+Cloud ShellのSecret Manager監査とActionsのGitHub Secrets監査が両方成功して初めて、保存された接続先の一致を確認済みとする。Secret Manager側はユーザー実行のpass報告を受領済み。GitHub DB Secrets側もmain 8718b6cの[読取り監査40269546985](https://github.com/uhey77/grad-checker/actions/runs/40269546985)で成功し、WIF実認証と既存Registry読取りも成功した。
 
-## 初回作成・公開の確定手順（未実行）
+## 初回作成と将来の公開手順
 
-### 個別承認A: mainマージと読取り監査
+### 個別承認A: PR #75マージと読取り監査（完了）
 
-最新CI・差分を再確認したPR #75をmainへマージする。PRODUCTION_DEPLOY_ENABLEDは未設定を維持し、公開しない。マージ後の完全SHAを固定し、`production-preflight.yml`へexpected_shaを指定して手動実行する。現在のPhase 1の順序からこの手順を先行させる場合は、その例外も明示承認に含める。
+ユーザーの明示承認後、PR #75をmainへマージし、`production-preflight.yml`をmain完全SHA 8718b6ccd8cbde37085a05a135f94d60cf8a512fに固定して実行した。DB Secrets・WIF両jobが成功し、PRODUCTION_DEPLOY_ENABLEDは未設定を維持した。
 
-### 個別承認B: イメージpush・Cloud Run初回作成・公開IAM
+PR #76は別の文書PRであり、最新HEAD・CI・Draft状態を確認して、別途承認後にのみマージする。非公開構築の基準main SHAはPR #76マージ後に確定し直す。
+
+### 現在のPhase 1の構築承認: image push・非公開Cloud Run初回作成（未実施）
 
 - 対象はGCP `grad-checker-512505` / `asia-northeast1` / Registry `grad-checker` / Cloud Run `grad-checker-api`。
-- イメージ名は`asia-northeast1-docker.pkg.dev/grad-checker-512505/grad-checker/api:<承認済みmainの40桁SHA>`。既存Dockerfileを使ってビルド・pushし、Registryのdigestを実行記録へ保存する。現時点ではmain SHAとpush後digestは未確定。DB・バックアップ・環境ファイルは.dockerignoreで除外する。
-- `DEPLOY_IMAGE`に上記のタグを指定し、`python scripts/deployment/render_cloud_run.py`でマニフェストを生成、レビューする。`gcloud run services replace`による初回作成は非公開。Runtime SAは`grad-checker-runtime`、通常DB Secret version 1のみを注入する。
+- イメージ名は`asia-northeast1-docker.pkg.dev/grad-checker-512505/grad-checker/api:<承認済みmainの40桁SHA>`。既存Dockerfileを使ってビルド・pushし、Registryのdigestを実行記録へ保存する。PR #76マージ後のmain SHAとpush後digestは未確定。DB・バックアップ・環境ファイルは.dockerignoreで除外する。
+- `DEPLOY_IMAGE`に上記のタグを指定して既存rendererでレビュー用マニフェストを生成できるが、現行rendererはSHAタグのみ受理する。今回の実作成はpush後に取得した`api@sha256:<digest>`へ固定したマニフェストを改めて検証してから行う。タグだけでの実作成はしない。`gcloud run services replace`による初回作成は非公開とし、Invoker IAM checkを維持する。Runtime SAは`grad-checker-runtime`、通常DB Secret version 1のみを注入し、DIRECT_DATABASE_URLを渡さない。
 - 設定は1CPU / 512MiB / min 0 / max 1 / concurrency 4 / request-based / startup boost無効。livenessは/api/health、startup/readinessは/api/ready。PUBLIC_ORIGINは`https://grad-checker-chi.vercel.app`。
 - 既存SAでの作成にはCloud Run Developer、Runtime SAのService Account User、イメージ読取り権限が必要。image pushにはRegistry writerが必要。通常CDの権限を広げて代用しない。[Cloud Run公式デプロイ要件](https://docs.cloud.google.com/run/docs/deploying)
 - 非公開のReady状態と認証付き疎通を先に確認する。必要なら権限を持つ管理者の`gcloud run services proxy grad-checker-api --project grad-checker-512505 --region asia-northeast1 --port 18080`からローカル/api/readyを確認し、終了後proxyを止める。
-- Vercelの通常rewriteはCloud RunのInvoker認証を付けないため、APIの公開承認後に管理者が対象サービスへ`allUsers`の`roles/run.invoker`を追加する方針とする。対象サービスのsetIamPolicy権限が必要。組織ポリシーに拒否されたら停止し、別方式を無断で選ばない。[公開アクセスの公式手順](https://docs.cloud.google.com/run/docs/authenticating/public)
+- Phase 1では公開IAMを変更せず、allUsers/allAuthenticatedUsersへのInvoker付与やInvoker IAM check無効化を行わない。匿名リクエストが拒否され、許可された認証済み経路で/api/readyが成功することを別々に確認する。Vercelは変更しない。
 - Cloud Run作成・Registry保存・起動/処理・転送・ログ等の費用が発生し得る。min/max設定は費用上限を保証しない。初回作成前に請求先の利用枠・予算通知先を確認する。
 
 既存deploy.ymlはサービス存在確認後にimage pushするため、初回未作成の状態では使えない。初回は上記の管理者手順で作成する。通常CDへの切替・有効化は初回公開成功後の別承認とする。
 
-### 個別承認C: Vercel stage検証と本番昇格
+### 将来の別承認: 公開IAMとVercel stage・本番昇格（Phase 1の対象外）
+
+Vercelの通常rewriteはCloud RunのInvoker認証を付けない。将来APIを公開する際は、管理者によるサービス単位の公開IAMと組織ポリシー確認を別途承認する。Phase 1中にallUsers付与やInvoker IAM check無効化を行わない。[公開アクセスの公式手順](https://docs.cloud.google.com/run/docs/authenticating/public)
 
 1. 既存Project/Teamを再確認する。実Cloud Run status.urlをCLOUD_RUN_API_ORIGINへ渡す。DB資格情報をVercelへ設定しない。
 2. 固定CLI 65.2.0の`vercel pull --environment=production`をumask 077で実行。`verify-frontend-env.mjs`を通し、`vercel build --prod`後に`verify-vercel-output.mjs`で実API origin・パス・SPA除外・no-storeを検証する。
@@ -105,4 +115,4 @@ Cloud ShellのSecret Manager監査とActionsのGitHub Secrets監査が両方成�
 - 昇格前に不調ならstageを昇格しない。昇格後に問題が出たら正常revision/deploymentへ戻すか、初回は公開停止を判断する。Vercel rollback後の自動ドメイン割当状態も確認する。
 - 公開後はCloud Run Ready / 5xx / latency / memory / OOM、Neon接続・compute、Vercel API中継エラー、GCP Billing/Registry/Secretアクセス/ログ量を確認する。ログ本文やCookie・SQLパラメーター・資格情報は成果物に貼り付けない。
 
-公開全体の承認依頼は、GitHub Secrets監査の順序解決、最新CI、対象main SHA・イメージdigest、公開権限主体、Vercel stage結果が揃った時点で操作ごとに行う。Cloud Shell監査はpass報告を受領済み。現在先に承認が必要なのは、個別承認Aの「mainマージと読取り監査だけを先行する順序変更」。Cloud Run作成・image push・公開IAM・Vercel昇格・有効化フラグ変更はこの承認に含めない。
+公開全体の承認依頼は、GitHub Secrets監査の順序解決、最新CI、対象main SHA・イメージdigest、公開権限主体、Vercel stage結果が揃った時点で操作ごとに行う。Cloud Shell監査はpass報告を受領済み。個別承認Aの順序変更は明示承認後に実施済みで、mainマージと読取り監査は完了した。Cloud Run作成・image push・公開IAM・Vercel昇格・有効化フラグ変更は承認に含めず、未実施のまま維持する。
