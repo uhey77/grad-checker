@@ -1,6 +1,6 @@
 # PR #75 本番移行前の監査
 
-監査日: 2026-10-23（日本時間）。対象は`feat/production-deployment`。本番公開可能と判定する前の、実測済み項目と未確認項目を区別する。本番デプロイ、mainへのマージ、本番DBのDDL・データ変更、PRODUCTION_DEPLOY_ENABLEDの変更は行っていない。
+初回監査日: 2026-10-23、承認ゲート再監査日: 2026-10-26（日本時間）。対象は`feat/production-deployment`。本番公開可能と判定する前の、実測済み項目と未確認項目を区別する。本番デプロイ、mainへのマージ、本番DBのDDL・データ変更、PRODUCTION_DEPLOY_ENABLEDの変更は行っていない。
 
 ## Vercel
 
@@ -24,13 +24,27 @@
 ## GitHubと承認ゲート
 
 - 認証アカウントは`kanade3256`、repository permissionはWrite。Admin/Maintainはない。
-- environment一覧は0件、`production` GETは404。Required reviewersとmain制限は未構成。
-- 既存のGCP/VERCEL Variablesはワークフローの固定ターゲットと一致。DATABASE_URL、DIRECT_DATABASE_URL、VERCEL_TOKENは登録済み（値は取得していない）。PRODUCTION_DEPLOY_ENABLEDは未設定のまま。
+- 2026-10-23時点の`production` GET 404・未構成という結果を更新した。2026-10-26にGitHub REST APIの`GET /repos/uhey77/grad-checker/environments/production`と`GET /repos/uhey77/grad-checker/environments/production/deployment-branch-policies`が成功し、保存済み設定を確認した。
+
+| API項目 | 保存済みの値 | 判定 |
+| --- | --- | --- |
+| `required_reviewers.reviewers` | User `uhey77` 1名 | スクリプトの「1名以上」を満たす |
+| `deployment_branch_policy.custom_branch_policies` | `true` | custom制限を満たす |
+| `deployment_branch_policy.protected_branches` | `false` | selected branch方式 |
+| `branch_policies` | `total_count: 1`、`name: main`、`type: branch`のみ | main限定を満たす（tag・wildcardなし） |
+| `can_admins_bypass` | `false` | 管理者による回避無効を確認 |
+| `required_reviewers.prevent_self_review` | `false` | 自己承認可能という管理者設定と一致 |
+
+`production`のIDは`25134972216`、APIの`updated_at`は`2026-10-23T13:33:08Z`。設定変更ではなくGETによる再確認である。`check-release-policy.mjs`は承認者の存在とmain限定を検証するが、承認者のlogin、管理者bypass、Prevent self-reviewは検査しないため、それらはAPIの値を別途照合した。独立した別人の承認を必須とする設定ではない。
+
+既存CLI認証を値非出力で`GH_TOKEN`へ渡し、ローカルで`GITHUB_REPOSITORY=uhey77/grad-checker`、`GITHUB_REF=refs/heads/main`を検証入力として、変更していない`node scripts/deployment/check-release-policy.mjs`を実APIに対して実行した。終了コード0、`Production approval and main branch policy verified`を確認した。これはmainでのActions実行やWIF実認証、Actionsの`github.token`でのAPI読取りを証明するものではない。`node --test scripts/deployment/test-release-policy.mjs`も3件成功した。
+
+- 既存のGCP/VERCEL Variablesはワークフローの固定ターゲットと一致。DATABASE_URL、DIRECT_DATABASE_URL、VERCEL_TOKENは登録済み（値は取得していない）。PRODUCTION_DEPLOY_ENABLEDは未設定のまま（2026-10-26にrepository variables全件とproduction environment variables全件を再確認、environment variablesは0件）。
 - deploy backendはmainかつ有効化フラグがtrueの場合だけproduction environmentで動作し、ポリシー検査の後にWIFを実行する。frontendはbackend成功に依存し、別runner・production environment・再検査を使いid-token権限を持たない。
 - database-connectivityはmainの手動実行、production environment、ポリシー検査を経てからDB Secretを使用する。SELECT 1のみでDDL・Seedをしない。
 - environmentがない状態でworkflowを動かして暗黙作成することや、WIFのmain条件を緩和することは行っていない。
 
-管理者の最小操作はSettings → Environments → `production`の作成、Required reviewersを1人以上、Deployment branches and tagsをSelectedでbranch `main`だけにすること。独立したレビューにする場合はPrevent self-reviewを有効化し、管理者bypassも無効にする。対応する契約機能が利用できない場合は公開を有効にせず承認方式を決める。この監査段階ではPRODUCTION_DEPLOY_ENABLEDを変更しない。Writeアカウントへのrepository Admin付与は不要。
+管理者による承認ゲート設定は完了し、現行スクリプトの条件を満たす。この段階ではPRODUCTION_DEPLOY_ENABLEDを変更しない。Writeアカウントへのrepository Admin付与は不要。
 
 ## Google Cloud
 
@@ -108,10 +122,26 @@ Neon CLIはブラウザー認証がタイムアウトし、ローカルcallback�
 - Nodeデプロイ関連テスト14件とactionlintが成功。既存プロジェクト設定を使用したVercel CLI 65.2.0の本番用ローカルビルドと生成routes検証も成功。
 - 既存のStarlette TestClient/httpx非推奨警告とuv-buildのバージョン範囲に関する警告は残るが、今回の検証失敗ではない。
 
+## 次の移行準備（2026-10-26）
+
+承認ゲートの未構成は解消した。次は移行対象と照合条件を確定する。今回の準備は既存文書・ソースとGitHubの読取り確認までで、本番接続・クラウド操作・workflow dispatchは行っていない。
+
+| 準備項目 | 現状と次に必要な確認 |
+| --- | --- |
+| PR・CI | PR #75はOPEN、対象head `0d50b56c03817d115b4463736a01267a539d4cae`のbackend/frontend/container/benchmarkは成功、手動vercel-auditはskip。今回の文書更新後のCIは別途確認する |
+| 本番移行元 | 881行のリハーサル実績は保持する。切替時の最終バックアップ、書込み停止時点、SHA-256、18テーブルの件数・全カラム照合、所要時間を実行記録として揃える。最終バックアップと移行所要時間の確定値は未確認 |
+| 卒業要件 | リハーサル元には要件・規則が0行。[卒業要件マスタ](../backend/seeds/requirements.md)と`cs_requirements_2026.json`には要件80・対象集合492・規則16・換算対象265・共通上限4がある。コピーだけでは判定用データが揃わないため、採用するシードと投入範囲・順序を本番書込みの承認対象に含める |
+| 出典上の未確認 | 適用入学年度はunverified/null。他学部4規則の正式な配分順序と対象科目転記は未確認。現行の2026年度便覧を使う運用・アプリ配分方針を維持し、確認済みとして補完しない |
+| 移行先・接続 | 既存Neon productionの対象DB、空状態、通常/direct接続の同一接続先・TLS、Secret Manager参照先の一致を実行直前に確認する。2026-10-23の空状態を現在の実測として扱わない。接続値を文書・ログへ保存しない |
+| WIF・DB接続 | main限定を維持する。`database-connectivity.yml`はmain手動実行・production承認後のSELECT 1のみ。今回はmainマージ禁止のため実行しない。作業ブランチでmainのWIF認証を代用しない |
+| 承認用の変更資料 | [移行手順](../backend/migrations/README.md)の接続不要なDDL出力、移行元/先と照合結果、必要な要件import、失敗時の保全手順を揃えてから、本番DDL・コピー・Seed・mainマージを個別に提示する |
+
+デプロイ関連Nodeテスト14件と`git diff --check`が成功。本番DB変更、mainマージ、Cloud Run作成・公開、Vercel公開、デプロイ有効化は未実施。公開可否の判定には上記の未確認項目と実環境受入が残る。
+
 ## 初回公開までの順序
 
 1. このPRの差分・CI・監査結果を確認する。mainへのマージは禁止のまま維持する。
-2. 管理者がGitHub productionのreviewer/main制限を設定する。GCPの静的設定監査は完了済み。WIF実認証・本番DB接続・Secret値の接続先・Cloud Run起動は未検証として後続で確認する。Vercel公式プラグインのteam認可は別に解決する。CLI/Actionsによる対象確認は成功済み。
+2. GitHub productionのreviewer/main制限は2026-10-26の実API検証で完了。GCPの静的設定監査は完了済み。WIF実認証・本番DB接続・Secret値の接続先・Cloud Run起動は未検証として後続で確認する。Vercel公式プラグインのteam認可は別に解決する。CLI/Actionsによる対象確認は成功済み。
 3. 本番に必要な卒業要件データ、移行元バックアップ、移行先、照合結果、所要時間を確認する。実アカウントのパスワードや復旧コードは収集しない。
 4. mainへのマージ、DBの初期DDL、データコピー、必要な規則importをそれぞれ影響とともに提示し、個別の本番承認を得る。
 5. 承認後のmainでWIFを検証し、承認されたSHAイメージを既存Registryへpushする。初回Cloud Runマニフェストをレビューする。実サービス作成は今回行わない。
