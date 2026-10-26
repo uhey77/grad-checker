@@ -4,16 +4,12 @@ import {
   filterRequirements,
   type GraduationResult,
 } from "../../../../modules/requirements/public.ts";
-import { ScrollTable } from "../ScrollTable.tsx";
-import { CreditsCell } from "../subjects/SubjectCells.tsx";
+import {
+  RequirementMatrix,
+  requirementCategoryName,
+} from "./RequirementMatrix.tsx";
 import { GraduationOverview } from "./GraduationOverview.tsx";
 import { CourseRecommendations } from "./CourseRecommendations.tsx";
-import { judgmentLabels } from "./labels.ts";
-const categoryLabels: Record<string, string> = {
-  実学基礎科目合計: "実学基礎",
-  専門基礎教育科目合計: "専門基礎",
-  専門教育科目合計: "専門教育",
-};
 export function GraduationResultView({
   result,
   showOverview = true,
@@ -97,42 +93,12 @@ export function GraduationResultView({
           >
             {category.id === null
               ? t(category.name)
-              : (categoryLabels[category.name] ?? category.name)}
+              : requirementCategoryName(category)}
           </button>
         ))}
       </div>
       <div id={conditionsId}>
-        <ScrollTable
-          label={t("卒業要件の条件別判定")}
-          caption={t("条件ごとの必要単位・修得単位・算入単位・不足単位と判定")}
-        >
-          <thead>
-            <tr>
-              <th scope="col">{t("条件")}</th>
-              <th scope="col">{t("必要")}</th>
-              <th scope="col">{t("修得")}</th>
-              <th scope="col">{t("算入")}</th>
-              <th scope="col">{t("不足")}</th>
-              <th scope="col">{t("判定")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requirements.map((row) => (
-              <tr key={row.id}>
-                <th scope="row">{row.name}</th>
-                <CreditsCell credits={row.requiredCredits} />
-                <CreditsCell credits={row.earnedCredits} />
-                <CreditsCell credits={row.creditedCredits} />
-                <CreditsCell credits={row.shortage} />
-                <td>
-                  <span className={`judgment-label ${row.result}`}>
-                    {t(judgmentLabels[row.result])}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </ScrollTable>
+        <RequirementMatrix requirements={requirements} />
       </div>
       <h3>{t("未修得の必修科目（全区分）")}</h3>
       {result.missingRequiredCourses.length ? (

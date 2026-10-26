@@ -1,5 +1,10 @@
 // 日本語のUI文言をキーにする。大学の名称・科目・出典データは翻訳しない。
 export const english = {
+  "（最低{{value0}}単位）": " (minimum {{value0}} credits)",
+  合計: "Total",
+  "科目区分ごとの合計・必修・選択・選択必修と最低単位の条件":
+    "Total, required courses, electives, restricted electives, and within-group minimums by category",
+  条件の記載なし: "No requirement listed",
   "{{value0}} 第{{value1}}回": "{{value0}}, attempt {{value1}}",
   "所属情報を読み込んでいます…": "Loading your program…",
   再試行: "Retry",
