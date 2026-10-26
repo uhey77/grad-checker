@@ -27,7 +27,10 @@ def command(*args):
 
 
 def request(path, token, method="GET", body=None):
-    if not path.startswith(PARENT + "/"):
+    if not any(
+        path.startswith(parent + "/")
+        for parent in (PARENT, f"projects/602914367926/locations/{REGION}")
+    ):
         raise RuntimeError("Unexpected API target")
     req = urllib.request.Request(
         API + path,
