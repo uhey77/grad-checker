@@ -1,6 +1,6 @@
 # PR #75 本番移行前の監査
 
-初回監査日: 2026-10-23、承認ゲート再監査日: 2026-10-26（日本時間）。対象は`feat/production-deployment`。本番公開可能と判定する前の、実測済み項目と未確認項目を区別する。本番デプロイ、mainへのマージ、本番DBのDDL・データ変更、PRODUCTION_DEPLOY_ENABLEDの変更は行っていない。
+初回監査日: 2026-10-23、承認ゲート再監査日・本番DB移行日: 2026-10-26（日本時間）。対象は`feat/production-deployment`。ユーザーの明示承認後、本番DBへ18テーブル作成・881行移行・卒業要件857行追加を実施し、照合に成功した。詳細・現在のDB状態・復旧手順は[本番Neonデータ移行の実行記録](production-neon-migration-2026-10-26.md)を参照する。以下のリハーサル・実行前準備は過去の実測記録として保持する。本番デプロイ、mainマージ、PRODUCTION_DEPLOY_ENABLED変更は行っていない。
 
 ## Vercel
 
@@ -79,6 +79,8 @@ Direct DB Secretの確認はSecret単位のIAMバインディングがないこ�
 
 ## NeonとSQLite
 
+2026-10-26追記: 承認済みの本番移行が完了し、現在は18テーブル・1,738行。元SQLite・保存バックアップは不変、全カラム照合・参照整合性・読取り判定検証が成功した。以下の空DB・881行リハーサルは2026-10-23の記録。[今回の本番実行記録](production-neon-migration-2026-10-26.md)が現在の状態を示す。
+
 Neon公式プラグインで既存project `plain-smoke-97118898`、Freeプラン、PostgreSQL 18、Singapore regionを確認。開始時に存在したのはproduction `br-calm-water-a1uug5fd`だけで、publicテーブルは0だった。
 
 ユーザーの個別承認後に`rehearsal/pr-75`（`br-delicate-sky-a1cmdbb8`）を作成した。computeは0.25 CU固定、期限は2026-10-24 17:36:03 JST。Freeプランではsuspend interval指定がHTTP 412で拒否されたため、ブランチ未作成を確認してからinterval指定を省いて作成し、既定値を維持した。プラン変更はない。共有compute/storage/転送枠を消費する。料金・枠は[Neon公式プラン](https://neon.com/docs/introduction/plans)を参照。
@@ -122,7 +124,7 @@ Neon CLIはブラウザー認証がタイムアウトし、ローカルcallback�
 - Nodeデプロイ関連テスト14件とactionlintが成功。既存プロジェクト設定を使用したVercel CLI 65.2.0の本番用ローカルビルドと生成routes検証も成功。
 - 既存のStarlette TestClient/httpx非推奨警告とuv-buildのバージョン範囲に関する警告は残るが、今回の検証失敗ではない。
 
-## 次の移行準備（2026-10-26）
+## 承認前の移行準備（2026-10-26、実行前記録）
 
 承認ゲートの未構成は解消した。次は移行対象と照合条件を確定する。今回の準備は既存文書・ソースとGitHubの読取り確認までで、本番接続・クラウド操作・workflow dispatchは行っていない。
 
@@ -139,6 +141,8 @@ Neon CLIはブラウザー認証がタイムアウトし、ローカルcallback�
 デプロイ関連Nodeテスト14件と`git diff --check`が成功。本番DB変更、mainマージ、Cloud Run作成・公開、Vercel公開、デプロイ有効化は未実施。公開可否の判定には上記の未確認項目と実環境受入が残る。
 
 ## 初回公開までの順序
+
+2026-10-26追記: 本番DDL・データコピー・既存CS要件シード投入は個別承認を得て完了した。以下の順序のうちDB移行分は[実行記録](production-neon-migration-2026-10-26.md)で更新済み。mainマージ・本番公開・デプロイ有効化への承認は含まない。
 
 1. このPRの差分・CI・監査結果を確認する。mainへのマージは禁止のまま維持する。
 2. GitHub productionのreviewer/main制限は2026-10-26の実API検証で完了。GCPの静的設定監査は完了済み。WIF実認証・本番DB接続・Secret値の接続先・Cloud Run起動は未検証として後続で確認する。Vercel公式プラグインのteam認可は別に解決する。CLI/Actionsによる対象確認は成功済み。
