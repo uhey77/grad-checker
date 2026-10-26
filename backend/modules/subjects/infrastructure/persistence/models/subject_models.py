@@ -5,17 +5,24 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     UniqueConstraint,
+    or_,
     text,
 )
+from sqlalchemy import (
+    column as sql_column,
+)
 from sqlmodel import Field, SQLModel
+
+from shared.infrastructure.persistence.expressions import IntegerMinimum
 
 
 def integer_check(
     column: str, minimum: int = 0, nullable: bool = False
 ) -> CheckConstraint:
-    expression = f"typeof({column}) = 'integer' AND {column} >= {minimum}"
+    value = sql_column(column)
+    expression = IntegerMinimum(value, minimum)
     if nullable:
-        expression = f"{column} IS NULL OR ({expression})"
+        expression = or_(value.is_(None), expression)
     return CheckConstraint(expression)
 
 

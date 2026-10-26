@@ -1,0 +1,68 @@
+name: Production preflight (read only)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact reviewed main commit SHA
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: production-preflight
+  cancel-in-progress: false
+jobs:
+  database:
+    if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main' && github.sha == inputs.expected_sha
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - run: node scripts/deployment/check-release-policy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with: {version: '0.13.1'}
+      - run: uv python install && uv sync --locked
+        working-directory: backend
+      - name: Verify both GitHub Secrets against the migrated production database
+        run: uv run --locked python -m scripts.check_release_database
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+  wif:
+    needs: database
+    if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main' && github.sha == inputs.expected_sha
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - run: node scripts/deployment/check-release-policy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: grad-checker-512505
+          workload_identity_provider: projects/602914367926/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: grad-checker-deployer@grad-checker-512505.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - name: Read existing registry and Cloud Run inventory without creating resources
+        run: |
+          gcloud artifacts repositories describe grad-checker --location asia-northeast1 --project grad-checker-512505 --format='value(name)'
+          gcloud run services list --region asia-northeast1 --project grad-checker-512505 --filter='metadata.name=grad-checker-api' --format='value(metadata.name)'

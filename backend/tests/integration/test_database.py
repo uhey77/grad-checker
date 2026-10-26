@@ -54,5 +54,5 @@ def test_independent_engines_do_not_share_database(tmp_path: Path) -> None:
 
 
 def test_unsupported_database_is_rejected() -> None:
-    with pytest.raises(ValueError, match="SQLite"):
-        create_database_engine("postgresql://localhost/grad_checker")
+    with pytest.raises(ValueError, match="SQLiteとPostgreSQL"):
+        create_database_engine("mysql://localhost/grad_checker")

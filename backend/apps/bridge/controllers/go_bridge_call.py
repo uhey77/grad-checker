@@ -18,7 +18,7 @@ def respond(action: Callable[[], object]) -> dict[str, object]:
         return {"data": action()}
     except BusinessError as error:
         return failure(error.code)
-    except Exception:
-        # 予期しない失敗の詳細はPythonのログだけに残し、Goへはコードだけを返す。
-        logger.exception("Unexpected bridge call failure")
+    except Exception as error:
+        # DB例外のDETAILや入力値は個人情報を含み得るためログに残さない。
+        logger.error("Unexpected bridge call failure: %s", type(error).__name__)
         return failure("internal_error")
