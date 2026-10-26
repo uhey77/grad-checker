@@ -62,7 +62,7 @@
 - 移行は読み取り専用の元SQLiteと空のPostgreSQLのみ。親参照順に全件copyし、型復元した全カラムの一致をcommit条件とする。再実行拒否・部分失敗rollback・元SQLite不変をテスト済み。全件メモリ照合は大規模データ向けには未評価だが、今回881行の移行は実測済み。
 - 512MiB試験は逐次操作の結果で、同時Argon2負荷や実利用規模の性能保証ではない。初回公開後のmemory/OOM/latency監視を残す。
 
-## 現在のDB・フラグ
+## 監査実行時のDB・フラグ
 
 マージ後、公式Neon接続の固定production/DBへSELECTだけを実行し、18テーブル・1738行、未検証の外部キー制約0件を確認した。本番へのDDL・データ移行・Seed・アカウント操作は実行していない。元SQLiteと保存バックアップは変更しない。repository/production environmentの公開フラグは未設定を維持する。
 
@@ -88,7 +88,7 @@
 | 件数・読取り専用 | 成功 | ログの制御されたJSONはsource=github-secrets、production_target_verified=true、tables=18、rows=1738、read_only=true |
 | GITHUB_TOKEN権限 | 成功 | 両jobでcheck-release-policy.mjsが実API検査に成功。必要なActions read権限を実証 |
 | WIF実認証 | 成功 | 固定provider/deployerでgoogle-github-actions/authが成功し、その認証で既存RegistryのGETが成功 |
-| Cloud Run inventory | 成功 | 対象project/regionの一覧読取りが成功し、grad-checker-apiは未作成 |
+| Cloud Run inventory | 成功 | 2026-10-26 14:07 JSTの監査時点では対象project/regionの一覧読取りが成功し、grad-checker-apiは未作成。初回構築の直前に再確認する |
 | 公開フラグ | 無効維持 | repository/production environmentの双方で未設定を監査完了後に再確認 |
 | 禁止操作 | 未実施 | workflowにはimage push・services replace・公開IAM・Vercel deploy/promote・DDL/移行/Seedがない |
 
