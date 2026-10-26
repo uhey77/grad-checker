@@ -29,7 +29,7 @@ Goは公開HTTP・認可・Origin/CSRF・Cookie、Pythonは業務処理・DBを�
 
 Vercelは既存の`grad-checker`、Root Directory `frontend`、Node.js 24、公開URL `https://grad-checker-chi.vercel.app`を再利用する。新しいプロジェクトは作成しない。Project/Org IDはGitHub Variablesを使用する。
 
-Neonの`grad-checker` / `production` / DB `grad-checker`を読み取り調査した時点では公開テーブルは0件だった。DB名は既定の`neondb`と異なるため接続先を確認する。スキーマ作成・データ移行・Seed・本番公開・mainへのマージは本作業では実行していない。
+2026-10-26に承認済みの本番移行とPR #75のmainマージが完了し、本番DBは18テーブル・1,738行である。初期DDL・SQLiteコピー・卒業要件シードを再実行しない。DB名は既定の`neondb`と異なる`grad-checker`を使用する。main 8718b6cでGitHub DB SecretsとWIFの読取り監査が成功した。Cloud Run未作成は監査時点の結果であり、初回構築直前に再確認する。本番公開は未実施。
 
 ## 環境変数とSecret（値は記録しない）
 
@@ -112,7 +112,9 @@ PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのP
 
 `PRODUCTION_DEPLOY_ENABLED`を未設定のままにしておけばmainへのマージ後も公開操作は実行しない。初回公開・承認設定・対象確認後にだけ有効化する。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。既存のVercel側Git連携状態も初回公開前に確認する。
 
-## 初回公開（ユーザー承認後）
+## 将来の全面公開（個別承認後、現在のPhase 1とは分離）
+
+以下は全面公開の一般手順である。現在のPhase 1では、PR #76の別途承認後のマージと、そのmainを基準にしたimage push・非公開Cloud Run構築だけを別承認で実施する。固定digestで作成し、公開IAM・allUsers付与・Vercel操作・PRODUCTION_DEPLOY_ENABLED変更は行わない。Phase 1の作業順序と現在の検証状態は[初回公開準備](initial-release-readiness.md)を優先する。完了済みのDB初期DDL・移行・Seedを以下の手順に従って再実行しない。
 
 1. PRのCI結果、生成DDL、変更差分、バックアップと復元方法をレビューする。mainへのマージも個別に承認を受ける。
 2. [DB移行手順](../backend/migrations/README.md)を隔離環境で実行し、件数・内容・認証・成績・判定を照合する。本番DDL、データコピー、Seedはそれぞれ影響確認と承認を必要とする。DBが空でも、承認なしに初期化しない。
@@ -125,7 +127,7 @@ PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのP
 9. `production` environmentのreviewer/main制限を設定し、明示承認後にPRODUCTION_DEPLOY_ENABLEDを有効化する。mainのProduction deploymentを手動実行し、environmentの承認を行う。
 10. Vercelの未昇格deploymentでAPI proxy・SPAを確認してからpromoteする。初回のVercel本番切替も承認対象とする。
 
-WIFはmain限定のため、このPRブランチで本番認証を試みない。実際のWIF・Secret値・Cloud Run/Vercelの本番受入は承認後の検証まで未確認である。
+WIFはmain限定を維持する。GitHub DB Secretsの本番接続先とWIF実認証はmain 8718b6cの読取り監査40269546985で検証済みであり、Secret値自体を記録していない。Cloud Runの起動・Secret注入・認証付きreadiness、Vercel接続/本番受入は別承認後に検証する。
 
 ## 本番受入
 
