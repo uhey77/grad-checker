@@ -142,3 +142,42 @@ def test_cloud_run_render_accepts_only_fixed_registry_and_commit_tag():
                 ]["image"]
                 == image
             )
+
+
+def test_preflight_is_manual_exact_main_and_separates_secrets_from_wif():
+    config = workflow("production-preflight.yml")
+    # PyYAMLのYAML 1.1ではonがTrueとして読まれる。
+    triggers = config.get("on", config.get(True))
+    assert set(triggers) == {"workflow_dispatch"}
+    jobs = config["jobs"]
+    for job in jobs.values():
+        assert "github.ref == 'refs/heads/main'" in job["if"]
+        assert "github.sha == inputs.expected_sha" in job["if"]
+        assert job["environment"] == "production"
+        policy = next(
+            i
+            for i, step in enumerate(job["steps"])
+            if step.get("run") == "node scripts/deployment/check-release-policy.mjs"
+        )
+        sensitive = [
+            i
+            for i, step in enumerate(job["steps"])
+            if "secrets." in str(step.get("env", {}))
+            or step.get("uses", "").startswith("google-github-actions/auth@")
+        ]
+        assert sensitive and all(i > policy for i in sensitive)
+    assert "id-token" not in jobs["database"]["permissions"]
+    assert jobs["wif"]["needs"] == "database"
+    assert jobs["wif"]["permissions"]["id-token"] == "write"
+    assert "secrets." not in str(jobs["wif"])
+    commands = "\n".join(
+        step.get("run", "") for job in jobs.values() for step in job["steps"]
+    )
+    for prohibited in (
+        "--apply",
+        "docker push",
+        "services replace",
+        "add-iam-policy-binding",
+        "vercel promote",
+    ):
+        assert prohibited not in commands

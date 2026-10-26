@@ -19,6 +19,10 @@ Goは公開HTTP・認可・Origin/CSRF・Cookie、Pythonは業務処理・DBを�
 
 `/api/health`はGoのliveness。`/api/ready`はGo→Python→DBの接続を確認し、200または503を返す。DB障害でlivenessを失敗させず、再起動の連鎖を避ける。内部エラーや業務データは返さない。
 
+## 初回公開準備の現在値
+
+本番DB移行は承認後に完了している。新規DDL・SQLite移行・Seedを再実行しない。旧SQLiteへの書込み再開は禁止。現時点の実測結果・Secret接続先の値非出力監査・初回作成の個別承認・ロールバックは[初回公開準備](initial-release-readiness.md)を参照する。既存deploy.ymlは初回サービス作成とstage/promoteの個別承認に使用せず、初回公開成功後の通常CD有効化も別承認とする。
+
 ## 既存リソースと未実行事項
 
 対象はGCP `grad-checker-512505`、リージョン`asia-northeast1`、Artifact Registry `grad-checker`、Cloud Run `grad-checker-api`。Runtime SAは`grad-checker-runtime`、Deployer SAは`grad-checker-deployer`（いずれも同プロジェクト）。サービスアカウントキーは作成しない。
@@ -94,6 +98,7 @@ docker run --rm -p 127.0.0.1:8080:8080 --memory=512m --cpus=1 \
 | --- | --- |
 | `check.yml` | PRと再利用可能CI。Python lint/型/全テスト、Go競合検出、PostgreSQL結合、Frontend lint/型/整形/テスト/build、Docker build/実行試験 |
 | `deploy.yml` | main push/手動実行→CI→承認ゲート→WIF→既存リソース確認→SHAタグのbuild/push→Cloud Run更新→readiness→Vercel本番用build→ドメイン未割当でstage→proxy/SPA検証→promote→本番疎通 |
+| `production-preflight.yml` | mainの完全SHA指定・production承認後、GitHub通常/direct Secretの本番接続先・TLS・18テーブル/1,738行を読取り検証。別jobのWIFは既存Registry/Cloud Run inventoryの読取りだけ。公開操作なし |
 | `database-connectivity.yml` | mainの承認済み手動実行だけで、既存GitHub Secretsのpooled/direct接続を読み取りSELECT 1で確認。DDLなし |
 | `graduation-benchmark.yml` | 既存の合成データ性能検証 |
 
