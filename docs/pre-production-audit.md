@@ -4,7 +4,7 @@
 
 ## 初回公開準備の追記（2026-10-26）
 
-移行後の本番18テーブル・1,738行を読取りで再確認した。Vercelのチーム認可をユーザーが完了し、公式接続の対象Project/deployment GETが成功したため、以下の過去の403記録は解消済み。ユーザー指定でローカル暗号化バックアップを作成・復号検証した。最新の実測結果、Cloud Shell監査手順、main限定のSecret検証に必要な順序調整、個別の公開承認対象は[初回公開準備](initial-release-readiness.md)を参照する。本番公開は未実施。
+移行後の本番18テーブル・1,738行を読取りで再確認した。Vercelのチーム認可をユーザーが完了し、公式接続の対象Project/deployment GETが成功したため、以下の過去の403記録は解消済み。ユーザー指定でローカル暗号化バックアップを作成・復号検証した。最新の実測結果、Cloud Shell監査手順、main限定のSecret検証に必要な順序調整、個別の公開承認対象は[初回公開準備](initial-release-readiness.md)を参照する。ユーザーが23dcc9cを認証済みCloud Shellで実行し、GCP metadata/IAMとSecret Manager接続先監査の2件ともpassと報告した。GitHub VERCEL_TOKENの固定GET監査40260703227も成功。本番公開は未実施。
 
 ## Vercel
 
