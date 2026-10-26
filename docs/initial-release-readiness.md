@@ -1,5 +1,14 @@
 # 初回本番公開の準備・実行状況
 
+## 現在の状態
+
+2026-10-26に本番公開とHTTPSブラウザー受入検証を完了した。
+本番URL: https://grad-checker-chi.vercel.app 。
+Cloud Runはgrad-checker-api-00001-g9l、Vercelはdpl_GEXV2AgfCoGPq8CZsSMfb1nQJZ6C。
+専用テストデータの後片付け後も、認証試行カウンター以外の17テーブルは構築前と全件一致。
+予算通知はユーザー指示で後回しとし、自動公開フラグも未設定を維持する。
+実測値・検証結果・既知の制約は[実行監査](initial-production-execution.md)を参照する。
+
 ## 承認と固定対象
 
 2026-10-26、ユーザーは非公開初回構築から必要最小限の公開Invoker、Vercel stage、

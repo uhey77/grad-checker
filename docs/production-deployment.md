@@ -21,15 +21,15 @@ Goは公開HTTP・認可・Origin/CSRF・Cookie、Pythonは業務処理・DBを�
 
 ## 初回公開準備の現在値
 
-本番DB移行は承認後に完了している。新規DDL・SQLite移行・Seedを再実行しない。旧SQLiteへの書込み再開は禁止。現時点の実測結果・Secret接続先の値非出力監査・初回作成の個別承認・ロールバックは[初回公開準備](initial-release-readiness.md)を参照する。既存deploy.ymlは初回サービス作成とstage/promoteの個別承認に使用せず、初回公開成功後の通常CD有効化も別承認とする。
+本番DB移行は承認後に完了している。新規DDL・SQLite移行・Seedを再実行しない。旧SQLiteへの書込み再開は禁止。2026-10-26に一括承認に基づく本番公開・HTTPS受入まで完了した。実測結果・Secret接続先の値非出力監査・実行承認・ロールバックは[初回公開準備](initial-release-readiness.md)を参照する。既存deploy.ymlは初回サービス作成とstage/promoteの個別承認に使用せず、初回公開成功後の通常CD有効化も別承認とする。
 
-## 既存リソースと未実行事項
+## 既存リソースと実行結果
 
 対象はGCP `grad-checker-512505`、リージョン`asia-northeast1`、Artifact Registry `grad-checker`、Cloud Run `grad-checker-api`。Runtime SAは`grad-checker-runtime`、Deployer SAは`grad-checker-deployer`（いずれも同プロジェクト）。サービスアカウントキーは作成しない。
 
 Vercelは既存の`grad-checker`、Root Directory `frontend`、Node.js 24、公開URL `https://grad-checker-chi.vercel.app`を再利用する。新しいプロジェクトは作成しない。Project/Org IDはGitHub Variablesを使用する。
 
-2026-10-26に承認済みの本番移行とPR #75のmainマージが完了し、本番DBは18テーブル・1,738行である。初期DDL・SQLiteコピー・卒業要件シードを再実行しない。DB名は既定の`neondb`と異なる`grad-checker`を使用する。main 8718b6cでGitHub DB SecretsとWIFの読取り監査が成功した。Cloud Run未作成は監査時点の結果であり、初回構築直前に再確認する。本番公開は未実施。
+2026-10-26に承認済みの本番移行とPR #75のmainマージが完了し、移行直後の本番DBは18テーブル・1,738行だった。公開受入後は承認済みの認証試行カウンターの通常削除等により18テーブル・1,735行となり、他の17テーブルは全カラム一致している。初期DDL・SQLiteコピー・卒業要件シードを再実行しない。DB名は既定の`neondb`と異なる`grad-checker`を使用する。main 8718b6cでGitHub DB SecretsとWIFの読取り監査が成功した。Cloud Run未作成は当時の監査結果であり、その後に固定digestで初回作成・公開した。現在のrevision・Vercel deployment・受入証跡は[実行監査](initial-production-execution.md)を参照する。
 
 ## 環境変数とSecret（値は記録しない）
 
@@ -112,22 +112,27 @@ PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのP
 
 `PRODUCTION_DEPLOY_ENABLED`を未設定のままにしておけばmainへのマージ後も公開操作は実行しない。初回公開・承認設定・対象確認後にだけ有効化する。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。既存のVercel側Git連携状態も初回公開前に確認する。
 
-## 将来の全面公開（個別承認後、現在のPhase 1とは分離）
+## 初回公開の順序と今後の通常CD
 
-以下は全面公開の一般手順である。現在のPhase 1では、PR #76の別途承認後のマージと、そのmainを基準にしたimage push・非公開Cloud Run構築だけを別承認で実施する。固定digestで作成し、公開IAM・allUsers付与・Vercel操作・PRODUCTION_DEPLOY_ENABLED変更は行わない。Phase 1の作業順序と現在の検証状態は[初回公開準備](initial-release-readiness.md)を優先する。完了済みのDB初期DDL・移行・Seedを以下の手順に従って再実行しない。
+初回構築・公開IAM・Vercel stage・検証後の昇格はユーザーの一括承認に基づき実施済み。
+GitHub productionのRequired reviewer承認は回避していない。
+自動公開フラグは未設定であり、通常CDを有効にする操作は今回行っていない。
+詳細と既知の制約は[実行監査](initial-production-execution.md)を優先する。
 
-1. PRのCI結果、生成DDL、変更差分、バックアップと復元方法をレビューする。mainへのマージも個別に承認を受ける。
-2. [DB移行手順](../backend/migrations/README.md)を隔離環境で実行し、件数・内容・認証・成績・判定を照合する。本番DDL、データコピー、Seedはそれぞれ影響確認と承認を必要とする。DBが空でも、承認なしに初期化しない。
-3. Secret Managerの通常接続とDirect接続が対象DBを指し、TLS設定を保持していることを確認する。Runtime SAは通常接続Secretだけを読める状態にする。
-4. 承認済みのmain SHAをタグにしたイメージを既存Artifact Registryへbuild/pushする。`DEPLOY_IMAGE`にそのイメージ参照を設定し、`python scripts/deployment/render_cloud_run.py`でレビュー用マニフェストを作る。
-5. 管理者がそのマニフェストで初回のCloud Runを作成する。`gcloud run services replace`は初回サービスを非公開で作成し、通常CDはIAMを変更しない。初回サービス未作成という提示条件では、通常CDは既存サービス確認で安全に停止する。現在の存在確認・IAM確認には、認証済みのGCP環境での読み取り監査が必要である。
-6. 初回公開の承認後に、管理者が当該サービスへallUsersの`roles/run.invoker`を設定するか、Invoker IAM checkを無効化する。必要な`run.services.setIamPolicy`はDeployerの通常のrun.developerには含まれない。Deployerに広いrun.adminを追加せず、管理者が一度だけ設定する方針とする。
-7. Cloud RunのReady、`/api/ready`、`/api/health`、Secret注入、ログの機密情報非露出を確認する。
-8. Vercelの既存Project/Org ID、Root Directory、Node.js、build/installコマンド、Git自動デプロイ無効、CLOUD_RUN_API_ORIGINを確認する。接続済みプラグインがチーム権限不足の403を返す場合は、正しいチームへのアクセス許可を完了してから再確認する。新しいプロジェクトで代用しない。
-9. `production` environmentのreviewer/main制限を設定し、明示承認後にPRODUCTION_DEPLOY_ENABLEDを有効化する。mainのProduction deploymentを手動実行し、environmentの承認を行う。
-10. Vercelの未昇格deploymentでAPI proxy・SPAを確認してからpromoteする。初回のVercel本番切替も承認対象とする。
+1. PRの最新HEAD・CI・差分とバックアップをレビューし、承認範囲内でマージする。
+2. 完了済みのDB移行・Seedの証跡と現在のデータを読み取りで照合する。本番DDL・コピー・Seedを再実行しない。
+3. Secret Managerの通常接続とDirect接続が対象DBを指し、TLS設定を保持していることを確認する。Runtime SAには通常接続Secretだけを渡す。
+4. `Initial private production service`を固定main SHAで手動実行する。隔離TLS DBでのコンテナ試験成功後にWIF認証し、既存Registryへpushする。
+5. 既存サービス不在を確認した場合だけ、取得したdigest固定manifestをCloud Run v2 create APIへ送る。既存サービスは更新・上書きしない。
+6. 非公開revisionのReady・設定・認証済みreadiness・匿名拒否・DB不変性を先に確認する。
+7. 管理者が当該サービスにだけallUsersの`roles/run.invoker`を設定し、Invoker IAM checkは維持する。Deployerへ広いrun.adminを追加しない。
+8. 実Cloud Run originでVercelをビルドし、`--prod --skip-domain`でstageを作成する。Origin・CSRF・認証・成績・判定・履歴・SPAを検証する。
+9. 全stage検証が成功した場合だけpromoteし、通常のHTTPSブラウザーで受入検証する。失敗を飛ばして次の公開工程へ進まない。
+10. 専用テストデータだけを後片付けし、既存データ・ログ・実測・費用を確認して記録する。
 
-WIFはmain限定を維持する。GitHub DB Secretsの本番接続先とWIF実認証はmain 8718b6cの読取り監査40269546985で検証済みであり、Secret値自体を記録していない。Cloud Runの起動・Secret注入・認証付きreadiness、Vercel接続/本番受入は別承認後に検証する。
+WIFはmain限定を維持する。GitHub DB SecretsとWIFはmain 8718b6cの読取り監査40269546985でも検証済み。
+通常CDの有効化は別途判断し、production承認と固定対象の確認を維持する。
+今回のSPA検査修正を取り込む前にフラグを有効にしない。
 
 ## 本番受入
 
