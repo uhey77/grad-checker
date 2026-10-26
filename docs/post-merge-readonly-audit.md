@@ -9,7 +9,7 @@
 - main pushの対象はdeploy.ymlのみ。backendはmainかつ公開フラグtrueの場合だけ、frontendはbackend成功後だけ動く。check.ymlのSecret監査はmanual専用でworkflow_callではskip。その他のworkflowにmain pushからの公開処理はない。
 - `gh pr merge --merge --match-head-commit`で指定HEADを保護してマージ。main SHA: `8718b6ccd8cbde37085a05a135f94d60cf8a512f`。マージ時刻: 2026-10-26 13:31:41 JST。
 - [main push run 40269537677](https://github.com/uhey77/grad-checker/actions/runs/40269537677)は成功。ci / backend・frontend・containerは成功、公開用backend/frontendはskip。通常CD・image push・公開は実行されていない。
-- [読取り監査run 40269546985](https://github.com/uhey77/grad-checker/actions/runs/40269546985)はmainの上記完全SHAをexpected_shaへ指定して起動。現在database jobがproduction承認待ちで、DB Secrets監査とWIF実認証は未確認。GitHub APIはreviewer uhey77、current_user_can_approve=falseを返した。エージェントは保護設定を回避しない。
+- [読取り監査run 40269546985](https://github.com/uhey77/grad-checker/actions/runs/40269546985)はmainの上記完全SHAをexpected_shaへ指定して起動。database・wifの両jobが成功し、run全体もsuccess。databaseは2026-10-26 14:07:13 JST、wifは14:07:43 JSTに完了した。承認履歴APIにuhey77のproduction承認2件を確認した。エージェントは保護設定を回避していない。
 
 ## 最新HEADのCI証跡
 
@@ -37,7 +37,7 @@
 
 [check-release-policy.mjs:12](../scripts/deployment/check-release-policy.mjs#L12)はrequired_reviewersの存在とcustom/main-only branch policyを検査し、現行の設定で実API検査に成功した。ユーザー名そのもの、管理者bypass、自己承認設定、現在のjobに対する承認履歴は検査しない。現在のAPIはreviewer uhey77、main branch 1件、bypass=false、prevent_self_review=falseであり意図した設定と一致する。
 
-両APIのGitHub公式ドキュメントはActions read権限を要求し、deploy/preflightのjobsはactions: readを指定している。contents: readはcheckout用、id-token: writeはWIF jobだけで、frontend/DB監査に渡していない。実GITHUB_TOKENでの確認は読取り監査のproduction承認後に実証する。[Environment API](https://docs.github.com/en/rest/deployments/environments#get-an-environment)、[Branch policies API](https://docs.github.com/en/rest/deployments/branch-policies#list-deployment-branch-policies)
+両APIのGitHub公式ドキュメントはActions read権限を要求し、deploy/preflightのjobsはactions: readを指定している。contents: readはcheckout用、id-token: writeはWIF jobだけで、frontend/DB監査に渡していない。実GITHUB_TOKENでの確認は上記読取り監査のdatabase/wif両jobで成功し、actions: readで両APIを読めることを実証した。[Environment API](https://docs.github.com/en/rest/deployments/environments#get-an-environment)、[Branch policies API](https://docs.github.com/en/rest/deployments/branch-policies#list-deployment-branch-policies)
 
 **残る保護境界と競合（WARN）:**
 
@@ -75,6 +75,25 @@
 | セキュリティ | WARN | 現行承認ゲートは有効、Secret非出力とjob権限分離を確認。Write主体/管理者変更の境界は残る | 公開前にSecretの保護境界と設定変更運用を確認 |
 | CI | PASS | レビューHEADとmain push双方の通常CI成功 | 本番Secrets/WIFの実認証成功と混同しない |
 | デプロイ安全性 | WARN | main pushの公開jobsはskip、初回作成/昇格は手順で分離 | 通常CDを初回に有効化しない。公開操作は別承認 |
-| 本番公開準備 | WARN | マージ済み、読取り監査はproduction承認待ち | GitHub DB SecretsとWIFを実証し、公開前受入へ進む |
+| 本番公開準備 | WARN | マージ・DB Secrets/WIFの読取り監査は成功。実サービスは未作成 | 作成・公開IAM・stage・昇格・HTTPS受入を別途承認する |
 
-ユーザー承認に基づく公開無効でのmainマージは完了。公開可とは判定していない。現在の未確認項目は、監査runのproduction承認、GitHub DB Secretsの保存接続先、ActionsからのWIF実認証、実サービス起動、公開IAMの組織制約/有効権限、実origin rewrite/HTTPS受入、正常revision/deploymentの確定である。
+ユーザー承認に基づく公開無効でのmainマージは完了。公開可とは判定していない。現在の未確認項目は、実サービス起動、公開IAMの組織制約/有効権限、実origin rewrite/HTTPS受入、正常revision/deploymentの確定である。
+
+## 読取り監査の確定結果
+
+| 項目 | 結果 | 根拠 |
+| --- | --- | --- |
+| production承認 | 成功 | approvals APIがuhey77によるapproved / productionを2件返した |
+| GitHub DB Secrets | 成功 | 通常/directの両接続が固定production endpoint・DB/public schema・TLS・全18テーブル件数検査に成功 |
+| 件数・読取り専用 | 成功 | ログの制御されたJSONはsource=github-secrets、production_target_verified=true、tables=18、rows=1738、read_only=true |
+| GITHUB_TOKEN権限 | 成功 | 両jobでcheck-release-policy.mjsが実API検査に成功。必要なActions read権限を実証 |
+| WIF実認証 | 成功 | 固定provider/deployerでgoogle-github-actions/authが成功し、その認証で既存RegistryのGETが成功 |
+| Cloud Run inventory | 成功 | 対象project/regionの一覧読取りが成功し、grad-checker-apiは未作成 |
+| 公開フラグ | 無効維持 | repository/production environmentの双方で未設定を監査完了後に再確認 |
+| 禁止操作 | 未実施 | workflowにはimage push・services replace・公開IAM・Vercel deploy/promote・DDL/移行/Seedがない |
+
+Secret Manager側は23dcc9cを使った認証済みCloud Shellのpass報告、GitHub側は今回のmain実行で実証した。双方が固定された同じproduction endpoint/DBと移行済み18テーブル・1738行に合致する。資格情報文字列やパスワードの同一性を比較したという意味ではない。
+
+監査ログはstdout/stderr全体を成果物へ転載せず、既知の検査JSON・ポリシー成功・固定Registry名・サービス一覧結果だけを抽出して確認した。WIFはread-only APIへのアクセス成立までを実証し、サービス作成・公開IAM変更などの書込み権限や実行時成立までをPASSにしていない。
+
+失敗した監査項目はない。未確認の本番公開作業は、承認済みmain SHAのimage build/pushとdigest記録、非公開Cloud Run作成とRuntime Secret注入/readiness、公開IAM、実originを使うVercel stage、対象deployment指定の本番昇格、HTTPSブラウザーでの専用受入データ操作、メトリクス/費用/ログ確認である。これらは本監査完了をもって自動的に承認されたものと扱わない。
