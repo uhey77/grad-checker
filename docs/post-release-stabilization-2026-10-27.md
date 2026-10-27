@@ -14,7 +14,7 @@
 - マージ後CI：[Production deployment 40478917240](https://github.com/uhey77/grad-checker/actions/runs/40478917240)。Backend・Frontend・Containerすべて成功、公開Backend/Frontendはフラグ未設定によりskip。
 - devを同じmain SHAからGitHub上に新規作成。作成前にdev不在と既存リモートブランチを確認。既存ブランチは削除・書換えしていない。
 - mainの旧branch protection APIは404だが、別途ruleset `Protect main` がactiveで既定ブランチの削除・force push禁止とPR必須を確認。承認必要数0、required_status_checksの規則なしで、CI成功や承認レビューはGitHub設定では強制されていない。devはprotected=false。設定変更は行わず残リスクとする。production environmentのreviewer `uhey77` とmainのbranch制限は有効。
-- 既存の通常開発PR #74はbaseをmainからdevへ変更済み。HEADは変更せず、競合解消と再検証は当該開発PRで別途必要。
+- 既存の通常開発PR #74はbaseをmainからdevへ変更済み。HEADは変更せず、base変更後の再照会でMERGEABLEを確認。内容の最終レビュー・再検証は当該開発PRで別途必要。
 
 ## 今回取得した結果
 
