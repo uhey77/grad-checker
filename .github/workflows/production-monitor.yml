@@ -1,0 +1,49 @@
+name: Production monitor (read only)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact reviewed main SHA
+        required: true
+        type: string
+      hours:
+        description: Historical observation window (missing data remains unverified)
+        type: choice
+        options: ['1', '24', '48']
+        default: '24'
+permissions:
+  contents: read
+concurrency:
+  group: production-monitor
+  cancel-in-progress: false
+jobs:
+  monitor:
+    if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main' && github.sha == inputs.expected_sha
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - name: Verify production approval and main restriction
+        run: node scripts/deployment/check-release-policy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: grad-checker-512505
+          workload_identity_provider: projects/602914367926/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: grad-checker-deployer@grad-checker-512505.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - name: Read service, historical metrics and log counts
+        run: python3 scripts/deployment/monitor_production.py --hours "$WINDOW_HOURS" > "$RUNNER_TEMP/production-monitor.json"
+        env:
+          WINDOW_HOURS: ${{ inputs.hours }}
+      - name: Publish sanitized counts and availability
+        run: cat "$RUNNER_TEMP/production-monitor.json" >> "$GITHUB_STEP_SUMMARY"
