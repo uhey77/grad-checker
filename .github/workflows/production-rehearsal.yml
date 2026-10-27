@@ -110,14 +110,20 @@ jobs:
         if: always()
         run: |
           if test -f "$RUNNER_TEMP/vercel-promotion-attempted"; then
-            vercel rollback "$GOOD_DEPLOYMENT" --yes
-            python3 scripts/deployment/verify_rehearsal_alias.py
+            # 別の公開操作による第三のdeploymentを上書きしない。
+            EXPECTED_DEPLOYMENT="$STAGE_URL" ALLOW_BASELINE=1 python3 scripts/deployment/verify_rehearsal_alias.py
+            rollback_status=0
+            vercel rollback "$GOOD_DEPLOYMENT" --yes || rollback_status=1
+            python3 scripts/deployment/verify_rehearsal_alias.py || rollback_status=1
             # rollback後の自動alias割当を正常deploymentのpromoteで復元する。
-            vercel promote "$GOOD_DEPLOYMENT" --yes
-            python3 scripts/deployment/verify_rehearsal_alias.py
+            # rollbackが失敗しても、正常版への復旧操作は試みる。
+            vercel promote "$GOOD_DEPLOYMENT" --yes || rollback_status=1
+            python3 scripts/deployment/verify_rehearsal_alias.py || rollback_status=1
+            exit "$rollback_status"
           fi
         env:
           EXPECTED_DEPLOYMENT: ${{ env.GOOD_DEPLOYMENT }}
+          STAGE_URL: ${{ steps.stage.outputs.url }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       - name: Always restore and verify Cloud Run baseline traffic
         if: always()

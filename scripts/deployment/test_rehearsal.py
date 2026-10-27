@@ -171,6 +171,37 @@ class CloudTests(unittest.TestCase):
 
 
 class AliasTests(unittest.TestCase):
+    def test_stage_project_and_ready_state_are_verified_before_alias(self):
+        project = "prj_QgFMi1xMYgrYLGPI1Yi9h0kdkNzW"
+        deployment = {
+            "project": {"id": project},
+            "target": "production",
+            "readyState": "READY",
+            "id": "dpl_stage",
+        }
+        alias_data = {"projectId": project, "deploymentId": "dpl_stage"}
+        with patch.dict(
+            os.environ,
+            {
+                "EXPECTED_DEPLOYMENT": "https://grad-checker-test.vercel.app",
+                "VERCEL_TOKEN": "synthetic-token",
+            },
+        ):
+            with patch.object(
+                alias.urllib.request,
+                "urlopen",
+                side_effect=[Response(deployment), Response(alias_data)],
+            ):
+                alias.verify()
+            with patch.object(
+                alias.urllib.request,
+                "urlopen",
+                return_value=Response({**deployment, "target": "preview"}),
+            ) as request:
+                with self.assertRaises(ValueError):
+                    alias.verify()
+                self.assertEqual(request.call_count, 1)
+
     def test_alias_must_match_both_project_and_deployment(self):
         good = {
             "projectId": "prj_QgFMi1xMYgrYLGPI1Yi9h0kdkNzW",
