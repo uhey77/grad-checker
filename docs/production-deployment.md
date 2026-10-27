@@ -189,3 +189,5 @@ Artifact Registryは最新の正常デプロイ、直前の正常ロールバッ
 ## 公開後の運用と開発統合
 
 日常開発とリリースPRは[開発・リリースフロー](development-flow.md)に従う。devでは本番公開しない。予算通知の設定済み記録、今回の実測と24〜48時間の未完了監視は[安定化監査](post-release-stabilization-2026-10-27.md)を参照する。
+
+24〜48時間の履歴メトリクス取得は[追加検証](stabilization-followup.md)のmain限定・production承認付き読取り監査を使う。欠測や権限不足を正常と扱わない。
