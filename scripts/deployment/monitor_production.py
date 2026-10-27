@@ -64,7 +64,9 @@ def metric(token, kind, aligner, start, end, extra=""):
             "available": True,
             "points": len(values),
             "maximum_aligned_value": max(values) if values else None,
-            "sum_aligned_values": sum(values) if aligner == "ALIGN_SUM" else None,
+            "sum_aligned_values": sum(values)
+            if values and aligner == "ALIGN_SUM"
+            else None,
             "truncated": bool(data.get("nextPageToken")),
             "alignment_seconds": 300,
             "aligner": aligner,
@@ -140,6 +142,7 @@ def report(hours, now=None):
     # ログ本文はgcloudの射影で捨て、出力は集計のみ。
     for name, query in {
         "errors": "severity>=ERROR",
+        "request_log_5xx": "httpRequest.status>=500",
         "oom_signals": 'SEARCH("Memory limit") OR SEARCH("OOM") OR SEARCH("out of memory")',
         "termination_signals": 'SEARCH("SIGKILL") OR SEARCH("terminated") OR SEARCH("container exited")',
         "database_connection_signals": 'SEARCH("OperationalError") OR SEARCH("connection refused") OR SEARCH("connection timeout") OR SEARCH("too many connections")',
@@ -167,6 +170,21 @@ def report(hours, now=None):
             ' AND metric.labels.response_code_class="5xx"',
         ),
         "latency_p95_ms": ("request_latencies", "ALIGN_PERCENTILE_95", ""),
+        "e2e_latency_p95_ms": (
+            "request_latency/e2e_latencies",
+            "ALIGN_PERCENTILE_95",
+            "",
+        ),
+        "pending_latency_p95_ms": (
+            "request_latency/pending",
+            "ALIGN_PERCENTILE_95",
+            "",
+        ),
+        "startup_latency_p95_ms": (
+            "container/startup_latencies",
+            "ALIGN_PERCENTILE_95",
+            "",
+        ),
         "instances": ("container/instance_count", "ALIGN_MAX", ""),
     }
     result["metrics"] = {

@@ -68,6 +68,7 @@ class MonitorTests(unittest.TestCase):
             )
             self.assertEqual(result["maximum_aligned_value"], None)
             self.assertEqual(result["points"], 0)
+            self.assertIsNone(result["sum_aligned_values"])
 
     def test_permissions_failure_exposes_no_error_body_or_token(self):
         failure = urllib.error.HTTPError("url", 403, "synthetic-secret", {}, None)

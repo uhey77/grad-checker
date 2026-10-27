@@ -56,6 +56,7 @@ gh workflow run production-monitor.yml --ref main -f expected_sha=<40桁のmain 
 CPU/メモリ・リクエストレイテンシの値は5分区間p95の最大値であり、全期間p95や瞬間最大ではない。[公式の分布メトリクスとpercentile](https://docs.cloud.google.com/monitoring/api/v3/distribution-metrics)と[Cloud Runメトリクス一覧](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z)に合わせる。
 ログのOOM/終了/接続失敗分類は文字列による兆候件数であり、正確な再起動回数や接続エラー総数ではない。
 空の時系列、権限不足、件数上限到達は、正常/0件の証明として扱わない。
+コンテナ内request_latenciesは起動時間を含まないため、E2E・pending・container startupの各p95も別々に取得し、遅延を切り分ける。request_countはコンテナに到達しない要求を含まないため、HTTP 5xxのリクエストログ件数も別に取得する。
 実請求額はMonitoring APIでは取得できないため、GCP Billing Reports・Neon請求画面での別確認が残る。
 
 ## ブランチ保護の具体案（未適用）
