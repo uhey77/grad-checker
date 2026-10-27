@@ -76,6 +76,7 @@ jobs:
         working-directory: backend
       - run: python3 -m unittest discover -s scripts/deployment -p 'test_initial*.py'
       - run: python3 -m unittest discover -s scripts/deployment -p 'test_monitor*.py'
+      - run: python3 -m unittest discover -s scripts/deployment -p 'test_rehearsal*.py'
       - run: docker build -t grad-checker-production:test .
       - run: uv run --locked --project backend python scripts/deployment/test_container.py
   vercel-audit:

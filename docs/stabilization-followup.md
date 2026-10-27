@@ -11,7 +11,7 @@ PR #74最新HEAD `fc354e032cffd1a9ad3544572a0d363c8e22fd7f` のレビューで�
 総合判定・総必要単位を変えず内訳を追加し、古い結果の未収録内訳を推測しない実装。
 ローカルfrontend-check、62テスト、build、必修内訳7テストは成功。
 Chromiumのテスト用API応答で1280/375/320pxの概要→詳細、日英切替、3個の48pxヘッダーボタン、Escapeのフォーカス復帰、マイページの編集キャンセル、概要取得失敗→再試行を確認。各幅JavaScript例外0、GETのみ・判定履歴API呼出しなし。本番API/DBの検証とは区別する。
-統合範囲はユーザーに確認中であり、この記録だけでPR #74の統合完了とはしない。
+ユーザーが「まだマージしない」と指定したためPR #74は未マージで保持する。今回のリリース・本番試験に含めない。
 
 ## 再測定と限界
 
@@ -71,11 +71,25 @@ mainの公開CIではcheck名が `ci / backend` 等、通常PRでは `backend` �
 ## 通常CDの更新・stage・rollback実証の手順（未実施）
 
 現在の復旧基準はCloud Run `grad-checker-api-00001-g9l` / digest `sha256:d3a2081572a5595f0ed7ab8f67f97650f445b366579c63870e6d0f8bd0331571` とVercel `dpl_GEXV2AgfCoGPq8CZsSMfb1nQJZ6C` の組。
-試験は本番revision/配信先を一時的に変更するため、対象と影響を提示してユーザー確認中。PRODUCTION_DEPLOY_ENABLEDは有効化しない。
+ユーザーから本番試験まで実施する承認を受領した。試験は本番revision/配信先を一時的に変更し、その後に上記正常版へ戻す。PRODUCTION_DEPLOY_ENABLEDは有効化しない。
+
+`production-rehearsal.yml` はmainの完全SHA一致、`REHEARSE_AND_RESTORE`入力、同SHAのCI成功、既存production承認を必須にする。公開中ソース `fce02dd0187d0c1afcb7531176d1def374932450` とbackend/frontend/Dockerfileの追跡ファイルが完全一致しなければ停止する。PR #74は含めない。
+
+```sh
+gh workflow run production-rehearsal.yml --ref main -f expected_sha=<40桁のmain SHA> -f confirmation=REHEARSE_AND_RESTORE
+```
+
+既存正常digestでno-trafficの一時revisionを作り、設定ハッシュ・Readyを照合後に一時的に100% trafficを向ける。Vercel stageのAPI/SPA検証後に一時promoteし、aliasを照合する。成功・失敗にかかわらずalwaysステップでVercel rollback、正常版再promote、Cloud Run正常revisionへのtraffic復旧と公開API/SPA再検証を行う。予期しない第三のrevisionへtrafficが変更されていた場合は上書きを停止する。runner喪失・timeout等で復旧ステップ自体が動かない場合は、以下の正常版へ手動復旧する。試験revision/stageは削除しない。
+
+```sh
+# 認証済み・対象確認済みの管理環境でのみ使用する緊急復旧先
+vercel rollback dpl_GEXV2AgfCoGPq8CZsSMfb1nQJZ6C --yes
+gcloud run services update-traffic grad-checker-api --project grad-checker-512505 --region asia-northeast1 --to-revisions=grad-checker-api-00001-g9l=100
+```
 
 1. リリースPRの最新HEAD CIを確認し、mainマージ後の完全SHAとproduction承認を固定する。
 2. 現在のCloud Run service spec・traffic・Ready revision・image digest、Vercelの本番aliasとdeploymentを読み取り照合する。基準と違えば停止し復旧先を再確定する。
-3. 既存Dockerfileの隔離DBコンテナ試験で成功したイメージだけを既存Registryへpushしdigestを記録する。DDL・Seed・移行は呼ばない。
+3. 初回に隔離DBコンテナ試験を通過した既存の正常digestを再利用する。今回は新しいbackend imageのbuild/pushをせず、DDL・Seed・移行も呼ばない。
 4. main限定のproduction承認下でCloud Run更新を実施し、現行フロントとの互換性・readinessを確認する。公開中の正常revision/imageは削除しない。
 5. Vercel production設定でbuildし、compiled API rewrite/SPA/資格情報非混入検査後、`--prod --skip-domain` でstageする。保護されたstageへ認証付きでreadiness/SPAを確認し、失敗なら昇格しない。
 6. ユーザー承認範囲内でテスト済みstageをpromoteし、公開readiness/SPAを確認する。DB不変の制約により、本番の新規アカウント作成・ログイン・成績保存・履歴作成による検証はしない。
