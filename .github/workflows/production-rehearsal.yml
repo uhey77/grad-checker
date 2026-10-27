@@ -1,0 +1,137 @@
+name: Production update and restore rehearsal
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact reviewed main SHA (application source must match the live release)
+        required: true
+        type: string
+      confirmation:
+        description: Type REHEARSE_AND_RESTORE for the approved temporary production changes
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+jobs:
+  ci:
+    if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main' && github.sha == inputs.expected_sha && inputs.confirmation == 'REHEARSE_AND_RESTORE'
+    uses: ./.github/workflows/check.yml
+  rehearse:
+    needs: ci
+    if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main' && github.sha == inputs.expected_sha && inputs.confirmation == 'REHEARSE_AND_RESTORE'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      REHEARSAL_CONFIRM: ${{ inputs.confirmation }}
+      VERCEL_ORG_ID: team_tZDGBnNdyZxvlZvkV86h6SGv
+      VERCEL_PROJECT_ID: prj_QgFMi1xMYgrYLGPI1Yi9h0kdkNzW
+      CLOUD_RUN_API_ORIGIN: https://grad-checker-api-hmhzqixo4q-an.a.run.app
+      GOOD_DEPLOYMENT: dpl_GEXV2AgfCoGPq8CZsSMfb1nQJZ6C
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - name: Verify approval policy and unchanged live application source
+        run: |
+          node scripts/deployment/check-release-policy.mjs
+          git diff --exit-code fce02dd0187d0c1afcb7531176d1def374932450 HEAD -- backend frontend Dockerfile
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Verify the known good production alias
+        run: python3 scripts/deployment/verify_rehearsal_alias.py
+        env:
+          EXPECTED_DEPLOYMENT: ${{ env.GOOD_DEPLOYMENT }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: grad-checker-512505
+          workload_identity_provider: projects/602914367926/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: grad-checker-deployer@grad-checker-512505.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - name: Update using only the existing healthy image digest
+        run: python3 scripts/deployment/rehearse_cloud_run.py update
+      - name: Install reviewed Vercel CLI
+        run: npm install -g vercel@65.2.0
+      - name: Pull existing production settings
+        run: |
+          umask 077
+          vercel pull --yes --environment=production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Verify settings, build unchanged frontend, and inspect output
+        run: |
+          node scripts/deployment/verify-frontend-env.mjs
+          vercel build --prod
+          node scripts/deployment/verify-vercel-output.mjs
+      - name: Stage production without assigning public domains
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          url=$(vercel deploy --prebuilt --prod --skip-domain)
+          DEPLOYMENT_URL="$url" node --input-type=module -e 'const u=new URL(process.env.DEPLOYMENT_URL); if(u.protocol!=="https:" || !u.hostname.endsWith(".vercel.app")) process.exit(1)'
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Verify protected stage API and SPA
+        run: |
+          vercel curl /api/ready --deployment "$DEPLOYMENT_URL" -- --fail --retry 6 --retry-delay 5 --output "$RUNNER_TEMP/readiness.json"
+          node scripts/deployment/verify-readiness.mjs < "$RUNNER_TEMP/readiness.json"
+          vercel curl /acceptance-check --deployment "$DEPLOYMENT_URL" -- --fail --output "$RUNNER_TEMP/frontend.html"
+          grep -q 'id="app"' "$RUNNER_TEMP/frontend.html"
+        env:
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Temporarily promote the tested stage
+        run: |
+          touch "$RUNNER_TEMP/vercel-promotion-attempted"
+          vercel promote "$DEPLOYMENT_URL" --yes
+          python3 scripts/deployment/verify_rehearsal_alias.py
+        env:
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+          EXPECTED_DEPLOYMENT: ${{ steps.stage.outputs.url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Verify temporary public deployment
+        run: |
+          curl --fail --retry 6 --retry-delay 5 https://grad-checker-chi.vercel.app/api/ready -o "$RUNNER_TEMP/readiness.json"
+          node scripts/deployment/verify-readiness.mjs < "$RUNNER_TEMP/readiness.json"
+          curl --fail https://grad-checker-chi.vercel.app/acceptance-check -o "$RUNNER_TEMP/frontend.html"
+          grep -q 'id="app"' "$RUNNER_TEMP/frontend.html"
+      - name: Always restore and verify the known good Vercel deployment
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/vercel-promotion-attempted"; then
+            # 別の公開操作による第三のdeploymentを上書きしない。
+            EXPECTED_DEPLOYMENT="$STAGE_URL" ALLOW_BASELINE=1 python3 scripts/deployment/verify_rehearsal_alias.py
+            rollback_status=0
+            vercel rollback "$GOOD_DEPLOYMENT" --yes || rollback_status=1
+            python3 scripts/deployment/verify_rehearsal_alias.py || rollback_status=1
+            # rollback後の自動alias割当を正常deploymentのpromoteで復元する。
+            # rollbackが失敗しても、正常版への復旧操作は試みる。
+            vercel promote "$GOOD_DEPLOYMENT" --yes || rollback_status=1
+            python3 scripts/deployment/verify_rehearsal_alias.py || rollback_status=1
+            exit "$rollback_status"
+          fi
+        env:
+          EXPECTED_DEPLOYMENT: ${{ env.GOOD_DEPLOYMENT }}
+          STAGE_URL: ${{ steps.stage.outputs.url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Always restore and verify Cloud Run baseline traffic
+        if: always()
+        run: python3 scripts/deployment/rehearse_cloud_run.py restore
+      - name: Verify restored public frontend and API
+        if: always()
+        run: |
+          curl --fail --retry 6 --retry-delay 5 https://grad-checker-chi.vercel.app/api/ready -o "$RUNNER_TEMP/readiness.json"
+          node scripts/deployment/verify-readiness.mjs < "$RUNNER_TEMP/readiness.json"
+          curl --fail https://grad-checker-chi.vercel.app/acceptance-check -o "$RUNNER_TEMP/frontend.html"
+          grep -q 'id="app"' "$RUNNER_TEMP/frontend.html"

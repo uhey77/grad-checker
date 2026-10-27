@@ -6,7 +6,7 @@
 本番URL: https://grad-checker-chi.vercel.app 。
 Cloud Runはgrad-checker-api-00001-g9l、Vercelはdpl_GEXV2AgfCoGPq8CZsSMfb1nQJZ6C。
 専用テストデータの後片付け後も、認証試行カウンター以外の17テーブルは構築前と全件一致。
-予算通知はユーザー指示で後回しとし、自動公開フラグも未設定を維持する。
+予算通知は設定・読取り照合済み（ユーザーのCloud Shell実行報告）。自動公開フラグは未設定を維持する。
 実測値・検証結果・既知の制約は[実行監査](initial-production-execution.md)を参照する。
 
 ## 承認と固定対象
@@ -81,7 +81,7 @@ VercelはAPIでHobby、NeonはFree（free_v3）を確認した。
 Neon production computeは0.25〜2 CU、suspend_timeout_seconds=0（既定の5分）で、既存設定を変更していない。
 Freeの容量・compute・通信枠を超える場合は可用性の制約がある。
 
-予算通知は500円・1,000円を目安とするが、請求通貨・通知先・予算IAMを確認してから設定する。
+月額1,000 JPYの予算通知は実費50%（500円）・100%（1,000円）で設定済み。再作成・更新しない。カスタム通知チャネルは未設定で、本人へのメール到達は未確認。詳細は[安定化監査](post-release-stabilization-2026-10-27.md)を参照する。
 通知は課金停止を意味しない。実測請求額を取得できない場合は未確認と記録する。
 
 ## 失敗時の停止・復旧
