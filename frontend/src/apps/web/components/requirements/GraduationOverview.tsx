@@ -1,23 +1,18 @@
 import { useTranslation } from "react-i18next";
-import type {
-  GraduationResult,
-  RequirementResult,
-} from "../../../../modules/requirements/public.ts";
+import type { GraduationResult } from "../../../../modules/requirements/public.ts";
 import { GraduationInfographic } from "./GraduationInfographic.tsx";
 export function GraduationOverview({
   result,
-  categories,
 }: {
   result: Pick<
     GraduationResult,
     "result" | "total" | "warnings" | "degreeLevel" | "completionConditions"
   >;
-  categories: RequirementResult[];
 }) {
   const { t } = useTranslation();
   return (
     <>
-      <GraduationInfographic result={result} categories={categories} />
+      <GraduationInfographic result={result} />
       <dl className="credit-summary">
         <div>
           <dt>{t("必要単位")}</dt>

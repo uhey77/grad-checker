@@ -795,8 +795,6 @@ tbody tr.earned-row:hover {
   font-weight: 700;
 }
 .graduation-infographic {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.6fr);
   margin: 24px 0;
   border: 1px solid #d6e6e4;
   border-radius: 18px;
@@ -874,81 +872,11 @@ tbody tr.earned-row:hover {
   color: #3a5b53;
   font-size: 0.85rem;
 }
-.category-progress-panel {
-  min-width: 0;
-  padding: 28px;
-}
-.category-progress-footnote {
+.credit-orbit-footnote {
+  margin: 12px 0 0;
   color: #53676f;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.7;
-}
-.category-progress-list {
-  display: grid;
-  gap: 22px;
-}
-.category-progress-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 650;
-}
-.category-progress-status {
-  flex-shrink: 0;
-  padding: 3px 9px;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-.category-progress-status.pass {
-  background: #eaf5ed;
-  color: #21633f;
-}
-.category-progress-status.fail {
-  background: #fff4e5;
-  color: #8b521b;
-}
-.category-progress-track {
-  height: 10px;
-  margin: 10px 0 6px;
-  overflow: hidden;
-  border-radius: 8px;
-  background: #edf1f3;
-}
-.category-progress-fill {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  transform-origin: left;
-}
-.category-progress-fill.tone-0 {
-  background: #37867b;
-}
-.category-progress-fill.tone-1 {
-  background: #638aa8;
-}
-.category-progress-fill.tone-2 {
-  background: #8b80ad;
-}
-.category-progress-count {
-  margin: 0;
-  text-align: right;
-  color: #53676f;
-  font-size: 0.78rem;
-  font-variant-numeric: tabular-nums;
-}
-.category-progress-count strong {
-  color: #213238;
-  font-size: 0.9rem;
-}
-.category-progress-footnote {
-  margin: 20px 0 0;
-  padding-top: 16px;
-  border-top: 1px solid #edf1f3;
 }
 /* ダッシュボード内は見出し・区分・本文・補足の4段階に揃える。 */
 .dashboard-page {
@@ -962,15 +890,13 @@ tbody tr.earned-row:hover {
   font-size: var(--dashboard-heading-size);
 }
 .dashboard-page .shortage-group h4,
-.dashboard-page .shortage-category h5,
-.dashboard-page .category-progress-heading {
+.dashboard-page .shortage-category h5 {
   font-size: var(--dashboard-section-size);
 }
 .dashboard-page .shortage-course-list,
 .dashboard-page .shortage-condition,
 .dashboard-page .requirement-matrix,
-.dashboard-page .requirement-matrix thead th,
-.dashboard-page .category-progress-count strong {
+.dashboard-page .requirement-matrix thead th {
   font-size: var(--dashboard-body-size);
 }
 .dashboard-page .shortage-course-credits,
@@ -979,9 +905,7 @@ tbody tr.earned-row:hover {
 .dashboard-page .credit-summary dt,
 .dashboard-page .credit-orbit-value > span,
 .dashboard-page .credit-orbit-caption,
-.dashboard-page .category-progress-footnote,
-.dashboard-page .category-progress-status,
-.dashboard-page .category-progress-count {
+.dashboard-page .credit-orbit-footnote {
   font-size: var(--dashboard-detail-size);
 }
 @keyframes infographic-enter {
@@ -995,11 +919,7 @@ tbody tr.earned-row:hover {
   }
 }
 @media (max-width: 640px) {
-  .graduation-infographic {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .credit-orbit-panel,
-  .category-progress-panel {
+  .credit-orbit-panel {
     padding: 24px 18px;
   }
   .credit-orbit {
