@@ -1,19 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { useEntranceProgress } from "../../hooks/useEntranceProgress.ts";
-import type {
-  GraduationResult,
-  RequirementResult,
-} from "../../../../modules/requirements/public.ts";
+import type { GraduationResult } from "../../../../modules/requirements/public.ts";
 
 function fraction(credited: number, required: number) {
   return required === 0 ? 1 : Math.min(credited / required, 1);
 }
 export function GraduationInfographic({
   result,
-  categories,
 }: {
   result: Pick<GraduationResult, "total" | "result">;
-  categories: RequirementResult[];
 }) {
   const { t, i18n } = useTranslation();
   const percent = new Intl.NumberFormat(i18n.resolvedLanguage, {
@@ -71,59 +66,8 @@ export function GraduationInfographic({
             <strong>{t("総単位の条件を満たしています")}</strong>
           </p>
         )}
-      </div>
-      <div className="category-progress-panel">
-        <h3>{t("区分別の単位")}</h3>
-        <div className="category-progress-list">
-          {categories.map((row, index) => {
-            const delay = Math.min(index, 4) * 0.1;
-            const reveal = Math.max(0, (progress - delay) / (1 - delay));
-            return (
-              <div className="category-progress" key={row.id}>
-                <div className="category-progress-heading">
-                  <span>{row.name}</span>
-                  <span className={`category-progress-status ${row.result}`}>
-                    {row.result === "pass"
-                      ? t("合計達成")
-                      : t("あと{{value0}}単位", { value0: row.shortage })}
-                  </span>
-                </div>
-                <div
-                  className="category-progress-track"
-                  role="meter"
-                  aria-label={row.name}
-                  aria-valuemin={0}
-                  aria-valuemax={Math.max(1, row.requiredCredits)}
-                  aria-valuenow={Math.min(
-                    row.creditedCredits,
-                    row.requiredCredits,
-                  )}
-                  aria-valuetext={t(
-                    "算入{{value0}}単位、必要{{value1}}単位、不足{{value2}}単位",
-                    {
-                      value0: row.creditedCredits,
-                      value1: row.requiredCredits,
-                      value2: row.shortage,
-                    },
-                  )}
-                >
-                  <span
-                    className={`category-progress-fill tone-${index % 3}`}
-                    style={{
-                      transform: `scaleX(${fraction(row.creditedCredits, row.requiredCredits) * reveal})`,
-                    }}
-                  />
-                </div>
-                <p className="category-progress-count">
-                  <strong>{row.creditedCredits}</strong>
-                  {t(" / {{value0}} 単位", { value0: row.requiredCredits })}
-                </p>
-              </div>
-            );
-          })}
-        </div>
         {total.result === "pass" && result.result === "fail" && (
-          <p className="category-progress-footnote">
+          <p className="credit-orbit-footnote">
             {t(
               "総単位は満たしていますが、必修・内訳などに未達成の条件が残っています。",
             )}

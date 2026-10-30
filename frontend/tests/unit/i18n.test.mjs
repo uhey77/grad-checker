@@ -373,6 +373,23 @@ test("英語でも判定保留と出典・推薦の原文を保ち、開講期�
   assert.match(markup, /Unverified \/ pending/);
   assert.match(markup, /学位論文の審査/);
   assert.match(markup, /href="https:\/\/example.com\/rules.pdf"/);
+  const totalMet = renderToStaticMarkup(
+    createElement(
+      I18nextProvider,
+      { i18n },
+      createElement(GraduationResultView, {
+        result: {
+          ...result,
+          result: "fail",
+          total: { ...result.total, shortage: 0, result: "pass" },
+        },
+      }),
+    ),
+  );
+  assert.match(
+    totalMet,
+    /The total credit requirement is met, but required courses or other category requirements remain outstanding/,
+  );
   const recommendation = {
     courseId: "recommended",
     name: "公式の推薦科目名",

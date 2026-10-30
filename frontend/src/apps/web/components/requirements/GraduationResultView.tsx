@@ -11,16 +11,12 @@ export function GraduationResultView({
   showOverview?: boolean;
 }) {
   const { t } = useTranslation();
-  const categories = result.requirements.filter(
-    (row) => row.kind === "classification_total",
-  );
   return (
     <div className="graduation-result">
       {showOverview && (
         <GraduationOverview
           key={`${result.curriculum.id}:${result.dataRevision}:${result.evaluatedAt}`}
           result={result}
-          categories={categories}
         />
       )}
       {result.externalAllocations.length > 0 && (

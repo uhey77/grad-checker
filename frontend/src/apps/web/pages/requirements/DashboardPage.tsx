@@ -81,11 +81,7 @@ export function DashboardPage({
                   </button>
                 </div>
               )}
-              <GraduationOverview
-                key={result.evaluatedAt}
-                result={result}
-                categories={result.categories}
-              />
+              <GraduationOverview key={result.evaluatedAt} result={result} />
               {displayedDetail ? (
                 <GraduationResultView
                   result={displayedDetail}

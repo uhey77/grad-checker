@@ -154,11 +154,6 @@ export const english = {
     "Required credit progress {{value0}}%. {{value1}} credits counted out of {{value2}} required.",
   "{{value0}}単位": "{{value0}} credits",
   総単位の条件を満たしています: "Total credit requirement met",
-  区分別の単位: "Credits by category",
-  合計達成: "Total met",
-  "あと{{value0}}単位": "{{value0}} credits remaining",
-  "算入{{value0}}単位、必要{{value1}}単位、不足{{value2}}単位":
-    "{{value0}} credits counted, {{value1}} required, {{value2}} remaining",
   "総単位は満たしていますが、必修・内訳などに未達成の条件が残っています。":
     "The total credit requirement is met, but required courses or other category requirements remain outstanding.",
   単位の進捗グラフ: "Credit progress charts",
