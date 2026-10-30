@@ -99,3 +99,18 @@ gcloud run services update-traffic grad-checker-api --project grad-checker-51250
 
 この手順書とローカルテストは、本番での更新/rollback成功の証拠ではない。
 24〜48時間監視、実請求、通知メール、実運用の保護設定、通常CD実証とユーザーの最終承認が揃うまで、自動公開フラグを変更しない。
+
+## 2026-10-30：更新試験の失敗と検証処理の修正
+
+[更新・復旧試験40487548392](https://github.com/uhey77/grad-checker/actions/runs/40487548392)はproduction承認後、Cloud Run更新ステップでRuntimeErrorとなった。
+ユーザー提供のCloud Shell読取り結果では更新権限は許可され、試験revisionの作成・Ready記録・正常digestとの一致を確認した。
+終了後のtrafficは正常revisionへ100%。workflowの復旧・公開API/SPA確認も成功した。
+Vercel stage以降はskipされ、通常更新・復旧試験の完了とは扱わない。
+旧ログは検証条件を区別しないため、latestReadyRevisionNameの不一致と設定ハッシュ不一致のどちらが原因かは確定していない。
+
+試験スクリプトは、サービスのlatestReadyRevisionNameとの比較に代えて、指定した試験revisionを直接取得し、名前・Ready=True・固定imageDigestを確認する。
+Active=False/Retiredだけでは拒否しない。これは配信先切替後のreadiness成功を証明するものではないため、切替後のtraffic/readiness確認を維持する。
+設定比較は従来どおりspec全体と選定済みannotationsのハッシュで行い、自動設定項目を推測で除外しない。
+切替直前のtrafficが正常revisionから変化していれば停止する。
+失敗時には固定のstage/error_codeとCLI終了コードを記録し、CLI出力・引数・設定値は出さない。
+この修正のテストはクラウドを呼ばない。main反映と承認下での本番再試験は別途必要で、自動公開フラグは変更しない。
