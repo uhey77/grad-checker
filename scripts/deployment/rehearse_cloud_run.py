@@ -19,12 +19,38 @@ IMAGE = f"{REGION}-docker.pkg.dev/{PROJECT}/grad-checker/api@{DIGEST}"
 ORIGIN = "https://grad-checker-api-hmhzqixo4q-an.a.run.app"
 
 
+STAGE = "initialization"
+
+
+class RehearsalError(RuntimeError):
+    def __init__(self, code, *, exit_code=None):
+        super().__init__(code)
+        self.code = code
+        self.exit_code = exit_code
+
+
+def failure_report(error):
+    report = {
+        "rehearsal": "FAIL",
+        "stage": STAGE,
+        "error_type": type(error).__name__,
+    }
+    if isinstance(error, RehearsalError):
+        report["error_code"] = error.code
+        if error.exit_code is not None:
+            report["exit_code"] = error.exit_code
+    return report
+
+
 def command(*args):
-    result = subprocess.run(
-        args, capture_output=True, text=True, timeout=600, check=False
-    )
+    try:
+        result = subprocess.run(
+            args, capture_output=True, text=True, timeout=600, check=False
+        )
+    except subprocess.TimeoutExpired:
+        raise RehearsalError("command_timeout") from None
     if result.returncode:
-        raise RuntimeError(f"{args[0]} {args[1]} failed")
+        raise RehearsalError("command_failed", exit_code=result.returncode)
     return result.stdout.strip()
 
 
@@ -60,6 +86,19 @@ def fingerprint(service):
         },
     }
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
+
+
+def validate_revision(revision, name):
+    if revision.get("metadata", {}).get("name") != name:
+        raise RehearsalError("revision_name_mismatch")
+    status = revision.get("status", {})
+    if not any(
+        c.get("type") == "Ready" and c.get("status") == "True"
+        for c in status.get("conditions", [])
+    ):
+        raise RehearsalError("revision_not_ready")
+    if status.get("imageDigest") != IMAGE:
+        raise RehearsalError("revision_image_mismatch")
 
 
 def traffic_is(service, revision):
@@ -100,7 +139,7 @@ def readiness():
         except (OSError, ValueError):
             pass
         time.sleep(5)
-    raise RuntimeError("Readiness failed")
+    raise RehearsalError("readiness_failed")
 
 
 def save(path, state):
@@ -109,10 +148,13 @@ def save(path, state):
 
 
 def update(path, run_id):
+    global STAGE
+    STAGE = "baseline_validation"
     if not re.fullmatch(r"[0-9]{1,20}", run_id):
         raise ValueError("Invalid rehearsal run id")
     service = gcloud("services", "describe", SERVICE)
     validate_baseline(service)
+    STAGE = "baseline_readiness"
     readiness()
     suffix = f"rehearsal-{run_id}"
     revision = f"{SERVICE}-{suffix}"
@@ -124,6 +166,7 @@ def update(path, run_id):
     }
     save(path, state)
     # 同一digest・既存サービス設定を維持。IAM/Secret/DDL/Seedは変更しない。
+    STAGE = "revision_creation"
     gcloud(
         "deploy",
         SERVICE,
@@ -131,15 +174,19 @@ def update(path, run_id):
         f"--revision-suffix={suffix}",
         "--no-traffic",
     )
+    STAGE = "revision_validation"
+    validate_revision(gcloud("revisions", "describe", revision), revision)
+    STAGE = "configuration_validation"
     service = gcloud("services", "describe", SERVICE)
-    if (
-        service["status"].get("latestReadyRevisionName") != revision
-        or fingerprint(service) != state["fingerprint"]
-    ):
-        raise RuntimeError("Rehearsal revision readiness/configuration mismatch")
+    if fingerprint(service) != state["fingerprint"]:
+        raise RehearsalError("configuration_mismatch")
+    if not traffic_is(service, BASELINE):
+        raise RehearsalError("unexpected_traffic_before_switch")
+    STAGE = "traffic_switch"
     gcloud("services", "update-traffic", SERVICE, f"--to-revisions={revision}=100")
     if not traffic_is(gcloud("services", "describe", SERVICE), revision):
-        raise RuntimeError("Cannot verify rehearsal traffic")
+        raise RehearsalError("traffic_switch_not_verified")
+    STAGE = "updated_readiness"
     readiness()
     state["update_verified"] = True
     save(path, state)
@@ -149,6 +196,8 @@ def update(path, run_id):
 
 
 def restore(path):
+    global STAGE
+    STAGE = "restore"
     if not path.exists():
         print(json.dumps({"cloud_run_restore": "not_needed"}))
         return
@@ -208,5 +257,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as error:  # noqa: BLE001 -- Secretを含み得るCLI応答を出さない
-        print(json.dumps({"rehearsal": "FAIL", "error_type": type(error).__name__}))
+        print(json.dumps(failure_report(error)))
         raise SystemExit(1) from None

@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -116,9 +117,15 @@ class CloudTests(unittest.TestCase):
             if args[0] == "deploy":
                 self.assertIn(f"--image={cloud.IMAGE}", args)
                 self.assertIn("--no-traffic", args)
-                service["status"]["latestReadyRevisionName"] = (
-                    f"{cloud.SERVICE}-rehearsal-123"
-                )
+                # --no-trafficではサービスのlatestReadyを判定根拠にしない。
+            if args[:2] == ("revisions", "describe"):
+                return {
+                    "metadata": {"name": args[2]},
+                    "status": {
+                        "imageDigest": cloud.IMAGE,
+                        "conditions": [{"type": "Ready", "status": "True"}],
+                    },
+                }
             if args[:2] == ("services", "update-traffic"):
                 revision = args[-1].removeprefix("--to-revisions=").removesuffix("=100")
                 service["status"]["traffic"] = [
@@ -142,6 +149,91 @@ class CloudTests(unittest.TestCase):
                 set(call) & {"delete", "set-iam-policy", "add-iam-policy-binding"}
                 for call in calls
             )
+        )
+
+    def test_revision_failures_and_configuration_changes_prevent_switch(self):
+        for failure in ("name", "ready", "image", "configuration", "traffic"):
+            with self.subTest(failure=failure):
+                service = baseline()
+                calls = []
+
+                def command(*args, calls=calls, failure=failure, service=service):
+                    calls.append(args)
+                    if args[0] == "deploy":
+                        if failure == "configuration":
+                            service["spec"]["template"]["spec"]["containers"][0]["env"][
+                                0
+                            ]["value"] = "changed-secret-value"
+                        if failure == "traffic":
+                            service["status"]["traffic"][0]["revisionName"] = "other"
+                    if args[:2] == ("revisions", "describe"):
+                        return {
+                            "metadata": {
+                                "name": "other" if failure == "name" else args[2]
+                            },
+                            "status": {
+                                "imageDigest": "wrong"
+                                if failure == "image"
+                                else cloud.IMAGE,
+                                "conditions": [
+                                    {
+                                        "type": "Ready",
+                                        "status": "False"
+                                        if failure == "ready"
+                                        else "True",
+                                    }
+                                ],
+                            },
+                        }
+                    return copy.deepcopy(service)
+
+                with (
+                    tempfile.TemporaryDirectory() as directory,
+                    patch.object(cloud, "gcloud", side_effect=command),
+                    patch.object(cloud, "readiness"),
+                ):
+                    with self.assertRaises(cloud.RehearsalError) as caught:
+                        cloud.update(Path(directory) / "state", "123")
+                    expected = {
+                        "name": "revision_name_mismatch",
+                        "ready": "revision_not_ready",
+                        "image": "revision_image_mismatch",
+                        "configuration": "configuration_mismatch",
+                        "traffic": "unexpected_traffic_before_switch",
+                    }
+                    self.assertEqual(caught.exception.code, expected[failure])
+                    self.assertNotIn(
+                        "changed-secret-value",
+                        json.dumps(cloud.failure_report(caught.exception)),
+                    )
+                self.assertFalse(
+                    any(c[:2] == ("services", "update-traffic") for c in calls)
+                )
+
+    def test_command_diagnostics_never_include_cli_output_or_arguments(self):
+        result = subprocess.CompletedProcess(
+            [], 1, "synthetic-secret", "synthetic-secret"
+        )
+        with (
+            patch.object(cloud.subprocess, "run", return_value=result),
+            self.assertRaises(cloud.RehearsalError) as caught,
+        ):
+            cloud.command("gcloud", "synthetic-secret")
+        report = cloud.failure_report(caught.exception)
+        self.assertEqual(report["error_code"], "command_failed")
+        self.assertEqual(report["exit_code"], 1)
+        self.assertNotIn("synthetic-secret", json.dumps(report))
+        with (
+            patch.object(
+                cloud.subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired("synthetic-secret", 600),
+            ),
+            self.assertRaises(cloud.RehearsalError) as caught,
+        ):
+            cloud.command("gcloud")
+        self.assertEqual(
+            cloud.failure_report(caught.exception)["error_code"], "command_timeout"
         )
 
     def test_concurrent_unknown_traffic_is_not_overwritten(self):
