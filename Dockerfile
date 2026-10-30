@@ -7,7 +7,7 @@ COPY backend/modules ./modules
 COPY backend/shared ./shared
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /api ./apps/api
 
-FROM ghcr.io/astral-sh/uv:0.13.1 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.6 AS uv
 FROM python:3.15.2-slim-bookworm AS python-build
 COPY --from=uv /uv /usr/local/bin/uv
 WORKDIR /app
