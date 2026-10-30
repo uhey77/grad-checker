@@ -28,12 +28,12 @@ export function GraduationInfographic({
       aria-label={t("単位の進捗グラフ")}
     >
       <div className="credit-orbit-panel">
-        <h3>{t("総単位の充足率")}</h3>
+        <h3>{t("必要単位の進捗")}</h3>
         <div
           className="credit-orbit"
           role="img"
           aria-label={t(
-            "総単位の充足率 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位",
+            "必要単位の進捗 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位",
             {
               value0: percent.format(ratio * 100),
               value1: total.creditedCredits,

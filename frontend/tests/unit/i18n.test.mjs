@@ -24,11 +24,68 @@ const { ProgramCoverage } = await built(
 const { GraduationResultView } = await built(
   "apps/web/components/requirements/GraduationResultView.js",
 );
+const { AppLayout } = await built("apps/web/layouts/AppLayout.js");
+const { ProfilePage } = await built("apps/web/pages/profiles/ProfilePage.js");
 const { ErrorState, FormError } = await built(
   "apps/web/components/StatusPanels.js",
 );
 const { SaveBar } = await built("apps/web/components/SaveBar.js");
 const { GradeTable } = await built("apps/web/components/grades/GradeTable.js");
+
+test("認証後のヘッダーはホームとマイページを表示し、言語切替を右に置く", () => {
+  const i18n = createSiteI18n({ languages: ["ja"] });
+  const markup = renderToStaticMarkup(
+    createElement(
+      I18nextProvider,
+      { i18n },
+      createElement(
+        AppLayout,
+        {
+          showDashboard: () => {},
+          profileAction: createElement(
+            "button",
+            { type: "button" },
+            "マイページ",
+          ),
+        },
+        "本文",
+      ),
+    ),
+  );
+  assert.match(markup, /aria-label="卒業要件チェッカー：ダッシュボードへ"/);
+  assert.match(markup, /マイページ.*Switch to English/);
+  assert.doesNotMatch(markup, /<nav/);
+  const auth = renderToStaticMarkup(
+    createElement(
+      I18nextProvider,
+      { i18n },
+      createElement(AppLayout, null, "ログイン"),
+    ),
+  );
+  assert.doesNotMatch(auth, /brand-home/);
+});
+
+test("マイページから成績入力へ移動でき、所属編集中は入口を表示しない", () => {
+  const i18n = createSiteI18n({ languages: ["ja"] });
+  const render = (editing) =>
+    renderToStaticMarkup(
+      createElement(
+        I18nextProvider,
+        { i18n },
+        createElement(ProfilePage, {
+          profile: { editing, state: null, error: "error", retry: () => {} },
+          loginName: "user",
+          active: true,
+          showDashboard: () => {},
+          showGrades: () => {},
+          logout: () => {},
+          authBusy: false,
+        }),
+      ),
+    );
+  assert.match(render(false), /成績入力へ/);
+  assert.doesNotMatch(render(true), /成績入力へ/);
+});
 
 test("保存済みの選択、ブラウザーの優先言語、日本語フォールバックの順で初期言語を決める", () => {
   assert.equal(initialLanguage("ja", ["en-US"]), "ja");
@@ -341,15 +398,18 @@ test("英語でも判定保留と出典・推薦の原文を保ち、開講期�
         result: {
           ...result,
           degreeLevel: "bachelor",
+          requirements: [
+            { id: "r", name: "公式の条件名", kind: "total", shortage: 2 },
+          ],
           recommendations: [recommendation],
         },
       }),
     ),
   );
-  assert.match(recommended, /Recommended courses/);
+  assert.match(recommended, /Remaining credits and course options/);
   assert.match(recommended, /公式の推薦科目名/);
   assert.match(recommended, /原文の推薦理由/);
-  assert.match(recommended, /Not taken/);
+  assert.doesNotMatch(recommended, /Not taken/);
   const offerings = [
     { semesterOrder: 1, termCode: "first" },
     { semesterOrder: 2, termCode: "second" },

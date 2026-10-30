@@ -3,13 +3,13 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useRef, type ReactNode } from "react";
 export function AppLayout({
   children,
-  navigation,
+  showDashboard,
   profileAction,
   screenKey,
   contentClassName,
 }: {
   children: ReactNode;
-  navigation?: ReactNode;
+  showDashboard?: () => void;
   profileAction?: ReactNode;
   screenKey?: string | null;
   contentClassName?: string;
@@ -29,12 +29,34 @@ export function AppLayout({
       <header className="site-header">
         <div className="app-container header-inner">
           <div className="header-brand">
-            {navigation}
-            <span className="brand">{t("卒業要件チェッカー")}</span>
+            {showDashboard ? (
+              <button
+                type="button"
+                className="brand brand-home"
+                onClick={showDashboard}
+                aria-label={t("卒業要件チェッカー：ダッシュボードへ")}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="m8 12 2.7 2.7L16.5 9" />
+                </svg>
+                <span>{t("卒業要件チェッカー")}</span>
+              </button>
+            ) : (
+              <span className="brand">{t("卒業要件チェッカー")}</span>
+            )}
           </div>
           <div className="header-controls">
-            <LanguageSwitcher />
             {profileAction}
+            <LanguageSwitcher />
           </div>
         </div>
       </header>

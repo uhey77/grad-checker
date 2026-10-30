@@ -1,5 +1,25 @@
 // 日本語のUI文言をキーにする。大学の名称・科目・出典データは翻訳しない。
 export const english = {
+  成績: "Grades",
+  成績入力へ: "Go to grade entry",
+  成績を入力: "Enter grades",
+  "卒業要件チェッカー：ダッシュボードへ":
+    "Graduation Requirements Checker: Go to dashboard",
+  その他の履修候補: "Other course options",
+  "総単位の不足を補える候補です。":
+    "These courses can help meet the total credit requirement.",
+  候補を見る: "View course options",
+  "{{value0}}の候補を見る": "View course options for {{value0}}",
+  区分の合計: "Category totals",
+  区分を確認できない必修科目: "Required courses with an unconfirmed category",
+  "次の必修科目を修得する必要があります。":
+    "You need to complete the following required courses.",
+  不足単位と履修候補: "Remaining credits and course options",
+  内訳の最低条件: "Minimum subrequirements",
+  "選択・選択必修の科目は候補です。すべての履修が必要という意味ではありません。":
+    "Elective courses are options; you do not need to take every course listed.",
+  "この条件の候補は確認できていません。":
+    "No course options have been confirmed for this requirement.",
   "（最低{{value0}}単位）": " (minimum {{value0}} credits)",
   合計: "Total",
   "科目区分ごとの合計・必修・選択・選択必修と最低単位の条件":
@@ -128,10 +148,10 @@ export const english = {
     "Non-credit completion requirements (self-reported)",
   "達成（本人申告）": "Met (self-reported)",
   未達成: "Not met",
-  総単位の充足率: "Total credit progress",
+  必要単位の進捗: "Required credit progress",
   " / {{value0}} 単位": " / {{value0}} credits",
-  "総単位の充足率 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位":
-    "Total credit progress {{value0}}%. {{value1}} credits counted out of {{value2}} required.",
+  "必要単位の進捗 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位":
+    "Required credit progress {{value0}}%. {{value1}} credits counted out of {{value2}} required.",
   "{{value0}}単位": "{{value0}} credits",
   総単位の条件を満たしています: "Total credit requirement met",
   区分別の単位: "Credits by category",
@@ -160,10 +180,9 @@ export const english = {
   "未確認・判定保留": "Unverified / pending",
   "根拠（{{value0}}）": "Source ({{value0}})",
   単位以外の修了条件: "Non-credit completion requirements",
-  条件別判定: "Results by requirement",
+  科目区分別の単位: "Credits by course category",
   判定条件の科目区分: "Requirement categories",
   条件: "Requirement",
-  卒業要件の条件別判定: "Graduation results by requirement",
   "条件ごとの必要単位・修得単位・算入単位・不足単位と判定":
     "Required, earned, counted, and remaining credits and result for each requirement",
   "未修得の必修科目（全区分）": "Unearned required courses (all categories)",
@@ -203,8 +222,6 @@ export const english = {
     "Create an account for this app. You will receive a recovery code after registration.",
   "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。":
     "Use your username and saved recovery code to set a new password. Your previous recovery code becomes invalid after a successful reset.",
-  "アプリ専用のユーザー名とパスワードを入力してください。":
-    "Enter your username and password for this app.",
   パスワードを忘れた場合: "Forgot password?",
   ログインへ戻る: "Back to login",
   "← ダッシュボードへ戻る": "← Back to dashboard",
@@ -235,8 +252,6 @@ export const english = {
   "卒業・修了要件の概要を読み込んでいます…": "Loading requirements overview…",
   "保存済みの成績は0件です。成績入力から修得状況を保存してください。":
     "No grades have been saved. Save your course completion status on the Grades screen.",
-  条件別の詳細を閉じる: "Hide requirement details",
-  条件別の詳細を表示: "Show requirement details",
   "卒業要件の詳細を読み込んでいます…": "Loading requirement details…",
   "最新の卒業・修了要件概要": "Latest requirements overview",
   "卒業・修了要件": "Graduation and degree completion requirements",

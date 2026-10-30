@@ -58,7 +58,10 @@ export function buildRequirementMatrix(
       });
     }
     const row = rows.get(owner.id)!;
-    (row.cells[requirement.kind] ??= []).push(requirement);
+    // 内訳の最低条件は独立した行を保ち、選択必修の列へ表示する。
+    const columnKind =
+      requirement.kind === "subminimum" ? "selective_group" : requirement.kind;
+    (row.cells[columnKind] ??= []).push(requirement);
   }
 
   const children = new Map<string | null, RequirementMatrixRow[]>();

@@ -96,6 +96,25 @@ main {
   font-size: 17px;
   letter-spacing: 0.02em;
 }
+.brand-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.brand-home svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+.brand-home:hover {
+  background: transparent;
+  color: #205c55;
+}
 .header-brand {
   display: flex;
   align-items: center;
@@ -608,26 +627,97 @@ tbody tr.earned-row:hover {
 .graduation-result {
   margin-top: 1.5rem;
 }
-.requirement-filters {
+.shortage-group {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid #d6e6e4;
+  border-radius: 14px;
+  background: #fff;
+}
+.shortage-group h4 {
+  margin: 0 0 8px;
+  color: #205c55;
+  font-size: 1.05rem;
+}
+.shortage-group > p {
+  color: #536b69;
+  margin: 0 0 16px;
+}
+.shortage-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.shortage-category {
+  min-width: 0;
+  border: 1px solid #dce9e7;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.shortage-category h5 {
+  margin: 0;
+  padding: 10px 14px;
+  background: #f1f7f6;
+  color: #244e49;
+  font-size: 0.95rem;
+}
+.shortage-condition + .shortage-condition {
+  margin-top: 20px;
+}
+.shortage-subminimum {
+  margin: 12px 0 0 16px;
+  padding-left: 12px;
+  border-left: 2px solid #cddfdb;
+}
+.shortage-candidates {
+  margin-top: 8px;
+}
+.shortage-candidates summary {
+  width: fit-content;
+  color: #205c55;
+  cursor: pointer;
+  font-weight: 600;
+}
+.shortage-candidates summary:focus-visible {
+  outline: 2px solid #205c55;
+  outline-offset: 3px;
+}
+.shortage-course-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.shortage-category .shortage-course-list {
+  margin: 0;
+}
+.shortage-course-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  overflow-wrap: anywhere;
+}
+.shortage-course-list li + li {
+  border-top: 1px solid #e8f0ef;
+}
+.shortage-course-credits {
+  flex: none;
+  color: #536b69;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.shortage-course-info {
+  min-width: 0;
+}
+.shortage-course-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 16px;
-}
-.requirement-filters button {
-  padding: 10px 18px;
-  border: 1px solid #cddcda;
-  border-radius: 999px;
-  background: #fff;
-  color: #365451;
-  font: inherit;
-  cursor: pointer;
-}
-.requirement-filters button[aria-pressed="true"] {
-  background: #205c55;
-  border-color: #205c55;
-  color: #fff;
-  font-weight: 700;
+  gap: 4px 16px;
+  margin-top: 4px;
+  color: #536b69;
+  font-size: 0.8rem;
 }
 .requirement-matrix {
   min-width: 640px;
@@ -659,15 +749,6 @@ tbody tr.earned-row:hover {
 .requirement-matrix .requirement-group-start > th,
 .requirement-matrix .requirement-group-start > td {
   border-top: 16px solid white;
-}
-.requirement-minimum-content {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.requirement-minimum-content .requirement-credit-value {
-  font-weight: 400;
 }
 .requirement-credit {
   position: relative;
@@ -869,6 +950,40 @@ tbody tr.earned-row:hover {
   padding-top: 16px;
   border-top: 1px solid #edf1f3;
 }
+/* ダッシュボード内は見出し・区分・本文・補足の4段階に揃える。 */
+.dashboard-page {
+  --dashboard-heading-size: 1.125rem;
+  --dashboard-section-size: 1rem;
+  --dashboard-body-size: 1rem;
+  --dashboard-detail-size: 0.875rem;
+}
+.dashboard-page .graduation-infographic h3,
+.dashboard-page .graduation-result h3 {
+  font-size: var(--dashboard-heading-size);
+}
+.dashboard-page .shortage-group h4,
+.dashboard-page .shortage-category h5,
+.dashboard-page .category-progress-heading {
+  font-size: var(--dashboard-section-size);
+}
+.dashboard-page .shortage-course-list,
+.dashboard-page .shortage-condition,
+.dashboard-page .requirement-matrix,
+.dashboard-page .requirement-matrix thead th,
+.dashboard-page .category-progress-count strong {
+  font-size: var(--dashboard-body-size);
+}
+.dashboard-page .shortage-course-credits,
+.dashboard-page .shortage-course-meta,
+.dashboard-page .requirement-credit-name,
+.dashboard-page .credit-summary dt,
+.dashboard-page .credit-orbit-value > span,
+.dashboard-page .credit-orbit-caption,
+.dashboard-page .category-progress-footnote,
+.dashboard-page .category-progress-status,
+.dashboard-page .category-progress-count {
+  font-size: var(--dashboard-detail-size);
+}
 @keyframes infographic-enter {
   from {
     opacity: 0;
@@ -897,48 +1012,15 @@ tbody tr.earned-row:hover {
   }
 }
 
-/* 画面移動は左側、マイページへの入口は右側に置く。 */
-.navigation-menu {
-  position: relative;
-  flex-shrink: 0;
+.dashboard-grade-prompt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 16px;
 }
-.navigation-menu-panel {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 8px);
-  left: 0;
-  width: 200px;
-  max-width: calc(100vw - 32px);
-  padding: 6px;
-  background: #fff;
-  border: 1px solid #dde5e7;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px #2132381a;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-6px);
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease,
-    visibility 0s linear 180ms;
-}
-.navigation-menu-panel[data-open="true"] {
-  transition-delay: 0s;
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-.navigation-menu-panel button {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  border: 0;
-  text-align: left;
-  font-size: 14px;
-}
-.navigation-menu-panel button + button {
-  margin-top: 4px;
-  border-top: 1px solid #e6ebed;
+.dashboard-grade-prompt p {
+  margin: 0;
 }
 .profile-page {
   max-width: 800px;
@@ -1026,7 +1108,6 @@ tbody tr.earned-row:hover {
   .graduation-infographic {
     animation: none;
   }
-  .navigation-menu-panel,
   .profile-editor {
     transition: none;
   }
@@ -1066,11 +1147,5 @@ tbody tr.earned-row:hover {
   }
   .header-controls {
     gap: 0.5rem;
-  }
-  .navigation-menu {
-    position: static;
-  }
-  .navigation-menu-panel {
-    left: 16px;
   }
 }

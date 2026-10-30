@@ -6,7 +6,7 @@ import {
 } from "../../../../modules/requirements/public.ts";
 import { useRemote } from "../useRemote.ts";
 
-// 詳細を開いたときに、表示中の概要と同じ版の結果を取得する。
+// 不足科目の表示に使うため、概要と同じ版の詳細を取得する。
 export function useDashboardDetail(
   useCases: GraduationUseCases,
   current: DashboardResult | null,

@@ -232,6 +232,10 @@ function graduationResult(data: unknown, legacy: boolean): GraduationResult {
         courseId: text(course.course_id),
         name: text(course.name),
         credits: integer(course.credits, 1),
+        classificationId:
+          course.classification_id == null
+            ? null
+            : text(course.classification_id),
       };
     }),
     allocations: list(value.allocations).map((data) => {

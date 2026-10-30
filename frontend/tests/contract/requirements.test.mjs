@@ -59,7 +59,12 @@ function fixture() {
       },
     ],
     missing_required_courses: [
-      { course_id: "course", name: "必修科目", credits: 2 },
+      {
+        course_id: "course",
+        name: "必修科目",
+        credits: 2,
+        classification_id: "social",
+      },
     ],
     allocations: [{ requirement_id: "total", transferred_credits: 2 }],
   };
@@ -229,6 +234,7 @@ test("判定は本人の保存済みデータをGETし、Cookie・キャンセ�
   assert.equal(result.dataRevision, 2);
   assert.equal(result.curriculum.sourceDocument, "テスト便覧");
   assert.equal(result.missingRequiredCourses[0].courseId, "course");
+  assert.equal(result.missingRequiredCourses[0].classificationId, "social");
   assert.equal(result.allocations[0].transferredCredits, 2);
   assert.equal(calls.length, 1);
   const { url, options } = calls[0];

@@ -6,7 +6,6 @@ import { AppLayout } from "./layouts/AppLayout.tsx";
 import { AuthGate, type AuthControls } from "./pages/accounts/AuthGate.tsx";
 import { ProfilePage } from "./pages/profiles/ProfilePage.tsx";
 import { GradeEntryPage } from "./pages/grades/GradeEntryPage.tsx";
-import { HeaderNavigation } from "./components/HeaderNavigation.tsx";
 import { ProfileButton } from "./components/ProfileButton.tsx";
 import {
   ErrorState,
@@ -53,12 +52,7 @@ function StudentScreens({
   return (
     <AppLayout
       screenKey={screen}
-      navigation={
-        <HeaderNavigation
-          showDashboard={() => setScreen("dashboard")}
-          showGrades={() => setScreen("grades")}
-        />
-      }
+      showDashboard={() => setScreen("dashboard")}
       profileAction={<ProfileButton showProfile={() => setScreen("profile")} />}
     >
       {auth.error ? (
@@ -89,6 +83,7 @@ function StudentScreens({
               curriculumId={profile.state?.profile.curriculumId ?? null}
               expire={expire}
               showProfile={() => setScreen("profile")}
+              showGrades={() => setScreen("grades")}
             />
           )
         ) : null}
@@ -99,6 +94,7 @@ function StudentScreens({
           loginName={loginName}
           active={screen === "profile"}
           showDashboard={() => setScreen("dashboard")}
+          showGrades={() => setScreen("grades")}
           logout={auth.logout}
           authBusy={auth.busy}
         />

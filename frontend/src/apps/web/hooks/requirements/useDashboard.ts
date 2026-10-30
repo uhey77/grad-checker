@@ -14,7 +14,6 @@ export function useDashboard(
   expire: () => void,
 ) {
   const [attempt, setAttempt] = useState(0);
-  const [expanded, setExpanded] = useState(false);
   const key =
     active && curriculumId ? `${curriculumId}:${revision}:${attempt}` : null;
   const load = useCallback(
@@ -40,8 +39,6 @@ export function useDashboard(
   }, [failure, expire]);
   return {
     summary,
-    expanded,
-    toggleDetail: () => setExpanded((value) => !value),
     retry: () => setAttempt((value) => value + 1),
     message: (error: unknown) =>
       errorMessage(error, "卒業要件の概要を取得できませんでした。"),

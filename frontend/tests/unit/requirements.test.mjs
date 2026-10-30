@@ -138,7 +138,7 @@ test("科目区分を階層にし、必修・選択を親区分の列へまと�
   assert.equal(rows[0].cells.required_courses[0], input[2]);
   assert.equal(rows[0].cells.elective_total[0], input[3]);
   assert.equal(rows[1].cells.selective_group[0], input[4]);
-  assert.equal(rows[2].cells.subminimum[0], input[5]);
+  assert.equal(rows[2].cells.selective_group[0], input[5]);
   assert.deepEqual(input, snapshot);
   assert.deepEqual(
     rows
@@ -207,12 +207,19 @@ test("判定結果は科目区分だけを行見出しにし、全条件の算�
   assert.deepEqual(headings, [
     "実学基礎科目",
     "総合・人文・社会・自然科学・ウェルビーイング",
-    "人文（最低2単位）1 / 2未達成",
+    "人文（最低2単位）",
     "外国語",
     "専門教育科目",
   ]);
   assert.doesNotMatch(html, /総必要単位|<th scope="col">内訳最低<\/th>/);
-  assert.match(html, /colSpan="5"/i);
+  assert.doesNotMatch(html, /colSpan=/i);
+  const humanitiesRow = html.match(
+    /<tr[^>]*><th[^>]*>人文（最低2単位）<\/th>(.*?)<\/tr>/,
+  )[1];
+  const cells = [...humanitiesRow.matchAll(/<td[^>]*>(.*?)<\/td>/g)].map(
+    (match) => match[1].replace(/<[^>]*>/g, ""),
+  );
+  assert.deepEqual(cells, ["—", "—", "—", "1 / 2未達成"]);
   for (const row of input.slice(1))
     assert.ok(html.includes(`aria-label="${row.name}"`), row.name);
   assert.match(html, /1 \/ 2/);

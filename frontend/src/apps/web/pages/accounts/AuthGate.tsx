@@ -98,17 +98,17 @@ export function AuthGate({
         ) : (
           <>
             {auth.error ? <FormError>{auth.error}</FormError> : null}
-            <p className="auth-help">
-              {mode === "register"
-                ? t(
-                    "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。",
-                  )
-                : mode === "recover"
+            {mode !== "login" && (
+              <p className="auth-help">
+                {mode === "register"
                   ? t(
-                      "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。",
+                      "このアプリ専用のアカウントを作成します。登録後に復旧コードを発行します。",
                     )
-                  : t("アプリ専用のユーザー名とパスワードを入力してください。")}
-            </p>
+                  : t(
+                      "ユーザー名と保管した復旧コードで、新しいパスワードを設定します。成功すると以前の復旧コードは使えなくなります。",
+                    )}
+              </p>
+            )}
             <AuthForm
               key={mode}
               mode={mode}

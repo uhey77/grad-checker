@@ -17,6 +17,7 @@ export function DashboardPage({
   curriculumId,
   expire,
   showProfile,
+  showGrades,
 }: {
   useCases: GraduationUseCases;
   active: boolean;
@@ -24,6 +25,7 @@ export function DashboardPage({
   curriculumId: string | null;
   expire: () => void;
   showProfile: () => void;
+  showGrades: () => void;
 }) {
   const { t } = useTranslation();
   const dashboard = useDashboard(
@@ -35,12 +37,7 @@ export function DashboardPage({
   );
   const summary = dashboard.summary;
   const result = summary.status === "ready" ? summary.data : null;
-  const detail = useDashboardDetail(
-    useCases,
-    result,
-    active && dashboard.expanded,
-    expire,
-  );
+  const detail = useDashboardDetail(useCases, result, active, expire);
   const displayedDetail = detail.status === "ready" ? detail.data : null;
   return (
     <div className="dashboard-page">
@@ -73,46 +70,37 @@ export function DashboardPage({
           ) : (
             <>
               {result?.gradeCount === 0 && (
-                <p role="status">
-                  {t(
-                    "保存済みの成績は0件です。成績入力から修得状況を保存してください。",
-                  )}
-                </p>
+                <div className="dashboard-grade-prompt" role="status">
+                  <p>
+                    {t(
+                      "保存済みの成績は0件です。成績入力から修得状況を保存してください。",
+                    )}
+                  </p>
+                  <button type="button" onClick={showGrades}>
+                    {t("成績を入力")}
+                  </button>
+                </div>
               )}
               <GraduationOverview
                 key={result.evaluatedAt}
                 result={result}
                 categories={result.categories}
               />
-              <button
-                type="button"
-                aria-expanded={dashboard.expanded}
-                aria-controls="dashboard-detail"
-                onClick={dashboard.toggleDetail}
-              >
-                {dashboard.expanded
-                  ? t("条件別の詳細を閉じる")
-                  : t("条件別の詳細を表示")}
-              </button>
-              {dashboard.expanded && (
-                <div id="dashboard-detail">
-                  {displayedDetail ? (
-                    <GraduationResultView
-                      result={displayedDetail}
-                      showOverview={false}
-                    />
-                  ) : detail.status === "error" ? (
-                    <ErrorState
-                      message={dashboard.message(detail.error)}
-                      actionLabel={t("再試行")}
-                      onAction={dashboard.retry}
-                    />
-                  ) : (
-                    <LoadingState>
-                      {t("卒業要件の詳細を読み込んでいます…")}
-                    </LoadingState>
-                  )}
-                </div>
+              {displayedDetail ? (
+                <GraduationResultView
+                  result={displayedDetail}
+                  showOverview={false}
+                />
+              ) : detail.status === "error" ? (
+                <ErrorState
+                  message={dashboard.message(detail.error)}
+                  actionLabel={t("再試行")}
+                  onAction={dashboard.retry}
+                />
+              ) : (
+                <LoadingState>
+                  {t("卒業要件の詳細を読み込んでいます…")}
+                </LoadingState>
               )}
             </>
           )}

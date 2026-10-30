@@ -11,6 +11,7 @@ export function ProfilePage({
   loginName,
   active,
   showDashboard,
+  showGrades,
   logout,
   authBusy,
 }: {
@@ -18,6 +19,7 @@ export function ProfilePage({
   loginName: string;
   active: boolean;
   showDashboard: () => void;
+  showGrades: () => void;
   logout: () => void;
   authBusy: boolean;
 }) {
@@ -115,6 +117,19 @@ export function ProfilePage({
               ) : null}
               <ProgramForm {...profile} programs={profile.state.programs} />
             </div>
+          </div>
+        </section>
+      )}
+      {!expanded && (
+        <section
+          className="panel profile-panel"
+          aria-labelledby="grades-heading"
+        >
+          <div className="profile-section-heading">
+            <h2 id="grades-heading">{t("成績")}</h2>
+            <button type="button" onClick={showGrades}>
+              {t("成績入力へ")}
+            </button>
           </div>
         </section>
       )}
