@@ -18,6 +18,8 @@ from modules.subjects.public import CurriculumData
 
 class StudentEvaluation(EvaluationResult):
     evaluated_at: datetime
+    # 判定条件を増やさず、既存の必修条件を科目区分別に表示するための内訳。
+    required_course_breakdowns: list[ConditionResult] = Field(default_factory=list)
 
 
 class StudentDashboard(BaseModel):

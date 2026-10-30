@@ -2704,6 +2704,13 @@
             "format": "date-time",
             "title": "Evaluated At",
             "type": "string"
+          },
+          "required_course_breakdowns": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionResult"
+            },
+            "title": "Required Course Breakdowns",
+            "type": "array"
           }
         },
         "required": [
@@ -2722,7 +2729,8 @@
           "external_allocations",
           "warnings",
           "recommendations",
-          "evaluated_at"
+          "evaluated_at",
+          "required_course_breakdowns"
         ],
         "type": "object",
         "additionalProperties": false
@@ -3673,6 +3681,13 @@
             "format": "date-time",
             "title": "Evaluated At",
             "type": "string"
+          },
+          "required_course_breakdowns": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionResult"
+            },
+            "title": "Required Course Breakdowns",
+            "type": "array"
           }
         },
         "required": [
@@ -3691,7 +3706,8 @@
           "external_allocations",
           "warnings",
           "recommendations",
-          "evaluated_at"
+          "evaluated_at",
+          "required_course_breakdowns"
         ],
         "type": "object",
         "additionalProperties": false

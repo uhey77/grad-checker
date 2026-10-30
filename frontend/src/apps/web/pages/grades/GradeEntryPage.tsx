@@ -8,7 +8,6 @@ import {
   takenYears,
   type GradeUseCases,
 } from "../../../../modules/grades/public.ts";
-import type { ProgramOption } from "../../../../modules/profiles/public.ts";
 import { useGradeEntry } from "../../hooks/grades/useGradeEntry.ts";
 import { GradeFilters } from "../../components/grades/GradeFilters.tsx";
 import { GradeTable } from "../../components/grades/GradeTable.tsx";
@@ -16,34 +15,22 @@ import { ConfirmPanel } from "../../components/ConfirmPanel.tsx";
 import { PageHeading } from "../../components/PageHeading.tsx";
 import { SaveBar } from "../../components/SaveBar.tsx";
 import { ErrorState, LoadingState } from "../../components/StatusPanels.tsx";
-import { programLabel } from "../../components/subjects/labels.ts";
-import type { GraduationUseCases } from "../../../../modules/requirements/public.ts";
-import { useCheckHistory } from "../../hooks/requirements/useCheckHistory.ts";
-import { useGraduationCheck } from "../../hooks/requirements/useGraduationCheck.ts";
-import { GraduationCheckPanel } from "../../components/requirements/GraduationCheckPanel.tsx";
 export function GradeEntryPage({
   catalogUseCases,
   gradeUseCases,
-  graduationUseCases,
-  active,
   csrf,
   expire,
   latestRevision,
   reportRevision,
-  savedProgram,
   showProfile,
   showDashboard,
 }: {
   catalogUseCases: CourseCatalogUseCases;
   gradeUseCases: GradeUseCases;
-  graduationUseCases: GraduationUseCases;
-  active: boolean;
   csrf: string;
   expire: () => void;
   latestRevision: number;
   reportRevision: (revision: number) => void;
-  // 所属設定で保存済みの所属。科目一覧と同じ課程の場合だけ見出しに使う。
-  savedProgram: ProgramOption | null;
   showProfile: () => void;
   showDashboard: () => void;
 }) {
@@ -58,56 +45,12 @@ export function GradeEntryPage({
   );
   const data = entry.data;
   const curriculum = data?.catalog.curriculum;
-  const checkBlocked =
-    !data ||
-    entry.dirty ||
-    entry.busy ||
-    entry.conflict ||
-    latestRevision > data.saved.dataRevision;
-  const history = useCheckHistory(graduationUseCases, active && !!data, expire);
-  const check = useGraduationCheck(
-    graduationUseCases,
-    data?.saved.dataRevision ?? 0,
-    curriculum?.curriculumId ?? "",
-    csrf,
-    active,
-    checkBlocked,
-    expire,
-    () => {
-      // 保存した判定を最新として表示し、履歴の先頭ページを取り直す。
-      history.showLatest();
-      history.refresh();
-    },
-  );
-  const entered = new Set(entry.draft.map((g) => g.courseId)).size;
-  const curriculumLabel =
-    curriculum && savedProgram?.curriculumId === curriculum.curriculumId
-      ? programLabel(savedProgram)
-      : curriculum?.name;
   return (
     <div className="grade-page">
       <button type="button" className="back-link" onClick={showDashboard}>
         {t("← ダッシュボードへ戻る")}
       </button>
       <PageHeading title={t("成績入力")} />
-      {data && (
-        <GraduationCheckPanel
-          busy={check.busy}
-          blocked={checkBlocked}
-          dirty={entry.dirty}
-          check={(answers) => void check.check(answers)}
-          curriculumId={curriculum?.curriculumId}
-          degreeLevel={savedProgram?.completionPolicy?.degreeLevel}
-          completionConditions={
-            savedProgram?.curriculumId === curriculum?.curriculumId
-              ? savedProgram?.completionPolicy?.conditions
-              : []
-          }
-          saved={check.saved}
-          error={check.error}
-          history={history}
-        />
-      )}
       {!data ? (
         entry.loadError ? (
           entry.programMissing ? (
@@ -131,23 +74,6 @@ export function GradeEntryPage({
           className="panel subject-list-panel"
           aria-label={t("成績入力")}
         >
-          <div className="list-heading">
-            <div className="grade-context">
-              <h2>
-                {t("本人の課程：{{value0}}", { value0: curriculumLabel })}
-              </h2>
-              <p>
-                {t(
-                  "表示 {{value0}} 件／全 {{value1}} 件・成績入力済み {{value2}} 科目",
-                  {
-                    value0: entry.visibleCourses.length,
-                    value1: data.catalog.courses.length,
-                    value2: entered,
-                  },
-                )}
-              </p>
-            </div>
-          </div>
           <GradeFilters
             filters={entry.filters}
             categories={data.catalog.categories}

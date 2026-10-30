@@ -20,7 +20,12 @@ export interface GraduationResult {
   };
   total: CreditSummary;
   requirements: RequirementResult[];
-  missingRequiredCourses: { courseId: string; name: string; credits: number }[];
+  missingRequiredCourses: {
+    courseId: string;
+    name: string;
+    credits: number;
+    classificationId: string | null;
+  }[];
   allocations: { requirementId: string; transferredCredits: number }[];
   externalAllocations: {
     ruleId: string;

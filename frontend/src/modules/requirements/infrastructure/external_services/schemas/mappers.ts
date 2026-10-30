@@ -181,7 +181,24 @@ export function toGraduationResult(data: unknown): GraduationResult {
 
 function graduationResult(data: unknown, legacy: boolean): GraduationResult {
   const value = record(data);
-  const requirements = list(value.requirements).map(condition);
+  const conditions = list(value.requirements).map(condition);
+  const byId = new Map(conditions.map((row) => [row.id, row]));
+  // 古い保存済み結果の内訳を、現在のマスタで補完しない。
+  const breakdowns =
+    value.required_course_breakdowns === undefined
+      ? []
+      : list(value.required_course_breakdowns).map(condition);
+  if (
+    breakdowns.some(
+      (row) =>
+        row.kind !== "required_courses" ||
+        row.classificationId === null ||
+        row.parentId === null ||
+        byId.get(row.parentId)?.kind !== "classification_total",
+    )
+  )
+    return invalid();
+  const requirements = [...conditions, ...breakdowns];
   if (
     !requirements.length ||
     new Set(requirements.map((r) => r.id)).size !== requirements.length
@@ -215,6 +232,10 @@ function graduationResult(data: unknown, legacy: boolean): GraduationResult {
         courseId: text(course.course_id),
         name: text(course.name),
         credits: integer(course.credits, 1),
+        classificationId:
+          course.classification_id == null
+            ? null
+            : text(course.classification_id),
       };
     }),
     allocations: list(value.allocations).map((data) => {

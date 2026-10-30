@@ -2,6 +2,10 @@ export type { GraduationUseCases } from "./application/ports/GraduationUseCases.
 export { GraduationError } from "./application/errors/GraduationError.ts";
 export type { GraduationRepository } from "./application/ports/GraduationRepository.ts";
 export type { CheckPageRequest } from "./application/dto/CheckPageRequest.ts";
+export {
+  buildRequirementMatrix,
+  type RequirementMatrixRow,
+} from "./application/services/buildRequirementMatrix.ts";
 export { filterRequirements } from "./application/services/filterRequirements.ts";
 export type {
   GraduationResult,
