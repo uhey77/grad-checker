@@ -7,8 +7,8 @@ GitHubの既定ブランチはmainを維持するため、PR作成時には明�
 2. 実装・テスト・commit・push後にdev向けPRを作成する。PRではBackend・Frontend・ContainerのCIを実行する。
 3. レビュー・CI成功後にdevへ統合する。devへのpushでも同じCheckを実行し、隔離PostgreSQL、Go/Python結合、フロント、コンテナを検証する。本番Secret・production environmentは使用しない。
 4. 複数変更をまとめてdev上で確認し、`gh pr create --base main --head dev` でリリースPRを作成する。最新HEADのレビュー・CIを確認してmainへマージする。
-5. mainではProduction deployment内の再利用CIが走る。公開jobはmain限定かつ既存の `PRODUCTION_DEPLOY_ENABLED == true`、production承認を必要とする。現状フラグは未設定で、マージだけでは公開しない。
-6. 有効化はユーザーの最終承認後に判断する。承認ゲート、Cloud Run更新、Vercel stage検証、rollbackの確認が必要。手順は[本番デプロイ](production-deployment.md)を参照する。
+5. mainではProduction deployment内の再利用CIが走る。公開jobはmain限定かつ既存の `PRODUCTION_DEPLOY_ENABLED == true`、production承認を必要とする。2026-11-02にユーザー承認を受けてリポジトリ変数を `true` に設定した。以降のmainへのpushではCI成功後にproduction承認待ちとなり、承認後に公開する。
+6. production承認者は `uhey77`、公開可能なbranchはmainだけとする。Cloud Run更新、Vercel stage検証後に本番へ反映する。失敗時は後続処理を停止し、必要なrollbackは承認を受けて実行する。手順は[本番デプロイ](production-deployment.md)を参照する。
 
 緊急時はmainから `hotfix/*` を作成し、CIとレビューを経てmainへ反映した後、devへ同期する。通常開発はdevへ集約する。既存の `feat/*` ブランチは一律改名・削除せず、通常PRのbaseをdevへ変更し差分・競合・CIを再確認する。
 
