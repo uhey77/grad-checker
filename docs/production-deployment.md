@@ -46,7 +46,7 @@ Vercelは既存の`grad-checker`、Root Directory `frontend`、Node.js 24、公�
 | `GCP_SERVICE_ACCOUNT`, `GCP_WIF_PROVIDER` | GitHub VariablesのWIF設定 |
 | `VERCEL_PROJECT_ID`, `VERCEL_ORG_ID` | GitHub Variablesの既存Vercel対象 |
 | `VERCEL_TOKEN` | GitHub Secret。Vercel認証ステップにだけ渡す |
-| `PRODUCTION_DEPLOY_ENABLED` | 承認後に有効化するGitHub Variable。未設定ではCDを実行しない |
+| `PRODUCTION_DEPLOY_ENABLED` | 2026-11-02にユーザー承認を受けてrepository変数を `true` に設定。通常CDを有効化し、公開にはproduction承認を必要とする |
 
 既存の認証試行制限等は`backend/apps/settings.py`を参照する。`.env`等はGit管理外。Pythonは環境ファイルを自動ロードしない。DB接続URL・成績・パスワード・復旧コード・セッション原値をコード、ログ、コミット、PRへ記録しない。例外ログもDBのDETAILやSQLパラメーターを含めず、例外の種類だけを記録する。
 
@@ -110,13 +110,13 @@ PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのP
 
 本番CDを有効化する前に、GitHubの`production` environmentへrequired reviewerを1人以上設定し、deployment branch policyをcustomで`main`のbranchだけに制限する。CDはこのポリシーをAPIで検証し、不足・読み取り不可ならWIFより前に停止する。GitHubの契約でrequired reviewerを利用できない場合はCDを有効化せず、同等の承認設計を別途決める。
 
-`PRODUCTION_DEPLOY_ENABLED`を未設定のままにしておけばmainへのマージ後も公開操作は実行しない。初回公開・承認設定・対象確認後にだけ有効化する。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。既存のVercel側Git連携状態も初回公開前に確認する。
+2026-11-02にユーザー承認を受けてrepository変数 `PRODUCTION_DEPLOY_ENABLED` を `true` に設定した。productionのRequired reviewerは `uhey77`、許可branchはmainだけを維持する。以降のmainへのpushではCI成功後に承認待ちとなり、承認後にCloud Run更新とVercelのstage検証・本番反映へ進む。設定変更だけでは過去にスキップされた実行は再開しない。今回、手動デプロイ・過去の実行の再実行は行っていない。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。既存のVercel側Git連携状態も初回公開前に確認する。
 
 ## 初回公開の順序と今後の通常CD
 
 初回構築・公開IAM・Vercel stage・検証後の昇格はユーザーの一括承認に基づき実施済み。
 GitHub productionのRequired reviewer承認は回避していない。
-自動公開フラグは未設定であり、通常CDを有効にする操作は今回行っていない。
+初回公開時点では自動公開フラグは未設定だった。その後、2026-11-02に上記のとおり通常CDを有効化した。
 詳細と既知の制約は[実行監査](initial-production-execution.md)を優先する。
 
 1. PRの最新HEAD・CI・差分とバックアップをレビューし、承認範囲内でマージする。
