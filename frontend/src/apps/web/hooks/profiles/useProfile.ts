@@ -25,7 +25,6 @@ export function useProfile(
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState(false);
   const [conflict, setConflict] = useState(false);
-  const [confirmReload, setConfirmReload] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const { busy, running, abort, run } = useExclusiveAction();
   useEffect(() => {
@@ -41,6 +40,7 @@ export function useProfile(
           setChosenId(profile.curriculumId ?? "");
           setError("");
           setConflict(false);
+          setEditing((current) => current || !profile.curriculumId);
         }
       },
       (failure: unknown) => {
@@ -97,16 +97,20 @@ export function useProfile(
         onError: (failure) => {
           if (failure instanceof ProfileError && failure.status === 401)
             expire();
-          if (failure instanceof ProfileError && failure.status === 409)
+          if (failure instanceof ProfileError && failure.status === 409) {
             setConflict(true);
-          setError(errorMessage(failure, "所属を保存できません。"));
+            setError(
+              "所属情報が更新されています。キャンセルして最新の所属を確認してください。",
+            );
+          } else {
+            setError(errorMessage(failure, "所属を保存できません。"));
+          }
         },
       },
     );
   }
   function reload() {
     if (running()) return;
-    setConfirmReload(false);
     setState(null);
     setError("");
     setNotice("");
@@ -127,19 +131,19 @@ export function useProfile(
       setNotice("");
     },
     conflict,
-    confirmReload,
-    confirmRetry: reload,
-    cancelRetry: () => setConfirmReload(false),
     choose: (id: string) => {
       setChosenId(id);
       setNotice("");
-      setConfirmReload(false);
     },
     save,
-    retry: () => {
+    cancel: () => {
       if (running()) return;
-      if (dirty) setConfirmReload(true);
-      else reload();
+      setChosenId(state?.profile.curriculumId ?? "");
+      setEditing(false);
+      setError("");
+      setNotice("");
+      if (conflict) reload();
     },
+    retry: reload,
   };
 }

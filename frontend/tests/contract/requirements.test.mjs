@@ -59,7 +59,12 @@ function fixture() {
       },
     ],
     missing_required_courses: [
-      { course_id: "course", name: "必修科目", credits: 2 },
+      {
+        course_id: "course",
+        name: "必修科目",
+        credits: 2,
+        classification_id: "social",
+      },
     ],
     allocations: [{ requirement_id: "total", transferred_credits: 2 }],
   };
@@ -229,6 +234,7 @@ test("判定は本人の保存済みデータをGETし、Cookie・キャンセ�
   assert.equal(result.dataRevision, 2);
   assert.equal(result.curriculum.sourceDocument, "テスト便覧");
   assert.equal(result.missingRequiredCourses[0].courseId, "course");
+  assert.equal(result.missingRequiredCourses[0].classificationId, "social");
   assert.equal(result.allocations[0].transferredCredits, 2);
   assert.equal(calls.length, 1);
   const { url, options } = calls[0];
@@ -604,4 +610,50 @@ test("修了条件の本人回答を成績版とともに送信し、履歴の�
   await repository.createCheck(2, "csrf", undefined, [
     { code: "thesis", status: "met" },
   ]);
+});
+
+test("必修内訳を表示へ渡し、古い応答には現在の内訳を補完しない", () => {
+  const data = fixture();
+  const category = {
+    ...data.requirements[0],
+    id: "category",
+    kind: "classification_total",
+    parent_id: "total",
+    classification_id: "specialized",
+    name: "専門教育科目合計",
+  };
+  data.requirements.push(category);
+  const breakdown = {
+    ...summary,
+    id: "experiment-required",
+    code: "experiment.required_breakdown",
+    name: "実験・総合の必修",
+    kind: "required_courses",
+    parent_id: "category",
+    classification_id: "experiment",
+    required_credits: 21,
+    earned_credits: 2,
+    credited_credits: 2,
+    shortage: 19,
+  };
+  assert.equal(toGraduationResult(data).requirements.length, 2);
+  data.required_course_breakdowns = [breakdown];
+  const result = toGraduationResult(data);
+  assert.equal(result.requirements.length, 3);
+  assert.equal(result.requirements[2].requiredCredits, 21);
+  assert.equal(result.requirements[2].creditedCredits, 2);
+  assert.equal(result.total.creditedCredits, summary.credited_credits);
+  for (const change of [
+    (row) => (row.kind = "selective_group"),
+    (row) => (row.parent_id = "missing"),
+    (row) => (row.parent_id = "total"),
+    (row) => (row.classification_id = null),
+    (row) => (row.id = "category"),
+  ]) {
+    const invalid = structuredClone(data);
+    change(invalid.required_course_breakdowns[0]);
+    assert.throws(() => toGraduationResult(invalid));
+  }
+  data.required_course_breakdowns = null;
+  assert.throws(() => toGraduationResult(data));
 });

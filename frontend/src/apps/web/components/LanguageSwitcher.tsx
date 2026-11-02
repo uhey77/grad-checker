@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { HeaderButton } from "./HeaderButton.tsx";
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
@@ -7,9 +8,7 @@ export function LanguageSwitcher() {
     targetLanguage === "ja" ? "日本語に切り替える" : "Switch to English";
 
   return (
-    <button
-      type="button"
-      className="language-switcher"
+    <HeaderButton
       lang={targetLanguage}
       aria-label={label}
       title={label}
@@ -18,6 +17,6 @@ export function LanguageSwitcher() {
       }}
     >
       {targetLanguage.toUpperCase()}
-    </button>
+    </HeaderButton>
   );
 }
