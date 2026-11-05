@@ -1,0 +1,40 @@
+name: Vercel authentication check (read only)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact reviewed main commit SHA
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  authentication:
+    if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main' && github.sha == inputs.expected_sha
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    env:
+      VERCEL_CLI_VERSION: '65.2.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - name: Verify production approval policy before authentication
+        run: node scripts/deployment/check-release-policy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Install fixed Vercel CLI
+        run: npm install -g "vercel@$VERCEL_CLI_VERSION"
+      - name: Check user API and CLI authentication without logging identity
+        run: node scripts/deployment/check-vercel-auth.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Verify access to the existing project without publishing
+        run: node scripts/deployment/audit-vercel-project.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
