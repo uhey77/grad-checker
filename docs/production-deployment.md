@@ -100,9 +100,18 @@ docker run --rm -p 127.0.0.1:8080:8080 --memory=512m --cpus=1 \
 | `deploy.yml` | main push/手動実行→CI→承認ゲート→WIF→既存リソース確認→SHAタグのbuild/push→Cloud Run更新→readiness→Vercel本番用build→ドメイン未割当でstage→proxy/SPA検証→promote→本番疎通 |
 | `production-preflight.yml` | mainの完全SHA指定・production承認後、GitHub通常/direct Secretの本番接続先・TLS・18テーブル/1,738行を読取り検証。別jobのWIFは既存Registry/Cloud Run inventoryの読取りだけ。公開操作なし |
 | `database-connectivity.yml` | mainの承認済み手動実行だけで、既存GitHub Secretsのpooled/direct接続を読み取りSELECT 1で確認。DDLなし |
+| `vercel-auth-check.yml` | mainの完全SHA指定・production承認後、同じVERCEL_TOKENでユーザーAPI・CLI認証・既存プロジェクトへのアクセスを読取り確認。デプロイ・DB接続なし |
 | `graduation-benchmark.yml` | 既存の合成データ性能検証 |
 
 Vercelの本番用ビルド後は、生成された`.vercel/output/config.json`を検査してAPI中継・SPAの除外条件・no-storeを確認してからstageする。`vercel pull`はumask 077で実行し、取得した環境ファイルをartifactへ含めない。
+
+### Vercel認証エラーの切り分け
+
+`User not found (404)`はユーザー取得時の失敗であり、トークンが存在することやLast activeの更新だけでは、その実行の認証成功を判断できない。通常デプロイではproject inspectの前にユーザーAPIとCLIの認証を確認する。
+
+本番の更新なしで確認する場合は、Actionsの `Vercel authentication check (read only)` → Run workflowで `main` を選択し、確認対象のmainの完全SHAを `expected_sha` に指定する。productionの承認後、ユーザーAPI（GET `/v2/user`）、固定バージョンの `vercel whoami --non-interactive`、既存プロジェクトのGET監査を順に実行する。PR・devからは本番Secretを利用しない。このワークフローはmainに反映されてから利用できる。
+
+ユーザーAPIの段階で失敗した場合は、HTTPステータスを確認し、トークンの有効性・発行元アカウント・Vercel側の状態を調べる。GitHubのproduction EnvironmentとRepositoryに同名Secretがある場合はproduction側が優先される。API成功後にCLIだけ失敗した場合は、固定したCLIの挙動やVercel側の状態を調べる。両方成功してプロジェクト監査で失敗した場合は、対象チーム・プロジェクトへの権限と設定を確認する。トークン・ユーザー情報・API応答本文・CLIの認証出力はログに記録しない。
 
 Cloud Run更新とVercel公開は別ジョブ・別runnerで実行する。WIFのid-token権限とGCP認証ファイルをフロントエンドの依存インストール・ビルドへ渡さない。両ジョブにproduction environmentを指定し、それぞれ承認ポリシーを検証する。
 
