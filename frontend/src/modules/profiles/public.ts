@@ -1,5 +1,6 @@
 export type { Profile } from "./domain/entities/profile.ts";
 export type { ProgramOption } from "./domain/entities/program.ts";
+export { groupPrograms } from "./application/services/groupPrograms.ts";
 export type { ProgramSelection } from "./application/dto/profile.ts";
 export type { ProfileUseCases } from "./application/ports/ProfileUseCases.ts";
 export { ProfileError } from "./application/errors/ProfileError.ts";

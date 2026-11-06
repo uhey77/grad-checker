@@ -100,6 +100,7 @@ export const english = {
   八王子: "Hachioji",
   蒲田: "Kamata",
   学部: "Undergraduate",
+  大学院: "Graduate school",
   修士: "Master’s",
   博士後期: "Doctoral",
   照合済み: "Verified",

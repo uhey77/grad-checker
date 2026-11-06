@@ -1,5 +1,8 @@
 import { useTranslation } from "react-i18next";
-import type { ProgramOption } from "../../../../modules/profiles/public.ts";
+import {
+  groupPrograms,
+  type ProgramOption,
+} from "../../../../modules/profiles/public.ts";
 import { ProgramCoverage } from "./ProgramCoverage.tsx";
 import { SaveBar } from "../SaveBar.tsx";
 import { programLabel } from "../subjects/labels.ts";
@@ -29,6 +32,7 @@ export function ProgramForm({
   cancel: () => void;
 }) {
   const { t } = useTranslation();
+  const groups = groupPrograms(programs);
   return (
     <form
       className="profile-form"
@@ -55,14 +59,26 @@ export function ProgramForm({
               {t("保存済みの所属（選択肢にありません）")}
             </option>
           ) : null}
-          {programs.map((p) => (
-            <option key={p.curriculumId} value={p.curriculumId}>
-              {programLabel(p)}
-              {p.completionPolicy?.unresolvedReasons.length
-                ? t("（判定準備中）")
-                : ""}
-            </option>
-          ))}
+          {(
+            [
+              ["undergraduate", "学部"],
+              ["graduate", "大学院"],
+              ["other", "その他"],
+            ] as const
+          ).map(([key, label]) =>
+            groups[key].length ? (
+              <optgroup key={key} label={t(label)}>
+                {groups[key].map((p) => (
+                  <option key={p.curriculumId} value={p.curriculumId}>
+                    {programLabel(p)}
+                    {p.completionPolicy?.unresolvedReasons.length
+                      ? t("（判定準備中）")
+                      : ""}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null,
+          )}
         </select>
       </div>
       <ProgramCoverage program={selected} />
