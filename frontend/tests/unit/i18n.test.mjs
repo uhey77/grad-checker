@@ -274,6 +274,10 @@ test("英語の入力フォーム・成績・課程の対応状況を表示し�
     },
   });
   assert.equal(coverage, "");
+  const verified = render(ProgramCoverage, {
+    program: { completionPolicy: { unresolvedReasons: [] } },
+  });
+  assert.equal(verified, "");
   const unavailable = render(ProgramCoverage, {
     program: {
       completionPolicy: {
@@ -288,6 +292,10 @@ test("英語の入力フォーム・成績・課程の対応状況を表示し�
   });
   assert.match(unavailable, /Evaluation is unavailable/);
   assert.match(unavailable, /公式規則の未確認理由/);
+  assert.doesNotMatch(
+    unavailable,
+    /courses Verified|Credits from other faculties/,
+  );
   const course = {
     courseId: "c1",
     name: "日本語の公式科目名 <script>",

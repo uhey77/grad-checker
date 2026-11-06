@@ -97,20 +97,11 @@ export const english = {
   未保存の変更あり: "Unsaved changes",
   成績入力の科目一覧: "Courses for grade entry",
   本人の成績入力: "Your grades",
-  八王子: "Hachioji",
-  蒲田: "Kamata",
   学部: "Undergraduate",
   大学院: "Graduate school",
-  修士: "Master’s",
-  博士後期: "Doctoral",
-  照合済み: "Verified",
   未確認: "Unverified",
-  "{{value0}}／{{value1}}：科目 {{value2}}・要件 {{value3}}・課程内の規則 {{value4}}":
-    "{{value0}} / {{value1}}: courses {{value2}}; requirements {{value3}}; program rules {{value4}}",
   "判定準備中：以下の確認が終わるまで判定を停止します。":
     "Evaluation is unavailable until the following items are verified.",
-  "他学部・他研究科の算入は対象と認定の確認が必要です。未登録の算入条件に依存する判定は停止します。":
-    "Credits from other faculties or graduate schools require verification of eligibility and recognition. Evaluation is unavailable when required allocation rules are missing.",
   課程の対応状況: "Program coverage",
   "学部・学科・専攻／研究科・専攻":
     "Faculty / department / specialization or graduate school / specialization",
