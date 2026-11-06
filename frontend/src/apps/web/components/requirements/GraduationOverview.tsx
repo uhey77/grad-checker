@@ -31,6 +31,13 @@ export function GraduationOverview({
           <dd>{result.total.shortage}</dd>
         </div>
       </dl>
+      {(!result.degreeLevel || result.degreeLevel === "bachelor") && (
+        <p className="source-note" role="note">
+          {t(
+            "在学期間など、成績から確認できない条件は含まれません。正式な卒業認定は大学が行います。",
+          )}
+        </p>
+      )}
       {result.degreeLevel && result.degreeLevel !== "bachelor" && (
         <p className="source-note" role="note">
           {t(
