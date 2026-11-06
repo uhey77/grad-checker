@@ -254,14 +254,6 @@ def main() -> None:  # noqa: PLR0915 - 公式表の固定対応を同じ生成�
             reasons.append(
                 "博士後期の専攻別学位申請要件は公開表の例示だけでは確定できない。特別研究の単位数も掲載されていない。学部・修士の単位条件は流用しない。"
             )
-        if suffix == "hs-ce":
-            reasons.append(
-                "2026年公開の教育課程表本文は2024年度入学生用・基礎必修12単位、2026年度卒業要件表は基礎必修20単位で不一致。2026年度科目集合の確認が必要。"
-            )
-        if suffix == "hs-ns":
-            reasons.append(
-                "2026年公開の教育課程表本文は2024年度入学生用。2026年度の看護師・保健師経路の科目集合・必須選択条件を確認する必要がある。"
-            )
         # 公開教育課程表は教員指示等も保持する。自動的な履修可否の判断はしない。
         roots = {}
         classes = {}
@@ -502,9 +494,7 @@ def main() -> None:  # noqa: PLR0915 - 公式表の固定対応を同じ生成�
             or suffix == "ds"
             or code in ("GR-DS-M", "GR-MT-M")
             else "hachioji",
-            catalog_status="unverified"
-            if suffix in ("hs-ce", "hs-ns") or doctoral or english
-            else "verified",
+            catalog_status="unverified" if doctoral or english else "verified",
             requirements_status="unverified" if reasons else "verified",
             rules_status="unverified" if reasons else "verified",
             unresolved_reasons=reasons,
@@ -812,6 +802,81 @@ def main() -> None:  # noqa: PLR0915 - 公式表の固定対応を同じ生成�
                                 group_req,
                                 cids=ids,
                             )
+            if code == "HS-CE":
+                # 2026年度蒲田学生便覧65頁: 自然科学2単位とそれ以外4単位。
+                for condition_code, name, natural, minimum_credits in (
+                    ("foundation-natural", "自然科学の選択2単位以上", True, 2),
+                    (
+                        "foundation-other",
+                        "自然科学以外の基礎教育の選択4単位以上",
+                        False,
+                        4,
+                    ),
+                ):
+                    policy["credit_minimums"].append(
+                        dict(
+                            code=condition_code,
+                            name=name,
+                            course_ids=[
+                                a["course_id"]
+                                for a, r, g, _, _ in rows
+                                if r == "基礎教育科目"
+                                and a["course_type"] == "elective"
+                                and (g == "自然科学") == natural
+                            ],
+                            required_credits=minimum_credits,
+                            source_document=source,
+                            source_pages="2026年度学生便覧（蒲田）冊子65頁",
+                        )
+                    )
+            if code == "HS-NS-PHN":
+                # 同56〜59頁: 資格取得経路の指定科目と、体育の代替条件。
+                required_names = (
+                    "法学",
+                    "統計学",
+                    "疫学の応用",
+                    "社会経済学",
+                    "公衆衛生看護学Ⅰ",
+                    "公衆衛生看護学Ⅱ",
+                    "公衆衛生看護学Ⅲ",
+                    "産業保健演習",
+                    "公衆衛生看護管理論",
+                    "公衆衛生看護学実習Ⅰ（行政保健）",
+                    "公衆衛生看護学実習Ⅱ（産業保健・学校保健）",
+                )
+                by_name = {
+                    course_records[a["course_id"]]["name"]: a["course_id"]
+                    for a, _, _, _, _ in rows
+                }
+                for name in required_names:
+                    cid = by_name[name]
+                    policy["credit_minimums"].append(
+                        dict(
+                            code="public-health-" + cid,
+                            name=name + "の修得",
+                            course_ids=[cid],
+                            required_credits=course_records[cid]["credits"],
+                            source_document=source,
+                            source_pages="2026年度学生便覧（蒲田）冊子56〜59頁",
+                        )
+                    )
+                policy["credit_minimums"].append(
+                    dict(
+                        code="public-health-wellness",
+                        name="スポーツ・コンディショニングまたは集中実技Ⅰ・Ⅱ",
+                        course_ids=[
+                            by_name[name]
+                            for name in (
+                                "スポーツ・コンディショニング",
+                                "集中実技Ⅰ",
+                                "集中実技Ⅱ",
+                            )
+                        ],
+                        required_credits=2,
+                        source_document=source,
+                        source_pages="2026年度学生便覧（蒲田）冊子56頁",
+                    )
+                )
             if code == "HS-R-ST":
                 policy["credit_minimums"].append(
                     dict(

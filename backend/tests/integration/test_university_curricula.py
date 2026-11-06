@@ -91,7 +91,7 @@ def snapshot_for(masters, code, *, earned=False, answers=False):
 def test_scope_and_official_totals(masters):
     subjects, requirements = masters
     assert len(subjects.curricula) == 38
-    assert sum(not p.unresolved_reasons for p in requirements.completion_policies) == 28
+    assert sum(not p.unresolved_reasons for p in requirements.completion_policies) == 31
     assert (
         len(
             {
@@ -255,9 +255,6 @@ def test_incomplete_graduate_master_is_a_configuration_error(masters):
 @pytest.mark.parametrize(
     "code",
     [
-        "HS-CE",
-        "HS-NS",
-        "HS-NS-PHN",
         "GR-CS-D",
         "GR-BIO-D",
         "GR-MS-D",
@@ -273,6 +270,67 @@ def test_unverified_programs_stop_with_reason(masters, code):
     ):
         evaluation_services.evaluate_graduation(
             snapshot_for(masters, code, earned=True, answers=True)
+        )
+
+
+def test_clinical_engineering_foundation_electives_are_separate(masters):
+    s = snapshot_for(masters, "HS-CE", earned=True)
+    names = {c.id: c.name for c in s.subjects.courses}
+    policy = next(
+        p
+        for p in s.requirements.completion_policies
+        if p.curriculum_id == s.curriculum_id
+    )
+    natural = next(c for c in policy.credit_minimums if c.code == "foundation-natural")
+    other = next(c for c in policy.credit_minimums if c.code == "foundation-other")
+    assert {names[c] for c in natural.course_ids} == {
+        "生物の世界",
+        "数学基礎",
+        "統計学",
+    }
+    assert natural.required_credits == 2
+    assert other.required_credits == 4
+    s.grades = [
+        g for g in s.grades if g.course_id not in {str(c) for c in natural.course_ids}
+    ]
+    result = evaluation_services.evaluate_graduation(s)
+    assert result.total.result == "pass"
+    assert result.result == "fail"
+    assert next(r for r in result.requirements if r.code == natural.code).shortage == 2
+
+
+def test_public_health_track_requires_named_courses_and_wellness_alternative(masters):
+    s = snapshot_for(masters, "HS-NS-PHN", earned=True)
+    names = {c.id: c.name for c in s.subjects.courses}
+    policy = next(
+        p
+        for p in s.requirements.completion_policies
+        if p.curriculum_id == s.curriculum_id
+    )
+    required = next(c for c in policy.credit_minimums if c.name == "疫学の応用の修得")
+    s.grades = [g for g in s.grades if g.course_id != str(required.course_ids[0])]
+    result = evaluation_services.evaluate_graduation(s)
+    assert result.total.result == "pass"
+    assert result.result == "fail"
+    assert next(r for r in result.requirements if r.code == required.code).shortage == 1
+
+    wellness = next(
+        c for c in policy.credit_minimums if c.code == "public-health-wellness"
+    )
+    for retained in (
+        {"スポーツ・コンディショニング"},
+        {"集中実技Ⅰ", "集中実技Ⅱ"},
+        {"集中実技Ⅰ"},
+    ):
+        s = snapshot_for(masters, "HS-NS-PHN", earned=True)
+        removed = {
+            str(cid) for cid in wellness.course_ids if names[cid] not in retained
+        }
+        s.grades = [g for g in s.grades if g.course_id not in removed]
+        result = evaluation_services.evaluate_graduation(s)
+        condition = next(r for r in result.requirements if r.code == wellness.code)
+        assert condition.result == (
+            "fail" if len(retained) == 1 and "集中実技Ⅰ" in retained else "pass"
         )
 
 

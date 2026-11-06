@@ -10,8 +10,10 @@ import {
 } from "../../components/StatusPanels.tsx";
 import { GraduationOverview } from "../../components/requirements/GraduationOverview.tsx";
 import { GraduationResultView } from "../../components/requirements/GraduationResultView.tsx";
+import { CompletionAssessment } from "../../components/requirements/CompletionAssessment.tsx";
 export function DashboardPage({
   useCases,
+  csrf,
   active,
   revision,
   curriculumId,
@@ -20,6 +22,7 @@ export function DashboardPage({
   showGrades,
 }: {
   useCases: GraduationUseCases;
+  csrf: string;
   active: boolean;
   revision: number;
   curriculumId: string | null;
@@ -81,22 +84,35 @@ export function DashboardPage({
                   </button>
                 </div>
               )}
-              <GraduationOverview key={result.evaluatedAt} result={result} />
               {displayedDetail ? (
-                <GraduationResultView
-                  result={displayedDetail}
-                  showOverview={false}
-                />
+                displayedDetail.degreeLevel !== "bachelor" &&
+                (displayedDetail.completionConditions?.length ?? 0) > 0 ? (
+                  <CompletionAssessment
+                    key={`${displayedDetail.curriculum.id}:${displayedDetail.dataRevision}:${JSON.stringify(displayedDetail.ruleRevisions)}`}
+                    result={displayedDetail}
+                    useCases={useCases}
+                    csrf={csrf}
+                    expire={expire}
+                  />
+                ) : (
+                  <GraduationResultView result={displayedDetail} />
+                )
               ) : detail.status === "error" ? (
-                <ErrorState
-                  message={dashboard.message(detail.error)}
-                  actionLabel={t("再試行")}
-                  onAction={dashboard.retry}
-                />
+                <>
+                  <GraduationOverview result={result} />
+                  <ErrorState
+                    message={dashboard.message(detail.error)}
+                    actionLabel={t("再試行")}
+                    onAction={dashboard.retry}
+                  />
+                </>
               ) : (
-                <LoadingState>
-                  {t("卒業要件の詳細を読み込んでいます…")}
-                </LoadingState>
+                <>
+                  <GraduationOverview result={result} />
+                  <LoadingState>
+                    {t("卒業要件の詳細を読み込んでいます…")}
+                  </LoadingState>
+                </>
               )}
             </>
           )}

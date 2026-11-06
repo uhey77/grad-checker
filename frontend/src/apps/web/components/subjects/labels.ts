@@ -30,13 +30,15 @@ interface ProgramNames {
   courseName: string | null;
 }
 
-// 課程は学部・学科・専攻・コース名で表す。便覧名・版・確認状態は表示しない。
+// 課程は学部・学科・専攻・コース名で表す。研究科の修士課程は省く。
 export function programLabel(program: ProgramNames): string {
   return [
     program.facultyName,
     program.departmentName,
     program.specializationName,
-    program.courseName,
+    program.facultyName.endsWith("研究科") && program.courseName === "修士課程"
+      ? null
+      : program.courseName,
   ]
     .filter(Boolean)
     .join(" ／ ");
