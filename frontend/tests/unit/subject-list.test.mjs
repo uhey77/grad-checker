@@ -160,6 +160,30 @@ test("課程・分類・開講元は全画面で同じ表記にする", () => {
     "CS学部 ／ 社会情報専攻",
   );
   assert.equal(
+    programLabel({
+      facultyName: "工学研究科",
+      specializationName: "サステイナブル工学専攻",
+      courseName: "修士課程",
+    }),
+    "工学研究科 ／ サステイナブル工学専攻",
+  );
+  assert.equal(
+    programLabel({
+      facultyName: "工学研究科",
+      specializationName: "サステイナブル工学専攻",
+      courseName: "博士後期課程",
+    }),
+    "工学研究科 ／ サステイナブル工学専攻 ／ 博士後期課程",
+  );
+  assert.equal(
+    programLabel({
+      facultyName: "バイオ・情報メディア研究科",
+      specializationName: "バイオニクス専攻",
+      courseName: "修士課程（英語プログラム）",
+    }),
+    "バイオ・情報メディア研究科 ／ バイオニクス専攻 ／ 修士課程（英語プログラム）",
+  );
+  assert.equal(
     joinLabels([null, "社会情報専攻", "講義・演習"]),
     "社会情報専攻 / 講義・演習",
   );
