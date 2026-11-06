@@ -108,7 +108,6 @@ export const english = {
   選択してください: "Please select",
   "保存済みの所属（選択肢にありません）":
     "Saved program (not in the available options)",
-  "（判定準備中）": " (evaluation unavailable)",
   "所属は未設定です。": "Your program has not been set.",
   未保存変更の確認: "Confirm unsaved changes",
   変更を破棄して再取得: "Discard changes and reload",

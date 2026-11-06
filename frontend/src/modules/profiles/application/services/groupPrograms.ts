@@ -2,6 +2,14 @@ import type { ProgramOption } from "../../domain/entities/program.ts";
 
 export type ProgramGroup = "undergraduate" | "graduate" | "other";
 
+export function selectablePrograms(
+  programs: readonly ProgramOption[],
+): ProgramOption[] {
+  return programs.filter(
+    (program) => !program.completionPolicy?.unresolvedReasons.length,
+  );
+}
+
 // 東京工科大学の学部・大学院案内の掲載順。未知の所属は名称順で後ろに表示する。
 // https://jyuken.teu.ac.jp/gakubu/index.html
 // https://www.teu.ac.jp/grad/gaiyou/index.html

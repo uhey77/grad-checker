@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 
-const { groupPrograms } = await import(
+const { groupPrograms, selectablePrograms } = await import(
   pathToFileURL(
     join(
       process.env.SUBJECT_TEST_BUILD_DIRECTORY,
@@ -47,7 +47,10 @@ test("実際の課程を学部と大学院に分け、大学の掲載順でま�
         specializationName: p.specialization_name,
         courseName: p.course_name,
         completionPolicy: policy
-          ? { degreeLevel: policy.degree_level }
+          ? {
+              degreeLevel: policy.degree_level,
+              unresolvedReasons: policy.unresolved_reasons,
+            }
           : undefined,
       };
     })
@@ -58,6 +61,12 @@ test("実際の課程を学部と大学院に分け、大学の掲載順でま�
   assert.equal(grouped.undergraduate.length, 25);
   assert.equal(grouped.graduate.length, 13);
   assert.equal(grouped.other.length, 0);
+  const selectable = selectablePrograms(options);
+  assert.equal(selectable.length, 31);
+  assert.equal(groupPrograms(selectable).graduate.length, 6);
+  assert.ok(
+    selectable.every((p) => !p.completionPolicy?.unresolvedReasons.length),
+  );
   assert.equal(
     new Set(
       [...grouped.undergraduate, ...grouped.graduate].map(
@@ -126,4 +135,16 @@ test("判定情報がない所属も失わず、分類不能な所属はその�
     grouped.other.map((p) => p.curriculumId),
     ["unknown"],
   );
+  const programs = [
+    option("legacy", "新学部"),
+    {
+      ...option("pending", "新研究科"),
+      completionPolicy: { unresolvedReasons: ["条件の確認中"] },
+    },
+  ];
+  assert.deepEqual(
+    selectablePrograms(programs).map((p) => p.curriculumId),
+    ["legacy"],
+  );
+  assert.equal(programs.length, 2);
 });

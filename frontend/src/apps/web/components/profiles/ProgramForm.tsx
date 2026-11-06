@@ -3,7 +3,6 @@ import {
   groupPrograms,
   type ProgramOption,
 } from "../../../../modules/profiles/public.ts";
-import { ProgramCoverage } from "./ProgramCoverage.tsx";
 import { SaveBar } from "../SaveBar.tsx";
 import { programLabel } from "../subjects/labels.ts";
 export function ProgramForm({
@@ -71,9 +70,6 @@ export function ProgramForm({
                 {groups[key].map((p) => (
                   <option key={p.curriculumId} value={p.curriculumId}>
                     {programLabel(p)}
-                    {p.completionPolicy?.unresolvedReasons.length
-                      ? t("（判定準備中）")
-                      : ""}
                   </option>
                 ))}
               </optgroup>
@@ -81,7 +77,6 @@ export function ProgramForm({
           )}
         </select>
       </div>
-      <ProgramCoverage program={selected} />
       <SaveBar
         error={error}
         busy={busy}
