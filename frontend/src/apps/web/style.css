@@ -939,6 +939,25 @@ tbody tr.earned-row:hover {
   gap: 8px 16px;
   margin-bottom: 16px;
 }
+.tutorial-page {
+  max-width: 1100px;
+  margin-inline: auto;
+}
+.tutorial-panel {
+  padding: 24px;
+  line-height: 1.7;
+}
+.tutorial-panel .save-bar {
+  margin-top: 24px;
+}
+.tutorial-notice {
+  background: #e5f5f2;
+  border: 1px solid #b4ded5;
+  border-radius: 8px;
+  color: #245a50;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+}
 .dashboard-grade-prompt p {
   margin: 0;
 }

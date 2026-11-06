@@ -1,5 +1,39 @@
 // 日本語のUI文言をキーにする。大学の名称・科目・出典データは翻訳しない。
 export const english = {
+  はじめての使い方: "Getting started",
+  チュートリアルを見る: "View tutorial",
+  "これは練習です。サンプルの成績は実際のデータに保存されません。":
+    "This is a practice exercise. Sample grades are not saved to your account.",
+  "成績を入力して、ダッシュボードを見てみましょう":
+    "Enter grades and explore the dashboard",
+  "架空の科目を使って、成績の入力から単位の確認までを体験できます。":
+    "Practice entering grades and checking credits using example courses.",
+  サンプル科目の成績を選ぶ: "Choose grades for sample courses",
+  成績を保存する: "Save your grades",
+  ダッシュボードで単位の進捗を確認する:
+    "Check your credit progress on the dashboard",
+  練習を始める: "Start practice",
+  スキップ: "Skip",
+  "1. サンプルの成績を入力": "1. Enter sample grades",
+  "科目の成績欄で「A」などを選び、「成績を保存」を押してください。表は左右にスクロールできます。":
+    "Choose a grade such as A, then select Save grades. You can scroll the table horizontally.",
+  "サンプル科目 {{value0}}": "Sample course {{value0}}",
+  サンプル学部: "Sample faculty",
+  サンプル区分: "Sample category",
+  "練習の成績に未保存の変更があります。":
+    "Your practice grades have unsaved changes.",
+  "練習の成績を保存しました。次にダッシュボードを確認しましょう。":
+    "Your practice grades are saved. Next, check the dashboard.",
+  "成績を選んでください。": "Choose a grade.",
+  ダッシュボードへ: "Go to dashboard",
+  練習を終了: "End practice",
+  "2. ダッシュボードで確認": "2. Check the dashboard",
+  "保存した成績をもとに、単位の進捗や不足を確認できます。ここでは架空の必要単位を使っています。":
+    "Saved grades show your credit progress and remaining credits. This example uses fictional requirements.",
+  "実際に使うときは、マイページで所属を設定してから成績を入力・保存してください。ダッシュボードに戻ると結果を確認できます。":
+    "To use the app, set your program in My Page, then enter and save your grades. Return to the dashboard to see your results.",
+  練習を終えてアプリを使う: "Finish practice and use the app",
+  成績入力に戻る: "Back to grade entry",
   成績: "Grades",
   成績入力へ: "Go to grade entry",
   成績を入力: "Enter grades",
