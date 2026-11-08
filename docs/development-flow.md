@@ -14,6 +14,8 @@ GitHubの既定ブランチはmainを維持するため、PR作成時には明�
 
 CheckはPRのbase変更（edited）でも再実行する。benchmarkは既存のPR差分条件と手動実行を維持する。dev pushではCheckが常に全体の統合検証を行い、Production deploymentは起動しない。Vercel Git自動公開無効とmain限定WIFも維持する。
 
+GitHub Actionsの依存関係は `.github/workflows/actions.lock` で管理する。ワークフローの追加や `uses:` の変更後は、認証済みのGitHub CLIで `gh extension install github/gh-actions-lock --pin v0.4.1` を初回に実行し、リポジトリ直下で `gh actions-lock` を実行して生成された差分を確認する。ロックファイルは手編集せず、変更したワークフローと一緒にコミットする。PRとdevへのpushでは `gh actions-lock --verify` で整合性と依存先を検証する。ロック対象外の再利用ワークフローやコンテナイメージは別途確認する。
+
 本番DB・SQLite・バックアップをCIの検証対象として書き換えない。AGENTS.mdの共有リンクとアーキテクチャルールは既存構成を維持する。
 
 ## リリース履歴
