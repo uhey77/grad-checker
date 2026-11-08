@@ -36,9 +36,9 @@ jobs:
       CLOUD_RUN_API_ORIGIN: https://grad-checker-api-hmhzqixo4q-an.a.run.app
       GOOD_DEPLOYMENT: dpl_GEXV2AgfCoGPq8CZsSMfb1nQJZ6C
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@v7.0.1
         with: {persist-credentials: false, fetch-depth: 0}
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+      - uses: actions/setup-node@v7.1.0
         with: {node-version: '24'}
       - name: Verify approval policy and unchanged live application source
         run: |
@@ -51,12 +51,12 @@ jobs:
         env:
           EXPECTED_DEPLOYMENT: ${{ env.GOOD_DEPLOYMENT }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+      - uses: google-github-actions/auth@v3.0.0
         with:
           project_id: grad-checker-512505
           workload_identity_provider: projects/602914367926/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           service_account: grad-checker-deployer@grad-checker-512505.iam.gserviceaccount.com
-      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - uses: google-github-actions/setup-gcloud@v3.0.1
       - name: Update using only the existing healthy image digest
         run: python3 scripts/deployment/rehearse_cloud_run.py update
       - name: Install reviewed Vercel CLI
