@@ -7,7 +7,7 @@ GitHubの既定ブランチはmainを維持するため、PR作成時には明�
 2. 実装・テスト・commit・push後にdev向けPRを作成する。PRではBackend・Frontend・ContainerのCIを実行する。
 3. レビュー・CI成功後にdevへ統合する。devへのpushでも同じCheckを実行し、隔離PostgreSQL、Go/Python結合、フロント、コンテナを検証する。本番Secret・production environmentは使用しない。
 4. devへのpush時、mainとの差分があり、dev→mainのPRがまだない場合はGitHub AppがPRを自動作成する。既存PRがあればdevの変更が自動で反映される。PR作成時にはCIも起動する。複数変更をdev上で確認し、最新HEADのレビュー・CIを確認したうえで、ユーザーが手動でmainへマージする。マージ後は[Release Please](#リリース履歴)が別のリリースPRを作成・更新する。
-5. mainではProduction deployment内の再利用CIが走る。公開jobはmain限定かつ `PRODUCTION_DEPLOY_ENABLED == true` を必要とする。production環境のRequired reviewersを外した後は、mainへのpushでCIが成功すると本番公開へ自動的に進む。
+5. mainではProduction deployment内の再利用CIが走る。公開jobはmain限定かつ `PRODUCTION_DEPLOY_ENABLED == true` を必要とする。production環境にRequired reviewersは設定せず、mainへのpushでCIが成功すると本番公開へ自動的に進む。
 6. 公開可能なbranchはmainだけとする。Cloud Run更新、Vercel stage検証後に本番へ反映する。失敗時は後続処理を停止し、必要なrollbackは承認を受けて実行する。手順は[本番デプロイ](production-deployment.md)を参照する。
 
 緊急時はmainから `hotfix/*` を作成し、CIとレビューを経てmainへ反映した後、devへ同期する。通常開発はdevへ集約する。既存の `feat/*` ブランチは一律改名・削除せず、通常PRのbaseをdevへ変更し差分・競合・CIを再確認する。
@@ -20,7 +20,7 @@ GitHub Actionsの依存関係は `.github/workflows/actions.lock` で管理す�
 
 ## リリース履歴
 
-mainへのpushで `Release Please` が動き、前回のリリース以降のコミットをまとめたリリースPRをmain向けに作成・更新する。ユーザーがPRのバージョン・変更一覧・CIを確認してマージすると、タグとGitHub Releaseが作成される。dev→mainは個々のコミット履歴を残すmerge commit方式でマージする。最初のリリースは `v1.0.0`、以降はConventional Commitに従い `feat:` はminor、`fix:` はpatch、`feat!:` や本文の `BREAKING CHANGE:` はmajorを上げる。ドキュメントやCIだけの変更では新しいリリースが作成されない場合がある。コミットメッセージの記載漏れは検出できないため、PRレビュー時に変更内容を確認する。
+mainへのpushで `Release Please` が動き、リリースPRをmain向けに作成・更新する。変更一覧はGitHubの自動生成ノートを使い、前回のタグ以降に取り込まれたPR単位で表示する。dev向けの個別PRとdev→mainの統合PRが両方表示される場合がある。ユーザーがPRのバージョン・変更一覧・CIを確認してマージすると、タグとGitHub Releaseが作成される。dev→mainは個々のコミット履歴を残すmerge commit方式でマージする。最初のリリースは `v1.0.0`、以降のバージョン判定は従来どおりConventional Commitに従い `feat:` はminor、`fix:` はpatch、`feat!:` や本文の `BREAKING CHANGE:` はmajorを上げる。ドキュメントやCIだけの変更では新しいリリースが作成されない場合がある。コミットメッセージの記載漏れは検出できないため、PRレビュー時に変更内容を確認する。
 
 リリースPRが更新する `CHANGELOG.md`、`.release-please-manifest.json`、`version.txt` だけのmainへのpushでは、同じアプリを二重に本番デプロイしない。これ以外のファイルが同じpushに含まれる場合は通常のProduction deploymentを実行する。タグとGitHub Releaseはコードのリリース記録であり、本番デプロイの成功を示さない。対象SHAのProduction deploymentを別に確認する。初回の変更一覧は、準備時のmain `f536e4e76c939456939512d13660bcbf6e8decab` の次からを対象とし、それ以前の履歴へタグを付けない。
 
