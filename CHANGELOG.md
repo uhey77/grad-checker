@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1 (2026-11-08)
+
+## What's Changed
+* ci: リリースノートをPR単位にする by @uhey77 in https://github.com/uhey77/grad-checker/pull/100
+* dev の変更をまとめてリリースする by @grad-checker-release[bot] in https://github.com/uhey77/grad-checker/pull/101
+
+
+**Full Changelog**: https://github.com/uhey77/grad-checker/compare/v1.0.0...v1.0.1
+
 ## 1.0.0 (2026-11-08)
 
 
