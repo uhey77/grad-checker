@@ -20,6 +20,8 @@ workflows:
         - 'actions/setup-node@v7.1.0'
         - 'google-github-actions/auth@v3.0.0'
         - 'google-github-actions/setup-gcloud@v3.0.1'
+    '.github/workflows/dev-release-pr.yml':
+        - 'actions/create-github-app-token@v3.3.0'
     '.github/workflows/graduation-benchmark.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-go@v7.0.0'
