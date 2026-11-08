@@ -1,4 +1,4 @@
-// 本番environmentの承認者とmain制限を、WIF認証より前に確認する。
+// 本番environmentのmain制限を、WIF認証より前に確認する。
 const repository = process.env.GITHUB_REPOSITORY;
 if (
   repository !== "uhey77/grad-checker" ||
@@ -22,13 +22,6 @@ if (!response.ok)
     "A protected production environment must be configured before release",
   );
 const environment = await response.json();
-if (
-  !environment.protection_rules?.some(
-    (rule) => rule.type === "required_reviewers" && rule.reviewers?.length > 0,
-  )
-) {
-  throw new Error("production requires at least one required reviewer");
-}
 if (!environment.deployment_branch_policy?.custom_branch_policies) {
   throw new Error("production must restrict deployments to main");
 }
@@ -51,4 +44,4 @@ if (
 ) {
   throw new Error("production must allow only the main branch");
 }
-console.log("Production approval and main branch policy verified");
+console.log("Production main branch policy verified");

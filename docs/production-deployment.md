@@ -8,7 +8,7 @@ flowchart LR
   Vercel -->|/api HTTPS rewrite| Go[Cloud Run / Go API]
   Go -->|127.0.0.1:8001 HTTP| Python[同一コンテナ / FastAPI・SQLModel]
   Python -->|TLS / psycopg 3| Neon[Neon PostgreSQL]
-  Actions[GitHub Actions / main・承認] -->|OIDC / WIF| Registry[Artifact Registry]
+  Actions[GitHub Actions / main・CI] -->|OIDC / WIF| Registry[Artifact Registry]
   Registry --> Go
   Secret[Secret Manager / Runtime SA] --> Python
 ```
@@ -19,9 +19,9 @@ Goは公開HTTP・認可・Origin/CSRF・Cookie、Pythonは業務処理・DBを�
 
 `/api/health`はGoのliveness。`/api/ready`はGo→Python→DBの接続を確認し、200または503を返す。DB障害でlivenessを失敗させず、再起動の連鎖を避ける。内部エラーや業務データは返さない。
 
-## 初回公開準備の現在値
+## 初回公開の記録
 
-本番DB移行は承認後に完了している。新規DDL・SQLite移行・Seedを再実行しない。旧SQLiteへの書込み再開は禁止。2026-10-26に一括承認に基づく本番公開・HTTPS受入まで完了した。実測結果・Secret接続先の値非出力監査・実行承認・ロールバックは[初回公開準備](initial-release-readiness.md)を参照する。既存deploy.ymlは初回サービス作成とstage/promoteの個別承認に使用せず、初回公開成功後の通常CD有効化も別承認とする。
+本番DB移行は承認後に完了している。新規DDL・SQLite移行・Seedを再実行しない。旧SQLiteへの書込み再開は禁止。2026-10-26に一括承認に基づく本番公開・HTTPS受入まで完了した。実測結果・Secret接続先の値非出力監査・実行承認・ロールバックは[初回公開準備](initial-release-readiness.md)を参照する。初回公開時はdeploy.ymlをサービス作成とstage/promoteの個別承認に使用せず、通常CDの有効化も別途承認した。初回構築専用ワークフローは廃止した。
 
 ## 既存リソースと実行結果
 
@@ -46,7 +46,7 @@ Vercelは既存の`grad-checker`、Root Directory `frontend`、Node.js 24、公�
 | `GCP_SERVICE_ACCOUNT`, `GCP_WIF_PROVIDER` | GitHub VariablesのWIF設定 |
 | `VERCEL_PROJECT_ID`, `VERCEL_ORG_ID` | GitHub Variablesの既存Vercel対象 |
 | `VERCEL_TOKEN` | GitHub Secret。Vercel認証ステップにだけ渡す |
-| `PRODUCTION_DEPLOY_ENABLED` | 2026-11-02にユーザー承認を受けてrepository変数を `true` に設定。通常CDを有効化し、公開にはproduction承認を必要とする |
+| `PRODUCTION_DEPLOY_ENABLED` | 2026-11-02にユーザー承認を受けてrepository変数を `true` に設定。通常CDを有効化する。Required reviewersを外した後はCI成功後に自動公開する |
 
 既存の認証試行制限等は`backend/apps/settings.py`を参照する。`.env`等はGit管理外。Pythonは環境ファイルを自動ロードしない。DB接続URL・成績・パスワード・復旧コード・セッション原値をコード、ログ、コミット、PRへ記録しない。例外ログもDBのDETAILやSQLパラメーターを含めず、例外の種類だけを記録する。
 
@@ -97,10 +97,10 @@ docker run --rm -p 127.0.0.1:8080:8080 --memory=512m --cpus=1 \
 | Workflow | 動作 |
 | --- | --- |
 | `check.yml` | PRと再利用可能CI。Python lint/型/全テスト、Go競合検出、PostgreSQL結合、Frontend lint/型/整形/テスト/build、Docker build/実行試験 |
-| `deploy.yml` | main push/手動実行→CI→承認ゲート→WIF→既存リソース確認→SHAタグのbuild/push→Cloud Run更新→readiness→Vercel本番用build→ドメイン未割当でstage→proxy/SPA検証→promote→本番疎通 |
-| `production-preflight.yml` | mainの完全SHA指定・production承認後、GitHub通常/direct Secretの本番接続先・TLS・18テーブル/1,738行を読取り検証。別jobのWIFは既存Registry/Cloud Run inventoryの読取りだけ。公開操作なし |
-| `database-connectivity.yml` | mainの承認済み手動実行だけで、既存GitHub Secretsのpooled/direct接続を読み取りSELECT 1で確認。DDLなし |
-| `vercel-auth-check.yml` | mainの完全SHA指定・production承認後、同じVERCEL_TOKENでユーザーAPI・CLI認証・既存プロジェクトへのアクセスを読取り確認。デプロイ・DB接続なし |
+| `deploy.yml` | main push/手動実行→CI→main制限の確認→WIF→既存リソース確認→SHAタグのbuild/push→Cloud Run更新→readiness→Vercel本番用build→ドメイン未割当でstage→proxy/SPA検証→promote→本番疎通 |
+| `production-preflight.yml` | mainの完全SHA指定後、GitHub通常/direct Secretの本番接続先・TLS・18テーブル/1,738行を読取り検証。別jobのWIFは既存Registry/Cloud Run inventoryの読取りだけ。公開操作なし |
+| `database-connectivity.yml` | mainの手動実行だけで、既存GitHub Secretsのpooled/direct接続を読み取りSELECT 1で確認。DDLなし |
+| `vercel-auth-check.yml` | mainの完全SHA指定後、同じVERCEL_TOKENでユーザーAPI・CLI認証・既存プロジェクトへのアクセスを読取り確認。デプロイ・DB接続なし |
 | `graduation-benchmark.yml` | 既存の合成データ性能検証 |
 
 Vercelの本番用ビルド後は、生成された`.vercel/output/config.json`を検査してAPI中継・SPAの除外条件・no-storeを確認してからstageする。`vercel pull`はumask 077で実行し、取得した環境ファイルをartifactへ含めない。
@@ -109,19 +109,19 @@ Vercelの本番用ビルド後は、生成された`.vercel/output/config.json`�
 
 `User not found (404)`はユーザー取得時の失敗であり、トークンが存在することやLast activeの更新だけでは、その実行の認証成功を判断できない。通常デプロイではproject inspectの前にユーザーAPIとCLIの認証を確認する。
 
-本番の更新なしで確認する場合は、Actionsの `Vercel authentication check (read only)` → Run workflowで `main` を選択し、確認対象のmainの完全SHAを `expected_sha` に指定する。productionの承認後、ユーザーAPI（GET `/v2/user`）、固定バージョンの `vercel whoami --non-interactive`、既存プロジェクトのGET監査を順に実行する。PR・devからは本番Secretを利用しない。このワークフローはmainに反映されてから利用できる。
+本番の更新なしで確認する場合は、Actionsの `Vercel authentication check (read only)` → Run workflowで `main` を選択し、確認対象のmainの完全SHAを `expected_sha` に指定する。mainを確認後、ユーザーAPI（GET `/v2/user`）、固定バージョンの `vercel whoami --non-interactive`、既存プロジェクトのGET監査を順に実行する。PR・devからは本番Secretを利用しない。このワークフローはmainに反映されてから利用できる。
 
 ユーザーAPIの段階で失敗した場合は、HTTPステータスを確認し、トークンの有効性・発行元アカウント・Vercel側の状態を調べる。GitHubのproduction EnvironmentとRepositoryに同名Secretがある場合はproduction側が優先される。API成功後にCLIだけ失敗した場合は、固定したCLIの挙動やVercel側の状態を調べる。両方成功してプロジェクト監査で失敗した場合は、対象チーム・プロジェクトへの権限と設定を確認する。トークン・ユーザー情報・API応答本文・CLIの認証出力はログに記録しない。
 
-Cloud Run更新とVercel公開は別ジョブ・別runnerで実行する。WIFのid-token権限とGCP認証ファイルをフロントエンドの依存インストール・ビルドへ渡さない。両ジョブにproduction environmentを指定し、それぞれ承認ポリシーを検証する。
+Cloud Run更新とVercel公開は別ジョブ・別runnerで実行する。WIFのid-token権限とGCP認証ファイルをフロントエンドの依存インストール・ビルドへ渡さない。両ジョブにproduction environmentを指定し、それぞれmain限定ポリシーを検証する。
 
 PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのPostgreSQLは合成データ専用である。Actionsは確認したcommit SHAに固定する。デプロイは直列化し、実行中の本番更新を新しいpushで強制キャンセルしない。失敗時は後続のVercel昇格等へ進まない。
 
-本番CDを有効化する前に、GitHubの`production` environmentへrequired reviewerを1人以上設定し、deployment branch policyをcustomで`main`のbranchだけに制限する。CDはこのポリシーをAPIで検証し、不足・読み取り不可ならWIFより前に停止する。GitHubの契約でrequired reviewerを利用できない場合はCDを有効化せず、同等の承認設計を別途決める。
+GitHubの`production` environmentのdeployment branch policyをcustomで`main`のbranchだけに制限する。CDはこのポリシーをAPIで検証し、不足・読み取り不可ならWIFより前に停止する。
 
-2026-11-02にユーザー承認を受けてrepository変数 `PRODUCTION_DEPLOY_ENABLED` を `true` に設定した。productionのRequired reviewerは `uhey77`、許可branchはmainだけを維持する。以降のmainへのpushではCI成功後に承認待ちとなり、承認後にCloud Run更新とVercelのstage検証・本番反映へ進む。設定変更だけでは過去にスキップされた実行は再開しない。今回、手動デプロイ・過去の実行の再実行は行っていない。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。既存のVercel側Git連携状態も初回公開前に確認する。
+2026-11-02にユーザー承認を受けてrepository変数 `PRODUCTION_DEPLOY_ENABLED` を `true` に設定した。productionの許可branchはmainだけを維持する。Required reviewersを外した後のmainへのpushでは、CI成功後に承認待ちを挟まずCloud Run更新とVercelのstage検証・本番反映へ進む。設定変更だけでは過去にスキップされた実行は再開しない。今回、手動デプロイ・過去の実行の再実行は行っていない。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。既存のVercel側Git連携状態も初回公開前に確認する。
 
-## 初回公開の順序と今後の通常CD
+## 初回公開時の順序（履歴）
 
 初回構築・公開IAM・Vercel stage・検証後の昇格はユーザーの一括承認に基づき実施済み。
 GitHub productionのRequired reviewer承認は回避していない。
@@ -140,7 +140,7 @@ GitHub productionのRequired reviewer承認は回避していない。
 10. 専用テストデータだけを後片付けし、既存データ・ログ・実測・費用を確認して記録する。
 
 WIFはmain限定を維持する。GitHub DB SecretsとWIFはmain 8718b6cの読取り監査40269546985でも検証済み。
-通常CDの有効化は別途判断し、production承認と固定対象の確認を維持する。
+初回公開時には通常CDの有効化を別途判断し、production承認と固定対象を確認した。
 今回のSPA検査修正を取り込む前にフラグを有効にしない。
 
 ## 本番受入
@@ -199,4 +199,4 @@ Artifact Registryは最新の正常デプロイ、直前の正常ロールバッ
 
 日常開発とリリースPRは[開発・リリースフロー](development-flow.md)に従う。devでは本番公開しない。予算通知の設定済み記録、今回の実測と24〜48時間の未完了監視は[安定化監査](post-release-stabilization-2026-10-27.md)を参照する。
 
-24〜48時間の履歴メトリクス取得は[追加検証](stabilization-followup.md)のmain限定・production承認付き読取り監査を使う。欠測や権限不足を正常と扱わない。
+24〜48時間の履歴メトリクス取得は[追加検証](stabilization-followup.md)のmain限定の読取り監査を使う。欠測や権限不足を正常と扱わない。

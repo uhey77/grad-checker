@@ -62,7 +62,7 @@ jobs:
       - run: npm ci
         working-directory: frontend
       - run: make frontend-check frontend-test build
-      - run: node --test scripts/deployment/test-*.mjs
+      - run: node --test scripts/deployment/test-*.mjs scripts/release/test-*.mjs
   container:
     if: github.event_name != 'workflow_dispatch' || !inputs.audit_vercel
     runs-on: ubuntu-latest
