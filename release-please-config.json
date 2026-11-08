@@ -4,6 +4,7 @@
     ".": {
       "release-type": "simple",
       "initial-version": "1.0.0",
+      "changelog-type": "github",
       "include-component-in-tag": false
     }
   },

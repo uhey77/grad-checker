@@ -119,7 +119,7 @@ PRでは本番Secret・WIF・実クラウドの変更を使用しない。CIのP
 
 GitHubの`production` environmentのdeployment branch policyをcustomで`main`のbranchだけに制限する。CDはこのポリシーをAPIで検証し、不足・読み取り不可ならWIFより前に停止する。
 
-2026-11-02にユーザー承認を受けてrepository変数 `PRODUCTION_DEPLOY_ENABLED` を `true` に設定した。productionの許可branchはmainだけを維持する。Required reviewersを外した後のmainへのpushでは、CI成功後に承認待ちを挟まずCloud Run更新とVercelのstage検証・本番反映へ進む。設定変更だけでは過去にスキップされた実行は再開しない。今回、手動デプロイ・過去の実行の再実行は行っていない。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。既存のVercel側Git連携状態も初回公開前に確認する。
+2026-11-02にユーザー承認を受けてrepository変数 `PRODUCTION_DEPLOY_ENABLED` を `true` に設定した。2026-11-08にproductionのRequired reviewersを解除し、許可branchはmainだけを維持した。以後のmainへのpushでは、CI成功後に承認待ちを挟まずCloud Run更新とVercelのstage検証・本番反映へ進む。承認解除時に待機中だったフロントエンドジョブは中断されたため、対象の失敗ジョブを再実行し、本番反映後の検証成功を確認した。設定変更だけでは過去にスキップされた実行は再開しない。Vercel Git自動デプロイは設定ファイルで無効化し、Actions経由に統一する。
 
 ## 初回公開時の順序（履歴）
 
