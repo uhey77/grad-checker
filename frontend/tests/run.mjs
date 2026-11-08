@@ -66,6 +66,7 @@ try {
         "--test",
         "tests/contract/subject-list.test.mjs",
         "tests/unit/grades.test.mjs",
+        "tests/unit/program-groups.test.mjs",
         "tests/unit/requirements.test.mjs",
         "tests/unit/shortage-courses.test.mjs",
         "tests/unit/subject-list.test.mjs",

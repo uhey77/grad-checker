@@ -112,12 +112,12 @@ export function ProfilePage({
             aria-hidden={!expanded}
           >
             <div className="profile-editor-inner">
-              {profile.state.programs.length === 0 ? (
+              {profile.selectablePrograms.length === 0 ? (
                 <p role="status">
                   {t("選択できるカリキュラムが登録されていません。")}
                 </p>
               ) : null}
-              <ProgramForm {...profile} programs={profile.state.programs} />
+              <ProgramForm {...profile} programs={profile.selectablePrograms} />
             </div>
           </div>
         </section>

@@ -43621,12 +43621,10 @@
       "curriculum_id": "aa7c6b48-a0d3-5f84-bf62-e9b794e0cdd3",
       "degree_level": "bachelor",
       "campus": "kamata",
-      "catalog_status": "unverified",
-      "requirements_status": "unverified",
-      "rules_status": "unverified",
-      "unresolved_reasons": [
-        "2026年公開の教育課程表本文は2024年度入学生用。2026年度の看護師・保健師経路の科目集合・必須選択条件を確認する必要がある。"
-      ],
+      "catalog_status": "verified",
+      "requirements_status": "verified",
+      "rules_status": "verified",
+      "unresolved_reasons": [],
       "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
       "source_pages": "PDF 1-4",
       "credit_groups": [],
@@ -43638,17 +43636,51 @@
       "curriculum_id": "9d817f7a-bcad-5218-ba38-e2dcacd36a95",
       "degree_level": "bachelor",
       "campus": "kamata",
-      "catalog_status": "unverified",
-      "requirements_status": "unverified",
-      "rules_status": "unverified",
-      "unresolved_reasons": [
-        "2026年公開の教育課程表本文は2024年度入学生用・基礎必修12単位、2026年度卒業要件表は基礎必修20単位で不一致。2026年度科目集合の確認が必要。"
-      ],
+      "catalog_status": "verified",
+      "requirements_status": "verified",
+      "rules_status": "verified",
+      "unresolved_reasons": [],
       "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ce.pdf",
       "source_pages": "PDF 1-3",
       "credit_groups": [],
       "non_credit_conditions": [],
-      "credit_minimums": []
+      "credit_minimums": [
+        {
+          "code": "foundation-natural",
+          "name": "自然科学の選択2単位以上",
+          "course_ids": [
+            "fb958dd9-9c85-523e-8f80-a209e72304ea",
+            "80fecc62-70af-573b-b7e6-ed8b0371f6fc",
+            "3d062ff8-6f65-5af1-ba27-00a552a9e875"
+          ],
+          "required_credits": 2,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ce.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子65頁"
+        },
+        {
+          "code": "foundation-other",
+          "name": "自然科学以外の基礎教育の選択4単位以上",
+          "course_ids": [
+            "eb915dbd-f74c-5b0b-885c-ab24fb706563",
+            "25e8f6bf-790c-5b87-97f5-3212543a5b66",
+            "76f0ef05-ff7d-5133-b703-e299a96e5671",
+            "9d7f0e98-5fe4-5e8e-9366-a1eb83c88429",
+            "d3f12c95-0c0c-5c60-b039-3685b6cc88f8",
+            "f138d6a6-c338-504f-ae40-cf7b5e664202",
+            "d15846a2-d354-5997-9cbf-7339277691d2",
+            "0d7a3df0-e5ab-5bd8-891b-b75ac28e0b7e",
+            "5aafaecf-b710-5908-bac7-47070fe41893",
+            "f4427e14-4937-516e-bcc9-f5ec1b346698",
+            "5bfbf30b-f6ee-5cfb-831b-7a1c8f677788",
+            "c52ede9b-29c4-5dda-8627-6c27d69e937f",
+            "801ee274-e834-5aa6-afd4-2a640dee3f86",
+            "1e9ca494-104d-5eda-a598-2e6679075501"
+          ],
+          "required_credits": 4,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ce.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子65頁"
+        }
+      ]
     },
     {
       "id": "26b07ba3-c212-5a3b-9861-bef414203ef9",
@@ -43734,17 +43766,138 @@
       "curriculum_id": "70c0382c-be71-536d-8e66-2320c325d053",
       "degree_level": "bachelor",
       "campus": "kamata",
-      "catalog_status": "unverified",
-      "requirements_status": "unverified",
-      "rules_status": "unverified",
-      "unresolved_reasons": [
-        "2026年公開の教育課程表本文は2024年度入学生用。2026年度の看護師・保健師経路の科目集合・必須選択条件を確認する必要がある。"
-      ],
+      "catalog_status": "verified",
+      "requirements_status": "verified",
+      "rules_status": "verified",
+      "unresolved_reasons": [],
       "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
       "source_pages": "PDF 1-4",
       "credit_groups": [],
       "non_credit_conditions": [],
-      "credit_minimums": []
+      "credit_minimums": [
+        {
+          "code": "public-health-273f0b30-3238-5282-985c-01f765d22b96",
+          "name": "法学の修得",
+          "course_ids": [
+            "273f0b30-3238-5282-985c-01f765d22b96"
+          ],
+          "required_credits": 2,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-eca42a89-d117-57ac-83d6-3ce5eb703de9",
+          "name": "統計学の修得",
+          "course_ids": [
+            "eca42a89-d117-57ac-83d6-3ce5eb703de9"
+          ],
+          "required_credits": 2,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-7d9170c9-064c-5cc9-8283-9fdf1e55e70f",
+          "name": "疫学の応用の修得",
+          "course_ids": [
+            "7d9170c9-064c-5cc9-8283-9fdf1e55e70f"
+          ],
+          "required_credits": 1,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-08ae74b9-1a65-515b-a0b4-2c63ee6308ee",
+          "name": "社会経済学の修得",
+          "course_ids": [
+            "08ae74b9-1a65-515b-a0b4-2c63ee6308ee"
+          ],
+          "required_credits": 2,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-7e2de5e1-de7a-5ce2-b28e-b27b7eb12b42",
+          "name": "公衆衛生看護学Ⅰの修得",
+          "course_ids": [
+            "7e2de5e1-de7a-5ce2-b28e-b27b7eb12b42"
+          ],
+          "required_credits": 1,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-d71a9d38-24ea-519d-a5e2-fd9775ed371c",
+          "name": "公衆衛生看護学Ⅱの修得",
+          "course_ids": [
+            "d71a9d38-24ea-519d-a5e2-fd9775ed371c"
+          ],
+          "required_credits": 2,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-d5b8867e-1f21-5bfd-845e-6fc46c634623",
+          "name": "公衆衛生看護学Ⅲの修得",
+          "course_ids": [
+            "d5b8867e-1f21-5bfd-845e-6fc46c634623"
+          ],
+          "required_credits": 1,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-6c5a2f2b-49ac-52cf-b4f6-73adc1450c21",
+          "name": "産業保健演習の修得",
+          "course_ids": [
+            "6c5a2f2b-49ac-52cf-b4f6-73adc1450c21"
+          ],
+          "required_credits": 1,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-cecada3d-bf08-527a-bc76-6e1224ecf501",
+          "name": "公衆衛生看護管理論の修得",
+          "course_ids": [
+            "cecada3d-bf08-527a-bc76-6e1224ecf501"
+          ],
+          "required_credits": 1,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-11aebaba-76ff-5477-9319-893158793afb",
+          "name": "公衆衛生看護学実習Ⅰ（行政保健）の修得",
+          "course_ids": [
+            "11aebaba-76ff-5477-9319-893158793afb"
+          ],
+          "required_credits": 4,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-93ecc5c5-5f68-5d15-bfb3-9f2c1b47a89d",
+          "name": "公衆衛生看護学実習Ⅱ（産業保健・学校保健）の修得",
+          "course_ids": [
+            "93ecc5c5-5f68-5d15-bfb3-9f2c1b47a89d"
+          ],
+          "required_credits": 1,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56〜59頁"
+        },
+        {
+          "code": "public-health-wellness",
+          "name": "スポーツ・コンディショニングまたは集中実技Ⅰ・Ⅱ",
+          "course_ids": [
+            "9d888b62-2ab3-5df1-8e0e-92e463fe7b6d",
+            "f16b85c3-65d5-5d64-b252-3ed7b8f39042",
+            "b3914820-bd82-5ef3-b591-e613df19fdfd"
+          ],
+          "required_credits": 2,
+          "source_document": "https://www.teu.ac.jp/ap_page/koukai/kyouikukatei_2026_3-3-2_hs-ns.pdf",
+          "source_pages": "2026年度学生便覧（蒲田）冊子56頁"
+        }
+      ]
     },
     {
       "id": "d689288f-a68b-57d6-bc48-6f5610048100",

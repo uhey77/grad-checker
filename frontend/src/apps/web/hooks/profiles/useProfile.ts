@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ProfileError,
+  selectablePrograms,
   type Profile,
   type ProgramOption,
   type ProfileUseCases,
@@ -56,7 +57,8 @@ export function useProfile(
       abort();
     };
   }, [useCases, attempt, expire, reportRevision, abort]);
-  const selected = state?.programs.find((p) => p.curriculumId === chosenId);
+  const available = selectablePrograms(state?.programs ?? []);
+  const selected = available.find((p) => p.curriculumId === chosenId);
   const savedProgram = state?.programs.find(
     (p) => p.curriculumId === state.profile.curriculumId,
   );
@@ -118,6 +120,7 @@ export function useProfile(
   }
   return {
     state,
+    selectablePrograms: available,
     chosenId,
     selected,
     savedProgram,

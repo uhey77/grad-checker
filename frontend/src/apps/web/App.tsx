@@ -98,6 +98,7 @@ function StudentScreens({
             ) : (
               <DashboardPage
                 useCases={application.requirements}
+                csrf={csrf}
                 active={
                   !showTutorial && screen === "dashboard" && !!profile.state
                 }
