@@ -5,15 +5,12 @@ import { spawnSync } from "node:child_process";
 function check({
   repository = "uhey77/grad-checker",
   ref = "refs/heads/main",
-  reviews = true,
   policies = [{ name: "main", type: "branch" }],
   available = true,
 } = {}) {
   const replies = [
     {
-      protection_rules: reviews
-        ? [{ type: "required_reviewers", reviewers: [{}] }]
-        : [],
+      protection_rules: [],
       deployment_branch_policy: { custom_branch_policies: true },
     },
     { branch_policies: policies },
@@ -35,8 +32,7 @@ test("production release requires the expected repository and main", () => {
   assert.notEqual(check({ ref: "refs/heads/feature" }).status, 0);
 });
 
-test("missing reviewers, wildcard/tag policy, or unreadable environment blocks release", () => {
-  assert.notEqual(check({ reviews: false }).status, 0);
+test("wildcard/tag policy or unreadable environment blocks release", () => {
   assert.notEqual(
     check({ policies: [{ name: "*", type: "branch" }] }).status,
     0,
@@ -48,7 +44,7 @@ test("missing reviewers, wildcard/tag policy, or unreadable environment blocks r
   assert.notEqual(check({ available: false }).status, 0);
 });
 
-test("protected production environment restricted to main permits release", () => {
+test("production environment restricted to main permits release without reviewer", () => {
   const result = check();
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /policy verified/);

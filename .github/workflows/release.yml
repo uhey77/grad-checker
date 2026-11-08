@@ -1,0 +1,25 @@
+name: Release history
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: release-history
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24'}
+      - name: Create release tags and notes for main
+        run: node scripts/release/publish.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
