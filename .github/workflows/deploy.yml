@@ -2,6 +2,11 @@ name: Production deployment
 on:
   push:
     branches: [main]
+    # Release Please の履歴更新だけではアプリを再デプロイしない。
+    paths-ignore:
+      - CHANGELOG.md
+      - .release-please-manifest.json
+      - version.txt
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,25 +1,30 @@
-name: Release history
+name: Release Please
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: release-history
+  group: release-please
   cancel-in-progress: false
 jobs:
   release:
     if: github.repository == 'uhey77/grad-checker' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v7.0.1
-        with: {fetch-depth: 0, persist-credentials: false}
-      - uses: actions/setup-node@v7.1.0
-        with: {node-version: '24'}
-      - name: Create release tags and notes for main
-        run: node scripts/release/publish.mjs
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Create repository-scoped GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+      - name: Create release PR or publish release
+        uses: googleapis/release-please-action@v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          target-branch: main
