@@ -20,9 +20,9 @@ GitHub Actionsの依存関係は `.github/workflows/actions.lock` で管理す�
 
 ## リリース履歴
 
-mainへのpushで `Release Please` が動き、前回のリリース以降のコミットをまとめたリリースPRをmain向けに作成・更新する。ユーザーがPRのバージョン・変更一覧・CIを確認してマージすると、タグとGitHub Releaseが作成される。最初のリリースは `v1.0.0`、以降はConventional Commitに従い `feat:` はminor、`fix:` はpatch、`feat!:` や本文の `BREAKING CHANGE:` はmajorを上げる。ドキュメントやCIだけの変更では新しいリリースが作成されない場合がある。コミットメッセージの記載漏れは検出できないため、PRレビュー時に変更内容を確認する。
+mainへのpushで `Release Please` が動き、前回のリリース以降のコミットをまとめたリリースPRをmain向けに作成・更新する。ユーザーがPRのバージョン・変更一覧・CIを確認してマージすると、タグとGitHub Releaseが作成される。dev→mainは個々のコミット履歴を残すmerge commit方式でマージする。最初のリリースは `v1.0.0`、以降はConventional Commitに従い `feat:` はminor、`fix:` はpatch、`feat!:` や本文の `BREAKING CHANGE:` はmajorを上げる。ドキュメントやCIだけの変更では新しいリリースが作成されない場合がある。コミットメッセージの記載漏れは検出できないため、PRレビュー時に変更内容を確認する。
 
-リリースPRが更新する `CHANGELOG.md`、`.release-please-manifest.json`、`version.txt` だけのmainへのpushでは、同じアプリを二重に本番デプロイしない。これ以外のファイルが同じpushに含まれる場合は通常のProduction deploymentを実行する。タグとGitHub Releaseはコードのリリース記録であり、本番デプロイの成功を示さない。対象SHAのProduction deploymentを別に確認する。過去の履歴へ自動的にタグを付けない。
+リリースPRが更新する `CHANGELOG.md`、`.release-please-manifest.json`、`version.txt` だけのmainへのpushでは、同じアプリを二重に本番デプロイしない。これ以外のファイルが同じpushに含まれる場合は通常のProduction deploymentを実行する。タグとGitHub Releaseはコードのリリース記録であり、本番デプロイの成功を示さない。対象SHAのProduction deploymentを別に確認する。初回の変更一覧は、準備時のmain `f536e4e76c939456939512d13660bcbf6e8decab` の次からを対象とし、それ以前の履歴へタグを付けない。
 
 Release Please専用のGitHub Appをこのリポジトリだけにインストールし、Contents、Issues、Pull requestsの各Read and writeを付与する。AppのClient IDをrepository variable `RELEASE_APP_CLIENT_ID`、秘密鍵をrepository secret `RELEASE_APP_PRIVATE_KEY` に登録する。Appの認証情報がない場合はRelease Pleaseが失敗するため、mainへの導入前に設定する。短命のインストールトークンはジョブ終了時に失効し、PRのCIを手動承認なしで実行できる。
 

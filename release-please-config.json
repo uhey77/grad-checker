@@ -6,5 +6,6 @@
       "initial-version": "1.0.0",
       "include-component-in-tag": false
     }
-  }
+  },
+  "bootstrap-sha": "f536e4e76c939456939512d13660bcbf6e8decab"
 }
