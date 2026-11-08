@@ -11,6 +11,7 @@ test('変更内容から最大の変更種別を採用する', () => {
   assert.equal(nextVersion('1.2.3', ['fix: 修正', 'feat(api): 追加']), '1.3.0');
   assert.equal(nextVersion('1.2.3', ['fix: 修正', 'docs: 更新']), '1.2.4');
   assert.equal(nextVersion('1.2.3', ['feat!: 変更', 'feat: 追加']), '2.0.0');
+  assert.equal(nextVersion('1.2.3', ['feat: BREAKING CHANGE: 互換性を変更する']), '2.0.0');
   assert.equal(nextVersion('1.2.3', ['fix(api): 修正\n\nBREAKING CHANGE: 非互換']), '2.0.0');
   assert.equal(nextVersion('1.2.3', ['docs: feat: 引用']), '1.2.4');
 });

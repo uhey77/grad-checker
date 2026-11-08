@@ -6,6 +6,7 @@ export function nextVersion(previous, messages, initial = '1.0.0') {
   let [, major, minor, patch] = match.map(Number);
   const breaking = messages.some((message) =>
     /^[a-z]+(?:\([^\n)]*\))?!: /i.test(message) ||
+    /^[a-z]+(?:\([^\n)]*\))?: BREAKING[ -]CHANGE: /i.test(message) ||
     /^BREAKING[ -]CHANGE: /im.test(message),
   );
   const feature = messages.some((message) => /^feat(?:\([^\n)]*\))?: /i.test(message));

@@ -22,7 +22,7 @@ mainへのpushで `Release history` が起動し、対象コミットに注釈�
 
 バージョンは `vMAJOR.MINOR.PATCH` 形式で、最初の自動リリースは `v1.0.0` とする。以降は前回のタグから対象コミットまでの全コミットメッセージを確認し、優先順位の高い変更に合わせる。
 
-- `feat!:` や `feat(api)!:` のような `!`、または本文の `BREAKING CHANGE:` / `BREAKING-CHANGE:` がある場合はMAJORを上げる。
+- `feat!:` や `feat(api)!:` のような `!`、件名の `feat: BREAKING CHANGE: ...`、または本文の `BREAKING CHANGE:` / `BREAKING-CHANGE:` がある場合はMAJORを上げる。件名に記載する方法は、このリポジトリの1行コミット規則にも従う。
 - それ以外で `feat:` / `feat(api):` がある場合はMINORを上げる。
 - それ以外の修正、文書、設定などはPATCHを上げる。
 
