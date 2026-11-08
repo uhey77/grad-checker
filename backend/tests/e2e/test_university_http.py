@@ -109,7 +109,7 @@ def test_complete_seed_to_owner_only_completion_snapshot(
             )
         assert client.get("/api/checks/" + saved["id"]).json() == saved
         assert_unsupported_program_stops(
-            client, programs, headers, snapshot_for(masters, "HS-CE")
+            client, programs, headers, snapshot_for(masters, "GR-CS-D")
         )
         other = {"login_name": "completion_other", "password": PASSWORD}
         client.post("/api/auth/register", json=other).raise_for_status()
@@ -121,7 +121,7 @@ def test_complete_seed_to_owner_only_completion_snapshot(
 
 
 def assert_unsupported_program_stops(client, programs, headers, unsupported):
-    # 科目資料の年度が一致しない課程は、所属は選べても確定判定を作らない。
+    # 未確認の博士課程は、所属は選べても確定判定を作らない。
     assert (
         client.put(
             "/api/me/program",
@@ -140,5 +140,5 @@ def assert_unsupported_program_stops(client, programs, headers, unsupported):
     reason = next(
         p for p in programs if p["curriculum_id"] == str(unsupported.curriculum_id)
     )["completion_policy"]["unresolved_reasons"]
-    assert "2024" in " ".join(reason)
+    assert "博士後期" in " ".join(reason)
     assert client.get("/api/checks").json()["total_count"] == 2

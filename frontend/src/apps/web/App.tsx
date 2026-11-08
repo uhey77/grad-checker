@@ -78,6 +78,7 @@ function StudentScreens({
           ) : (
             <DashboardPage
               useCases={application.requirements}
+              csrf={csrf}
               active={screen === "dashboard" && !!profile.state}
               revision={latestRevision}
               curriculumId={profile.state?.profile.curriculumId ?? null}
