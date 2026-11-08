@@ -50,6 +50,6 @@
 
 ### 作業ブランチと統合検証
 - 日常の機能追加は `feature/*`、通常修正は `fix/*` を `dev` から作成し、PRのマージ先も `dev` とする。
-- `dev` へのpushで本番Secretを使わない統合CIを実行する。複数の変更をまとめて検証し、`dev` → `main` のリリースPRを作成する。
+- `dev` へのpushで本番Secretを使わない統合CIを実行する。複数の変更をまとめて検証し、自動作成される `dev` → `main` のリリースPRをユーザーが手動でマージする。
 - `main` のCI成功後はproduction承認なしで本番公開する。`PRODUCTION_DEPLOY_ENABLED` は承認なしに変更しない。
 - 詳細は [開発・リリースフロー](docs/development-flow.md) を参照する。
