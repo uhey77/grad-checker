@@ -40,7 +40,7 @@ jobs:
         with: {persist-credentials: false, fetch-depth: 0}
       - uses: actions/setup-node@v7.1.0
         with: {node-version: '24'}
-      - name: Verify approval policy and unchanged live application source
+      - name: Verify main restriction and unchanged live application source
         run: |
           node scripts/deployment/check-release-policy.mjs
           git diff --exit-code fce02dd0187d0c1afcb7531176d1def374932450 HEAD -- backend frontend Dockerfile

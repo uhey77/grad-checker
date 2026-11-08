@@ -15,7 +15,7 @@ jobs:
     needs: ci
     outputs:
       api_origin: ${{ steps.cloud_run.outputs.api_origin }}
-    # 初回公開承認前は未設定のまま。environmentのrequired reviewersも別途必須。
+    # 本番公開フラグとmain限定を維持する。
     if: github.ref == 'refs/heads/main' && vars.PRODUCTION_DEPLOY_ENABLED == 'true'
     environment: production
     runs-on: ubuntu-latest
@@ -36,7 +36,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-node@v7.1.0
         with: {node-version: '24'}
-      - name: Verify approval policy before any cloud authentication
+      - name: Verify main branch policy before any cloud authentication
         run: node scripts/deployment/check-release-policy.mjs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -96,7 +96,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-node@v7.1.0
         with: {node-version: '24'}
-      - name: Verify approval policy before frontend publication
+      - name: Verify main branch policy before frontend publication
         run: node scripts/deployment/check-release-policy.mjs
         env:
           GH_TOKEN: ${{ github.token }}

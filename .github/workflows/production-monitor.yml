@@ -31,7 +31,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-node@v7.1.0
         with: {node-version: '24'}
-      - name: Verify production approval and main restriction
+      - name: Verify production main restriction
         run: node scripts/deployment/check-release-policy.mjs
         env:
           GH_TOKEN: ${{ github.token }}

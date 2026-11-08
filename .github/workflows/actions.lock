@@ -25,13 +25,6 @@ workflows:
         - 'actions/setup-go@v7.0.0'
         - 'actions/upload-artifact@v4.6.2'
         - 'astral-sh/setup-uv@v10.3.0'
-    '.github/workflows/initial-production.yml':
-        - 'actions/checkout@v7.0.1'
-        - 'actions/setup-node@v7.1.0'
-        - 'actions/upload-artifact@v4.6.2'
-        - 'astral-sh/setup-uv@v10.3.0'
-        - 'google-github-actions/auth@v3.0.0'
-        - 'google-github-actions/setup-gcloud@v3.0.1'
     '.github/workflows/production-monitor.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-node@v7.1.0'
@@ -48,6 +41,9 @@ workflows:
         - 'actions/setup-node@v7.1.0'
         - 'google-github-actions/auth@v3.0.0'
         - 'google-github-actions/setup-gcloud@v3.0.1'
+    '.github/workflows/release.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'actions/setup-node@v7.1.0'
     '.github/workflows/vercel-auth-check.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-node@v7.1.0'
