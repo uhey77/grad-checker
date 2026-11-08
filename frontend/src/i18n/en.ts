@@ -1,5 +1,39 @@
 // 日本語のUI文言をキーにする。大学の名称・科目・出典データは翻訳しない。
 export const english = {
+  はじめての使い方: "Getting started",
+  チュートリアルを見る: "View tutorial",
+  "これは練習です。サンプルの成績は実際のデータに保存されません。":
+    "This is a practice exercise. Sample grades are not saved to your account.",
+  "成績を入力して、ダッシュボードを見てみましょう":
+    "Enter grades and explore the dashboard",
+  "架空の科目を使って、成績の入力から単位の確認までを体験できます。":
+    "Practice entering grades and checking credits using example courses.",
+  サンプル科目の成績を選ぶ: "Choose grades for sample courses",
+  成績を保存する: "Save your grades",
+  ダッシュボードで単位の進捗を確認する:
+    "Check your credit progress on the dashboard",
+  練習を始める: "Start practice",
+  スキップ: "Skip",
+  "1. サンプルの成績を入力": "1. Enter sample grades",
+  "科目の成績欄で「A」などを選び、「成績を保存」を押してください。表は左右にスクロールできます。":
+    "Choose a grade such as A, then select Save grades. You can scroll the table horizontally.",
+  "サンプル科目 {{value0}}": "Sample course {{value0}}",
+  サンプル学部: "Sample faculty",
+  サンプル区分: "Sample category",
+  "練習の成績に未保存の変更があります。":
+    "Your practice grades have unsaved changes.",
+  "練習の成績を保存しました。次にダッシュボードを確認しましょう。":
+    "Your practice grades are saved. Next, check the dashboard.",
+  "成績を選んでください。": "Choose a grade.",
+  ダッシュボードへ: "Go to dashboard",
+  練習を終了: "End practice",
+  "2. ダッシュボードで確認": "2. Check the dashboard",
+  "保存した成績をもとに、単位の進捗や不足を確認できます。ここでは架空の必要単位を使っています。":
+    "Saved grades show your credit progress and remaining credits. This example uses fictional requirements.",
+  "実際に使うときは、マイページで所属を設定してから成績を入力・保存してください。ダッシュボードに戻ると結果を確認できます。":
+    "To use the app, set your program in My Page, then enter and save your grades. Return to the dashboard to see your results.",
+  練習を終えてアプリを使う: "Finish practice and use the app",
+  成績入力に戻る: "Back to grade entry",
   成績: "Grades",
   成績入力へ: "Go to grade entry",
   成績を入力: "Enter grades",
@@ -97,26 +131,17 @@ export const english = {
   未保存の変更あり: "Unsaved changes",
   成績入力の科目一覧: "Courses for grade entry",
   本人の成績入力: "Your grades",
-  八王子: "Hachioji",
-  蒲田: "Kamata",
   学部: "Undergraduate",
-  修士: "Master’s",
-  博士後期: "Doctoral",
-  照合済み: "Verified",
+  大学院: "Graduate school",
   未確認: "Unverified",
-  "{{value0}}／{{value1}}：科目 {{value2}}・要件 {{value3}}・課程内の規則 {{value4}}":
-    "{{value0}} / {{value1}}: courses {{value2}}; requirements {{value3}}; program rules {{value4}}",
   "判定準備中：以下の確認が終わるまで判定を停止します。":
     "Evaluation is unavailable until the following items are verified.",
-  "他学部・他研究科の算入は対象と認定の確認が必要です。未登録の算入条件に依存する判定は停止します。":
-    "Credits from other faculties or graduate schools require verification of eligibility and recognition. Evaluation is unavailable when required allocation rules are missing.",
   課程の対応状況: "Program coverage",
   "学部・学科・専攻／研究科・専攻":
     "Faculty / department / specialization or graduate school / specialization",
   選択してください: "Please select",
   "保存済みの所属（選択肢にありません）":
     "Saved program (not in the available options)",
-  "（判定準備中）": " (evaluation unavailable)",
   "所属は未設定です。": "Your program has not been set.",
   未保存変更の確認: "Confirm unsaved changes",
   変更を破棄して再取得: "Discard changes and reload",
@@ -147,6 +172,13 @@ export const english = {
   "単位以外の修了条件（本人申告）":
     "Non-credit completion requirements (self-reported)",
   "達成（本人申告）": "Met (self-reported)",
+  "回答は判定履歴に保存されます。再読み込み後は再入力してください。":
+    "Answers are saved with this assessment. Enter them again after reloading.",
+  "判定中…": "Assessing…",
+  回答を反映して判定: "Assess with these answers",
+  本人申告を含む参考判定: "Reference assessment with self-reported answers",
+  "在学期間など、成績から確認できない条件は含まれません。正式な卒業認定は大学が行います。":
+    "Requirements that cannot be verified from grades, such as enrollment duration, are not included. The university makes the official graduation decision.",
   未達成: "Not met",
   必要単位の進捗: "Required credit progress",
   " / {{value0}} 単位": " / {{value0}} credits",

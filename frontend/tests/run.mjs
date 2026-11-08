@@ -54,6 +54,7 @@ try {
       "src/apps/web/components/grades/GradeTable.tsx",
       "src/apps/web/components/FilterFields.tsx",
       "src/apps/web/components/SaveBar.tsx",
+      "src/apps/web/pages/tutorial/tutorialProgress.ts",
     ],
     { stdio: "inherit" },
   );
@@ -65,6 +66,7 @@ try {
         "--test",
         "tests/contract/subject-list.test.mjs",
         "tests/unit/grades.test.mjs",
+        "tests/unit/program-groups.test.mjs",
         "tests/unit/requirements.test.mjs",
         "tests/unit/shortage-courses.test.mjs",
         "tests/unit/subject-list.test.mjs",
@@ -76,6 +78,7 @@ try {
         "tests/contract/course-catalog.test.mjs",
         "tests/contract/shared-http.test.mjs",
         "tests/unit/i18n.test.mjs",
+        "tests/unit/tutorial.test.mjs",
       ],
       {
         stdio: "inherit",
