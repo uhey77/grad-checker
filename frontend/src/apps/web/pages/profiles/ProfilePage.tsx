@@ -12,6 +12,7 @@ export function ProfilePage({
   active,
   showDashboard,
   showGrades,
+  showTutorial,
   logout,
   authBusy,
 }: {
@@ -20,6 +21,7 @@ export function ProfilePage({
   active: boolean;
   showDashboard: () => void;
   showGrades: () => void;
+  showTutorial: () => void;
   logout: () => void;
   authBusy: boolean;
 }) {
@@ -129,6 +131,19 @@ export function ProfilePage({
             <h2 id="grades-heading">{t("成績")}</h2>
             <button type="button" onClick={showGrades}>
               {t("成績入力へ")}
+            </button>
+          </div>
+        </section>
+      )}
+      {!expanded && (
+        <section
+          className="panel profile-panel"
+          aria-labelledby="tutorial-heading"
+        >
+          <div className="profile-section-heading">
+            <h2 id="tutorial-heading">{t("はじめての使い方")}</h2>
+            <button type="button" onClick={showTutorial}>
+              {t("チュートリアルを見る")}
             </button>
           </div>
         </section>
