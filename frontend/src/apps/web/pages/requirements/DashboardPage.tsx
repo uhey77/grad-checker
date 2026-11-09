@@ -19,7 +19,6 @@ export function DashboardPage({
   curriculumId,
   expire,
   showProfile,
-  showGrades,
 }: {
   useCases: GraduationUseCases;
   csrf: string;
@@ -28,7 +27,6 @@ export function DashboardPage({
   curriculumId: string | null;
   expire: () => void;
   showProfile: () => void;
-  showGrades: () => void;
 }) {
   const { t } = useTranslation();
   const dashboard = useDashboard(
@@ -72,18 +70,6 @@ export function DashboardPage({
             </LoadingState>
           ) : (
             <>
-              {result?.gradeCount === 0 && (
-                <div className="dashboard-grade-prompt" role="status">
-                  <p>
-                    {t(
-                      "保存済みの成績は0件です。成績入力から修得状況を保存してください。",
-                    )}
-                  </p>
-                  <button type="button" onClick={showGrades}>
-                    {t("成績を入力")}
-                  </button>
-                </div>
-              )}
               {displayedDetail ? (
                 displayedDetail.degreeLevel !== "bachelor" &&
                 (displayedDetail.completionConditions?.length ?? 0) > 0 ? (
