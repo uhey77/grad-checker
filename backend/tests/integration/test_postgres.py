@@ -35,7 +35,6 @@ from tests.integration import test_check_results as check_cases
 from tests.integration import test_grades as grade_cases
 from tests.integration import test_profile as profile_cases
 from tests.integration import test_unit_of_work as uow_cases
-from tests.unit.test_requirement_evaluation import snapshot  # noqa: F401
 
 BACKEND = Path(__file__).resolve().parents[2]
 

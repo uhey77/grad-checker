@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CatalogCourse } from "../../../../modules/subjects/public.ts";
 import {
-  attemptsOf,
   canAddRetake,
   courseStatus,
   failingGradeCodes,
   gradeCodes,
+  groupAttemptsByCourse,
   maxAcademicYear,
   minAcademicYear,
   sameGrades,
@@ -157,6 +157,8 @@ export function GradeTable({
 }) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
+  const draftByCourse = useMemo(() => groupAttemptsByCourse(draft), [draft]);
+  const savedByCourse = useMemo(() => groupAttemptsByCourse(saved), [saved]);
   const pageSize = 100;
   const currentPage = Math.min(
     page,
@@ -220,11 +222,11 @@ export function GradeTable({
         </thead>
         <tbody>
           {visibleCourses.map((course) => {
-            const attempts = attemptsOf(draft, course.courseId);
+            const attempts = draftByCourse.get(course.courseId) ?? [];
             const status = courseStatus(attempts);
             const changed = !sameGrades(
               attempts,
-              attemptsOf(saved, course.courseId),
+              savedByCourse.get(course.courseId) ?? [],
             );
             const placement = course.placement;
             return (

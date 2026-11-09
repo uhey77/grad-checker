@@ -10,6 +10,8 @@ from sqlalchemy.engine import make_url
 from migrations.schema import initialize_schema
 from shared.infrastructure.persistence.database import create_database_engine
 
+pytest_plugins = ("tests.support.graduation",)
+
 
 @pytest.fixture
 def postgres_empty_engine():

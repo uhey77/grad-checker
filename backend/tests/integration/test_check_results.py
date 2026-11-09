@@ -20,7 +20,7 @@ from modules.subjects.infrastructure.persistence.unit_of_work import (
 )
 from modules.subjects.public import ImportSubjectDataUseCase
 from tests.integration.test_auth import login, register
-from tests.unit.test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
+from tests.support.graduation import grade, uid
 
 
 @pytest.fixture

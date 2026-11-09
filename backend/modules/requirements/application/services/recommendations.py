@@ -15,6 +15,34 @@ from modules.requirements.application.services.evaluation_context import (
 from modules.subjects.public import SubjectOfferingData
 
 
+def shortage_reductions(
+    before: list[ConditionResult], after: list[ConditionResult]
+) -> list[RecommendationReason]:
+    """同じ条件の不足をIDで比較し、試算結果の並び順には依存しない。"""
+    projected = {row.id: row for row in after}
+    before_ids = {row.id for row in before}
+    if (
+        len(before_ids) != len(before)
+        or len(projected) != len(after)
+        or before_ids != projected.keys()
+    ):
+        raise ValueError("推薦の試算前後で要件が一致しません。")
+    reasons = []
+    for condition in before:
+        reduction = condition.shortage - projected[condition.id].shortage
+        if reduction > 0:
+            reasons.append(
+                RecommendationReason(
+                    requirement_id=condition.id,
+                    code=condition.code,
+                    name=condition.name,
+                    shortage_reduction=reduction,
+                    reason=f"{condition.name}の不足を{reduction}単位減らせる候補です。",
+                )
+            )
+    return reasons
+
+
 def recommend_courses(
     context: EvaluationContext,
     courses: list[CourseResult],
@@ -60,18 +88,7 @@ def recommend_courses(
         projected = project(course_id)
         if projected is None:
             continue
-        reasons = [
-            RecommendationReason(
-                requirement_id=before.id,
-                code=before.code,
-                name=before.name,
-                shortage_reduction=before.shortage - after.shortage,
-                reason=f"{before.name}の不足を"
-                f"{before.shortage - after.shortage}単位減らせる候補です。",
-            )
-            for before, after in zip(conditions, projected, strict=True)
-            if before.shortage > after.shortage
-        ]
+        reasons = shortage_reductions(conditions, projected)
         if not reasons:
             continue
         association = context.associations.get(course_id)

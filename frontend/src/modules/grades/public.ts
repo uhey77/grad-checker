@@ -24,6 +24,7 @@ export {
   chooseGrade,
   draftProblem,
   emptyGradeFilters,
+  groupAttemptsByCourse,
   matchesGradeFilters,
   removeLatestAttempt,
   sameGrades,
