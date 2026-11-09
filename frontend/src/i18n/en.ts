@@ -177,7 +177,6 @@ export const english = {
   回答を反映して判定: "Assess with these answers",
   本人申告を含む参考判定: "Reference assessment with self-reported answers",
   未達成: "Not met",
-  必要単位の進捗: "Required credit progress",
   " / {{value0}} 単位": " / {{value0}} credits",
   "必要単位の進捗 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位":
     "Required credit progress {{value0}}%. {{value1}} credits counted out of {{value2}} required.",

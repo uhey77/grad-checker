@@ -23,7 +23,6 @@ export function GraduationInfographic({
       aria-label={t("単位の進捗グラフ")}
     >
       <div className="credit-orbit-panel">
-        <h3>{t("必要単位の進捗")}</h3>
         <div
           className="credit-orbit"
           role="img"

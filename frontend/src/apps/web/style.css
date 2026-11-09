@@ -805,11 +805,6 @@ tbody tr.earned-row:hover {
 .requirements-panel > .graduation-infographic:first-child {
   margin-top: 0;
 }
-.graduation-infographic h3 {
-  margin: 0;
-  font-size: 1rem;
-  letter-spacing: 0.04em;
-}
 .credit-orbit-panel {
   display: flex;
   flex-direction: column;
@@ -859,6 +854,13 @@ tbody tr.earned-row:hover {
   margin-left: 3px;
   font-size: 1rem;
 }
+/* 数値を円の中心に置くため、右の「%」と同じ幅の見えない余白を左に置く */
+.credit-orbit-value > strong::before {
+  content: "%";
+  margin-right: 3px;
+  font-size: 1rem;
+  visibility: hidden;
+}
 .credit-orbit-value > span {
   color: #536c66;
   font-size: 0.85rem;
@@ -885,7 +887,6 @@ tbody tr.earned-row:hover {
   --dashboard-body-size: 1rem;
   --dashboard-detail-size: 0.875rem;
 }
-.dashboard-page .graduation-infographic h3,
 .dashboard-page .graduation-result h3 {
   font-size: var(--dashboard-heading-size);
 }
