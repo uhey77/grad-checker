@@ -932,13 +932,6 @@ tbody tr.earned-row:hover {
   }
 }
 
-.dashboard-grade-prompt {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-bottom: 16px;
-}
 .tutorial-page {
   max-width: 1100px;
   margin-inline: auto;
@@ -957,9 +950,6 @@ tbody tr.earned-row:hover {
   color: #245a50;
   margin-bottom: 20px;
   padding: 12px 16px;
-}
-.dashboard-grade-prompt p {
-  margin: 0;
 }
 .profile-page {
   max-width: 800px;

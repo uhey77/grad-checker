@@ -36,7 +36,6 @@ export const english = {
   成績入力に戻る: "Back to grade entry",
   成績: "Grades",
   成績入力へ: "Go to grade entry",
-  成績を入力: "Enter grades",
   "卒業要件チェッカー：ダッシュボードへ":
     "Graduation Requirements Checker: Go to dashboard",
   その他の履修候補: "Other course options",
@@ -277,8 +276,6 @@ export const english = {
     "Save your program in My profile to view an overview of graduation or degree completion requirements.",
   概要を取得できませんでした: "Could not load overview",
   "卒業・修了要件の概要を読み込んでいます…": "Loading requirements overview…",
-  "保存済みの成績は0件です。成績入力から修得状況を保存してください。":
-    "No grades have been saved. Save your course completion status on the Grades screen.",
   "卒業要件の詳細を読み込んでいます…": "Loading requirement details…",
   "最新の卒業・修了要件概要": "Latest requirements overview",
   "卒業・修了要件": "Graduation and degree completion requirements",
