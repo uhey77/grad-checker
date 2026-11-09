@@ -26,6 +26,7 @@ export {
   emptyGradeFilters,
   groupAttemptsByCourse,
   matchesGradeFilters,
+  planGradeImport,
   removeLatestAttempt,
   sameGrades,
   setAttemptPeriod,
@@ -35,5 +36,22 @@ export {
   type GradeDraftProblem,
 } from "./application/services/gradeDraft.ts";
 
+export type {
+  GradeImportOutcome,
+  GradeImportPlan,
+  ImportedGrade,
+  ScreenshotCourse,
+  ScreenshotGradeRow,
+  ScreenshotReadProgress,
+} from "./application/dto/gradeScreenshot.ts";
+export {
+  GradeScreenshotError,
+  type GradeScreenshotProblem,
+} from "./application/errors/GradeScreenshotError.ts";
+export { parseGradeScreenshotText } from "./application/services/gradeScreenshot.ts";
 export { GetGradesUseCase } from "./application/use_cases/GetGradesUseCase.ts";
+export {
+  ReadGradeScreenshotUseCase,
+  maxScreenshotBytes,
+} from "./application/use_cases/ReadGradeScreenshotUseCase.ts";
 export { SaveGradesUseCase } from "./application/use_cases/SaveGradesUseCase.ts";

@@ -19,6 +19,7 @@ import {
   emptyGradeFilters,
   groupAttemptsByCourse,
   matchesGradeFilters,
+  planGradeImport,
   removeLatestAttempt,
   sameGrades,
   setAttemptPeriod,
@@ -26,6 +27,7 @@ import {
   type GradeChoice,
   type GradeFilters,
   type GradeUseCases,
+  type ImportedGrade,
   type StudentGrades,
   type TermCode,
 } from "../../../../modules/grades/public.ts";
@@ -225,6 +227,15 @@ export function useGradeEntry(
       ),
     addRetake: (courseId: string) =>
       edit((grades) => addRetake(grades, courseId)),
+    // スクリーンショットから読み取った成績を未保存の全集合へ反映する。保存は本人が行う。
+    applyImport: (imported: ImportedGrade[]) => {
+      if (running()) return;
+      edit((grades) => planGradeImport(grades, imported).grades);
+      setError("");
+      setNotice(
+        "スクリーンショットの成績を反映しました。内容を確認して保存してください。",
+      );
+    },
     removeLatest: (courseId: string) =>
       edit((grades) => removeLatestAttempt(grades, courseId)),
     save,

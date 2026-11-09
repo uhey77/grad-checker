@@ -33,9 +33,11 @@
     "vite": "8.3.4"
   },
   "dependencies": {
+    "@tesseract.js-data/jpn": "1.0.0",
     "i18next": "26.5.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-i18next": "17.1.0"
+    "react-i18next": "17.1.0",
+    "tesseract.js": "7.0.0"
   }
 }

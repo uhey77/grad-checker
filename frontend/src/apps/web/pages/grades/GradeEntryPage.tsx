@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   departmentOptions,
@@ -9,8 +10,11 @@ import {
   type GradeUseCases,
 } from "../../../../modules/grades/public.ts";
 import { useGradeEntry } from "../../hooks/grades/useGradeEntry.ts";
+import { useGradeScreenshot } from "../../hooks/grades/useGradeScreenshot.ts";
+import { GradeScreenshotImport } from "../../components/grades/GradeScreenshotImport.tsx";
 import { GradeFilters } from "../../components/grades/GradeFilters.tsx";
 import { GradeTable } from "../../components/grades/GradeTable.tsx";
+import { joinLabels } from "../../components/subjects/labels.ts";
 import { ConfirmPanel } from "../../components/ConfirmPanel.tsx";
 import { PageHeading } from "../../components/PageHeading.tsx";
 import { SaveBar } from "../../components/SaveBar.tsx";
@@ -45,6 +49,41 @@ export function GradeEntryPage({
   );
   const data = entry.data;
   const curriculum = data?.catalog.curriculum;
+  const courses = data?.catalog.courses;
+  const screenshotCourses = useMemo(
+    () =>
+      (courses ?? []).map((course) => ({
+        courseId: course.courseId,
+        name: course.name,
+        inCurriculum: course.placement !== null,
+      })),
+    [courses],
+  );
+  // 同名の科目を区別できるよう、科目コードと開講元を添える。
+  const courseLabels = useMemo(
+    () =>
+      new Map(
+        (courses ?? []).map((course) => [
+          course.courseId,
+          {
+            name: course.name,
+            detail: joinLabels([
+              course.code,
+              course.offeringFacultyName,
+              course.offeringDepartmentName,
+              course.offeringSpecializationName,
+            ]),
+          },
+        ]),
+      ),
+    [courses],
+  );
+  const screenshot = useGradeScreenshot(
+    gradeUseCases,
+    screenshotCourses,
+    entry.draft,
+    entry.applyImport,
+  );
   return (
     <div className="grade-page">
       <button type="button" className="back-link" onClick={showDashboard}>
@@ -74,6 +113,11 @@ export function GradeEntryPage({
           className="panel subject-list-panel"
           aria-label={t("成績入力")}
         >
+          <GradeScreenshotImport
+            {...screenshot}
+            courseLabels={courseLabels}
+            disabled={entry.busy}
+          />
           <GradeFilters
             filters={entry.filters}
             categories={data.catalog.categories}

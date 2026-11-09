@@ -8,6 +8,11 @@ import {
 } from "../../domain/services/attempts.ts";
 import type { GradeAttempt } from "../../domain/entities/gradeAttempt.ts";
 import type { GradeCode, TermCode } from "../../domain/value_objects/grade.ts";
+import type {
+  GradeImportOutcome,
+  GradeImportPlan,
+  ImportedGrade,
+} from "../dto/gradeScreenshot.ts";
 
 // 未保存の成績全集合を編集する純粋関数。非表示の科目の成績も保持する。
 export type GradeChoice = GradeCode | "pending";
@@ -129,6 +134,72 @@ export function removeLatestAttempt(
     courseId,
     attemptsOf(grades, courseId).slice(0, -1),
   );
+}
+
+const termOrder = { first: 0, second: 1 } as const;
+
+// 年度・学期の古い順。時期が不明な回次は後ろへ置き、同じ時期では元の順序を保つ。
+function byPeriod(
+  a: Pick<GradeAttempt, "academicYear" | "termCode">,
+  b: Pick<GradeAttempt, "academicYear" | "termCode">,
+): number {
+  const left = a.academicYear ?? Infinity;
+  const right = b.academicYear ?? Infinity;
+  if (left !== right) return left < right ? -1 : 1;
+  return (
+    (a.termCode === null ? 2 : termOrder[a.termCode]) -
+    (b.termCode === null ? 2 : termOrder[b.termCode])
+  );
+}
+
+// 読み取った成績を科目ごとに未保存の全集合へ反映する。
+// 同じ年度・学期の回次と時期が不明な既存の回次は読み取った成績で置き換え、
+// 時期の異なる既存の回次は再履修の履歴として残す。回次の規則に反する科目は変更しない。
+export function planGradeImport(
+  grades: GradeAttempt[],
+  imported: ImportedGrade[],
+): GradeImportPlan {
+  const period = (g: Pick<GradeAttempt, "academicYear" | "termCode">) =>
+    `${g.academicYear}:${g.termCode}`;
+  const byCourse = new Map<string, Map<string, ImportedGrade>>();
+  for (const grade of imported) {
+    const periods = byCourse.get(grade.courseId) ?? new Map();
+    // 同じ時期の行が重複した場合は後の行を使う。
+    periods.set(period(grade), grade);
+    byCourse.set(grade.courseId, periods);
+  }
+  const outcomes = new Map<string, GradeImportOutcome>();
+  let next = grades;
+  for (const [courseId, periods] of byCourse) {
+    const existing = attemptsOf(next, courseId);
+    const kept = existing.filter(
+      (a) => a.academicYear !== null && !periods.has(period(a)),
+    );
+    const attempts = [...kept, ...periods.values()]
+      .sort(byPeriod)
+      .map((g, index): GradeAttempt => ({
+        courseId,
+        attemptNo: index + 1,
+        resultStatus: g.resultStatus,
+        gradeCode: g.resultStatus === "pending" ? null : g.gradeCode,
+        academicYear: g.academicYear,
+        termCode: g.termCode,
+      }));
+    if (!isValidAttemptSequence(attempts)) {
+      outcomes.set(courseId, "invalid");
+      continue;
+    }
+    outcomes.set(
+      courseId,
+      existing.length === 0
+        ? "added"
+        : sameGrades(existing, attempts)
+          ? "unchanged"
+          : "updated",
+    );
+    next = replaceCourse(next, courseId, attempts);
+  }
+  return { grades: next, outcomes };
 }
 
 export function sameGrades(a: GradeAttempt[], b: GradeAttempt[]): boolean {

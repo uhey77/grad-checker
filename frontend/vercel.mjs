@@ -20,7 +20,8 @@ export const config = {
   git: { deploymentEnabled: false },
   rewrites: [
     { source: "/api/:path*", destination: `${backend}/api/:path*` },
-    { source: "/((?!api(?:/|$)|assets/).*)", destination: "/index.html" },
+    // 存在しない/assets・/ocrのファイルをindex.htmlで返さない。
+    { source: "/((?!api(?:/|$)|assets/|ocr/).*)", destination: "/index.html" },
   ],
   headers: [
     {
@@ -35,8 +36,9 @@ export const config = {
         { key: "X-Frame-Options", value: "DENY" },
         {
           key: "Content-Security-Policy",
+          // wasm-unsafe-evalは端末内OCRのWASMのコンパイルだけを許可し、JavaScriptのevalは許可しない。
           value:
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         },
       ],
     },

@@ -1079,3 +1079,99 @@ tbody tr.earned-row:hover {
     gap: 0.5rem;
   }
 }
+
+/* スクリーンショットからの成績の読み取り。反映前に確認する表を表示する。 */
+.screenshot-import {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border: 1px solid #dde5e7;
+  border-radius: 8px;
+  background: #fafcfb;
+}
+.screenshot-import summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.screenshot-import .hint {
+  margin: 10px 0;
+  color: #53676f;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.screenshot-drop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px dashed #9fb3b8;
+  border-radius: 8px;
+  background: #fff;
+  color: #53676f;
+  font-size: 13px;
+}
+.screenshot-drop:focus-visible {
+  outline: 3px solid #36a5a0;
+  outline-offset: 3px;
+}
+.file-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid #2c6560;
+  border-radius: 6px;
+  background: #2c6560;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.file-button:focus-within {
+  outline: 3px solid #36a5a0;
+  outline-offset: 3px;
+}
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+}
+.screenshot-table {
+  min-width: 920px;
+}
+.screenshot-table input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  margin: 0;
+}
+.screenshot-table .ocr-line {
+  max-width: 320px;
+  color: #53676f;
+  font-size: 12px;
+  word-break: break-all;
+}
+.screenshot-table select {
+  min-width: 240px;
+}
+.screenshot-table td:nth-child(n + 4) {
+  white-space: nowrap;
+}
+.screenshot-table .needs-review {
+  background: #fffaf0;
+}
+.review-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #fbe9c8;
+  color: #7a4b00;
+  font-size: 11px;
+  font-weight: 500;
+}

@@ -25,4 +25,8 @@ test("API proxy precedes SPA fallback and automatic Git releases are disabled", 
   assert.equal(config.rewrites[1].destination, "/index.html");
   assert.equal(config.headers[0].headers[0].value, "private, no-store");
   assert.doesNotMatch(result.stdout, /DATABASE_URL/);
+  // 端末内OCRのWASMだけを許可し、JavaScriptのevalや外部スクリプトは許可しない。
+  const csp = config.headers[1].headers.find((h) => h.key === "Content-Security-Policy").value;
+  const scriptSrc = csp.split(";").map((d) => d.trim()).find((d) => d.startsWith("script-src "));
+  assert.equal(scriptSrc, "script-src 'self' 'wasm-unsafe-eval'");
 });

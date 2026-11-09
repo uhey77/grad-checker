@@ -521,4 +521,44 @@ export const english = {
   "Pythonサービスの応答を読み込めません。":
     "Could not read the Python service response.",
   言語: "Language",
+  スクリーンショットから読み込む: "Import from a screenshot",
+  "成績照会画面のスクリーンショットから、科目名・評価・年度・学期を読み取ります。画像はこの端末内で読み取り、サーバーへ送信しません。初回は読み取り用のデータ（約6MB）をダウンロードします。":
+    "Reads course names, grades, years, and terms from a screenshot of your grade report. The image is processed on this device and is not sent to the server. The first time, about 6 MB of recognition data is downloaded.",
+  "スクリーンショットの選択・貼り付け": "Choose or paste a screenshot",
+  画像を選択: "Choose image",
+  "またはここへドラッグ、クリックして貼り付け（Ctrl+V / ⌘V）":
+    "or drag it here, or click here and paste (Ctrl+V / ⌘V)",
+  "文字を読み取っています… {{value0}}%": "Reading text… {{value0}}%",
+  "読み取りの準備をしています…": "Preparing to read…",
+  読み取りを中止: "Stop reading",
+  "{{value0}}行を読み取りました。読み取った行と科目を見比べ、反映する行を選んでください。":
+    "Read {{value0}} rows. Compare each row with the matched course and choose the rows to apply.",
+  読み取った成績: "Grades read from the screenshot",
+  スクリーンショットから読み取った成績: "Grades read from the screenshot",
+  反映: "Apply",
+  読み取った行: "Text read",
+  評価: "Grade",
+  "年度・学期": "Year and term",
+  反映内容: "Change",
+  "選択した{{value0}}行を反映": "Apply {{value0}} selected rows",
+  読み取り結果を破棄: "Discard results",
+  "「{{value0}}」を反映": "Apply “{{value0}}”",
+  "「{{value0}}」の科目": "Course for “{{value0}}”",
+  科目を照合できません: "No matching course",
+  科目を選択: "Choose a course",
+  要確認: "Check",
+  評価を読み取れません: "Grade not found",
+  新規: "New",
+  更新: "Update",
+  変更なし: "No change",
+  "反映不可（再履修の順序が不正）": "Cannot apply (invalid retake order)",
+  "スクリーンショットの成績を反映しました。内容を確認して保存してください。":
+    "Applied the grades from the screenshot. Review them and save.",
+  "画像ファイルを選択してください。": "Choose an image file.",
+  "画像が大きすぎます。20MB以下の画像を選択してください。":
+    "The image is too large. Choose an image of 20 MB or less.",
+  "画像を読み取れませんでした。別の画像で再度お試しいただくか、手動で入力してください。":
+    "Could not read the image. Try another image or enter grades manually.",
+  "成績の行を読み取れませんでした。成績表の部分を大きく写した画像でお試しください。":
+    "No grade rows were found. Try an image that shows the grade table larger.",
 } as const;

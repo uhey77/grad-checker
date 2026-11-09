@@ -19,6 +19,7 @@ for (const path of ["/", "/acceptance-check", "/grades"]) {
   assert.equal(destination(path), "/index.html");
 }
 assert.notEqual(destination("/assets/missing.js"), "/index.html");
+assert.notEqual(destination("/ocr/missing.js"), "/index.html");
 const apiHeaders = config.routes.find((route) => route.continue && new RegExp(route.src).test("/api/ready") && route.headers?.["Cache-Control"]);
 assert.match(apiHeaders?.headers["Cache-Control"] ?? "", /no-store/);
-console.log("Vercel build output verified: API proxy, SPA fallback, assets, no-store");
+console.log("Vercel build output verified: API proxy, SPA fallback, assets, OCR assets, no-store");

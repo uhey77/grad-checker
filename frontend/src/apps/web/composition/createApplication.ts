@@ -13,7 +13,8 @@ export function createApplication() {
     accounts: createAccountsModule("/api/auth"),
     profiles: createProfilesModule("/api"),
     courseCatalog: createCourseCatalogModule("/api"),
-    grades: createGradesModule("/api"),
+    // OCRのWorker・WASM・日本語データはビルド時に同一オリジンの/ocrへ配置する。
+    grades: createGradesModule("/api", "/ocr"),
     requirements: createRequirementsModule("/api"),
   };
 }

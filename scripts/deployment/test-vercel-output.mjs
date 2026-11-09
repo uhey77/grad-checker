@@ -18,14 +18,15 @@ const routes = [
   { src: "^/api(?:/(.*))?$", continue: true, headers: { "Cache-Control": "private, no-store" } },
   { handle: "filesystem" },
   { src: "^/api(?:/(.*))?$", dest: origin + "/api/$1" },
-  { src: "^/((?!api(?:/|$)|assets/).*)$", dest: "/index.html" },
+  { src: "^/((?!api(?:/|$)|assets/|ocr/).*)$", dest: "/index.html" },
 ];
-test("compiled API rewrites preserve paths and SPA excludes API and assets", () => {
+test("compiled API rewrites preserve paths and SPA excludes API, assets and OCR assets", () => {
   const result = verify(routes);
   assert.equal(result.status, 0, result.stderr);
 });
 test("compiled output rejects missing, wrong or shadowed API rewrites", () => {
-  for (const broken of [routes.slice(0, 2), [{ src: "^/(.*)$", dest: "/index.html" }, ...routes], routes.map(r => r.dest?.startsWith(origin) ? { ...r, dest: "https://wrong.run.app/api/$1" } : r)]) {
+  const ocrFallback = routes.map((r) => r.dest === "/index.html" ? { ...r, src: "^/((?!api(?:/|$)|assets/).*)$" } : r);
+  for (const broken of [routes.slice(0, 2), ocrFallback, [{ src: "^/(.*)$", dest: "/index.html" }, ...routes], routes.map(r => r.dest?.startsWith(origin) ? { ...r, dest: "https://wrong.run.app/api/$1" } : r)]) {
     assert.notEqual(verify(broken).status, 0);
   }
 });
