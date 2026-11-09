@@ -1,9 +1,23 @@
-import { mkdtemp, rm, writeFile, symlink } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const directory = await mkdtemp(join(tmpdir(), "grad-checker-tests-"));
+async function testFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map((entry) => {
+      const path = join(directory, entry.name);
+      return entry.isDirectory()
+        ? testFiles(path)
+        : entry.isFile() && entry.name.endsWith(".test.mjs")
+          ? [path]
+          : [];
+    }),
+  );
+  return files.flat().sort();
+}
 try {
   await writeFile(join(directory, "package.json"), '{"type":"module"}');
   await symlink(
@@ -15,46 +29,14 @@ try {
     process.execPath,
     [
       "node_modules/typescript/bin/tsc",
-      "--ignoreConfig",
-      "--target",
-      "ES2022",
-      "--module",
-      "ESNext",
-      "--moduleResolution",
-      "Bundler",
-      "--strict",
-      "--jsx",
-      "react-jsx",
-      "--skipLibCheck",
+      "--project",
+      "tsconfig.json",
+      "--noEmit",
+      "false",
       "--rootDir",
       "src",
-      "--rewriteRelativeImportExtensions",
       "--outDir",
       directory,
-      "src/modules/accounts/public.ts",
-      "src/modules/accounts/composition.ts",
-      "src/modules/profiles/public.ts",
-      "src/modules/profiles/composition.ts",
-      "src/modules/grades/public.ts",
-      "src/modules/grades/composition.ts",
-      "src/modules/requirements/public.ts",
-      "src/modules/requirements/composition.ts",
-      "src/modules/subjects/public.ts",
-      "src/modules/subjects/composition.ts",
-      "src/apps/web/components/subjects/labels.ts",
-      "src/apps/web/hooks/subjects/errors.ts",
-      "src/apps/web/hooks/grades/errors.ts",
-      "src/i18n/createI18n.ts",
-      "src/i18n/messages.ts",
-      "src/apps/web/components/accounts/AuthForm.tsx",
-      "src/apps/web/layouts/AppLayout.tsx",
-      "src/apps/web/components/requirements/GraduationResultView.tsx",
-      "src/apps/web/components/profiles/ProgramCoverage.tsx",
-      "src/apps/web/pages/profiles/ProfilePage.tsx",
-      "src/apps/web/components/grades/GradeTable.tsx",
-      "src/apps/web/components/FilterFields.tsx",
-      "src/apps/web/components/SaveBar.tsx",
-      "src/apps/web/pages/tutorial/tutorialProgress.ts",
     ],
     { stdio: "inherit" },
   );
@@ -62,24 +44,7 @@ try {
   else {
     const result = spawnSync(
       process.execPath,
-      [
-        "--test",
-        "tests/contract/subject-list.test.mjs",
-        "tests/unit/grades.test.mjs",
-        "tests/unit/program-groups.test.mjs",
-        "tests/unit/requirements.test.mjs",
-        "tests/unit/shortage-courses.test.mjs",
-        "tests/unit/subject-list.test.mjs",
-        "tests/unit/architecture.test.mjs",
-        "tests/contract/accounts.test.mjs",
-        "tests/contract/profiles.test.mjs",
-        "tests/contract/grades.test.mjs",
-        "tests/contract/requirements.test.mjs",
-        "tests/contract/course-catalog.test.mjs",
-        "tests/contract/shared-http.test.mjs",
-        "tests/unit/i18n.test.mjs",
-        "tests/unit/tutorial.test.mjs",
-      ],
+      ["--test", ...(await testFiles("tests"))],
       {
         stdio: "inherit",
         env: { ...process.env, SUBJECT_TEST_BUILD_DIRECTORY: directory },

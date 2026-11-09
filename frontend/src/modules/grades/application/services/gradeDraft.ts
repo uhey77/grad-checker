@@ -27,6 +27,19 @@ export function attemptsOf(
   return grades.filter((g) => g.courseId === courseId).sort(byKey);
 }
 
+export function groupAttemptsByCourse(
+  grades: GradeAttempt[],
+): Map<string, GradeAttempt[]> {
+  const grouped = new Map<string, GradeAttempt[]>();
+  for (const grade of grades) {
+    const attempts = grouped.get(grade.courseId) ?? [];
+    attempts.push(grade);
+    grouped.set(grade.courseId, attempts);
+  }
+  for (const attempts of grouped.values()) attempts.sort(byKey);
+  return grouped;
+}
+
 function replaceCourse(
   grades: GradeAttempt[],
   courseId: string,
