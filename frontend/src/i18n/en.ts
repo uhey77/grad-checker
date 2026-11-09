@@ -176,8 +176,6 @@ export const english = {
   "判定中…": "Assessing…",
   回答を反映して判定: "Assess with these answers",
   本人申告を含む参考判定: "Reference assessment with self-reported answers",
-  "在学期間など、成績から確認できない条件は含まれません。正式な卒業認定は大学が行います。":
-    "Requirements that cannot be verified from grades, such as enrollment duration, are not included. The university makes the official graduation decision.",
   未達成: "Not met",
   必要単位の進捗: "Required credit progress",
   " / {{value0}} 単位": " / {{value0}} credits",
