@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.2 (2026-11-10)
+
+## What's Changed
+* 成績入力と卒業判定の保守性を改善する by @uhey77 in https://github.com/uhey77/grad-checker/pull/103
+* refactor(frontend): ダッシュボードとマイページの重複・不要な表示を整理 by @uhey77 in https://github.com/uhey77/grad-checker/pull/105
+* dev の変更をまとめてリリースする by @grad-checker-release[bot] in https://github.com/uhey77/grad-checker/pull/104
+
+
+**Full Changelog**: https://github.com/uhey77/grad-checker/compare/v1.0.1...v1.0.2
+
 ## 1.0.1 (2026-11-08)
 
 ## What's Changed
