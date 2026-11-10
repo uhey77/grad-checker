@@ -17,7 +17,7 @@ from tests.e2e.test_auth_http import (
     test_real_registration_recovery_and_session as auth_scenario,
 )
 from tests.e2e.test_check_results_http import sign_in
-from tests.unit.test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
+from tests.support.graduation import grade, uid
 
 
 @pytest.fixture

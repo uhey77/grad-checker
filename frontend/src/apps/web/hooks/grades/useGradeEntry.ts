@@ -14,10 +14,10 @@ import {
 import {
   GradeError,
   addRetake,
-  attemptsOf,
   chooseGrade,
   draftProblem,
   emptyGradeFilters,
+  groupAttemptsByCourse,
   matchesGradeFilters,
   removeLatestAttempt,
   sameGrades,
@@ -53,8 +53,9 @@ export function useGradeEntry(
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [conflict, setConflict] = useState(false);
-  const [confirmReload, setConfirmReload] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmation, setConfirmation] = useState<"reload" | "clear" | null>(
+    null,
+  );
   const [attempt, setAttempt] = useState(0);
   const { busy, running, abort, run } = useExclusiveAction();
   const knownRevision = useRef(latestRevision);
@@ -103,8 +104,7 @@ export function useGradeEntry(
 
   function reload() {
     if (running()) return;
-    setConfirmReload(false);
-    setConfirmClear(false);
+    setConfirmation(null);
     setData(null);
     setLoadError("");
     setError("");
@@ -139,16 +139,17 @@ export function useGradeEntry(
 
   const visibleCourses = useMemo(() => {
     if (!data) return [];
+    const attempts = groupAttemptsByCourse(draft);
     return filterCatalogCourses(data.catalog.courses, filters).filter(
       (course) =>
-        matchesGradeFilters(attemptsOf(draft, course.courseId), filters),
+        matchesGradeFilters(attempts.get(course.courseId) ?? [], filters),
     );
   }, [data, draft, filters]);
 
   function edit(next: (grades: GradeAttempt[]) => GradeAttempt[]) {
     setDraft(next);
     setNotice("");
-    setConfirmClear(false);
+    setConfirmation((current) => (current === "clear" ? null : current));
   }
 
   async function save() {
@@ -158,13 +159,13 @@ export function useGradeEntry(
       setError(problem);
       return;
     }
-    if (draft.length === 0 && !confirmClear) {
-      setConfirmClear(true);
+    if (draft.length === 0 && confirmation !== "clear") {
+      setConfirmation("clear");
       return;
     }
     setError("");
     setNotice("");
-    setConfirmClear(false);
+    setConfirmation(null);
     await run(
       (signal) =>
         gradeUseCases.saveGrades.execute(
@@ -201,8 +202,8 @@ export function useGradeEntry(
     error,
     notice,
     conflict,
-    confirmReload,
-    confirmClear,
+    confirmReload: confirmation === "reload",
+    confirmClear: confirmation === "clear",
     changeFilter: (key: keyof Filters, value: string) =>
       setFilters((current) => ({
         ...current,
@@ -227,13 +228,13 @@ export function useGradeEntry(
     removeLatest: (courseId: string) =>
       edit((grades) => removeLatestAttempt(grades, courseId)),
     save,
-    cancelClear: () => setConfirmClear(false),
+    cancelClear: () => setConfirmation(null),
     retry: () => {
       if (running()) return;
-      if (dirty) setConfirmReload(true);
+      if (dirty) setConfirmation("reload");
       else reload();
     },
     confirmRetry: reload,
-    cancelRetry: () => setConfirmReload(false),
+    cancelRetry: () => setConfirmation(null),
   };
 }

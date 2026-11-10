@@ -18,7 +18,6 @@ from modules.subjects.public import ImportSubjectDataUseCase
 from scripts.build_openapi import OUTPUT, build_document
 from shared.infrastructure.persistence.database import create_database_engine
 from tests.e2e.test_auth_http import BACKEND, PASSWORD, auth_services  # noqa: F401
-from tests.unit.test_requirement_evaluation import snapshot  # noqa: F401
 
 DOCUMENT = json.loads(OUTPUT.read_text())
 

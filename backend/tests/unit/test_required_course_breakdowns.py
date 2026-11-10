@@ -11,7 +11,7 @@ from modules.requirements.application.services.student_evaluation import (
     evaluate_student,
 )
 from modules.subjects.application.dto.subject_data import SubjectDataSeed
-from tests.unit.test_requirement_evaluation import BACKEND, grade
+from tests.support.graduation import BACKEND, grade
 
 
 def cs_snapshot(index):

@@ -43,7 +43,7 @@ def main():
     )
     from modules.subjects.public import ImportSubjectDataUseCase
     from shared.infrastructure.persistence.database import create_database_engine
-    from tests.unit.test_requirement_evaluation import snapshot as snapshot_fixture
+    from tests.support.graduation import snapshot as snapshot_fixture
 
     image = sys.argv[1] if len(sys.argv) > 1 else "grad-checker-production:test"
     suffix = uuid4().hex[:12]
@@ -185,7 +185,7 @@ def main():
                 ).status_code
                 == 200
             )
-            from tests.unit.test_requirement_evaluation import grade, uid
+            from tests.support.graduation import grade, uid
 
             attempts = [grade(uid(i)).model_dump() for i in (10, 11, 13, 15)]
             grades = client.put(

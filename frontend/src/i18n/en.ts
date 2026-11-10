@@ -36,7 +36,6 @@ export const english = {
   成績入力に戻る: "Back to grade entry",
   成績: "Grades",
   成績入力へ: "Go to grade entry",
-  成績を入力: "Enter grades",
   "卒業要件チェッカー：ダッシュボードへ":
     "Graduation Requirements Checker: Go to dashboard",
   その他の履修候補: "Other course options",
@@ -177,10 +176,7 @@ export const english = {
   "判定中…": "Assessing…",
   回答を反映して判定: "Assess with these answers",
   本人申告を含む参考判定: "Reference assessment with self-reported answers",
-  "在学期間など、成績から確認できない条件は含まれません。正式な卒業認定は大学が行います。":
-    "Requirements that cannot be verified from grades, such as enrollment duration, are not included. The university makes the official graduation decision.",
   未達成: "Not met",
-  必要単位の進捗: "Required credit progress",
   " / {{value0}} 単位": " / {{value0}} credits",
   "必要単位の進捗 {{value0}}%。算入{{value1}}単位、必要{{value2}}単位":
     "Required credit progress {{value0}}%. {{value1}} credits counted out of {{value2}} required.",
@@ -277,8 +273,6 @@ export const english = {
     "Save your program in My profile to view an overview of graduation or degree completion requirements.",
   概要を取得できませんでした: "Could not load overview",
   "卒業・修了要件の概要を読み込んでいます…": "Loading requirements overview…",
-  "保存済みの成績は0件です。成績入力から修得状況を保存してください。":
-    "No grades have been saved. Save your course completion status on the Grades screen.",
   "卒業要件の詳細を読み込んでいます…": "Loading requirement details…",
   "最新の卒業・修了要件概要": "Latest requirements overview",
   "卒業・修了要件": "Graduation and degree completion requirements",

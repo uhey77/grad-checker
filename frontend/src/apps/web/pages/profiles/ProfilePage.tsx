@@ -89,14 +89,19 @@ export function ProfilePage({
               </button>
             )}
           </div>
-          <p className="saved-program">
-            {profile.savedProgram
-              ? programLabel(profile.savedProgram)
-              : profile.state.profile.curriculumId
-                ? t("選択肢にないカリキュラム")
-                : t("所属は未設定です。")}
-          </p>
-          {!expanded && <ProgramCoverage program={profile.savedProgram} />}
+          {/* 編集中は選択欄に同じ所属が表示されるため、保存済みの表示を省く */}
+          {!expanded && (
+            <>
+              <p className="saved-program">
+                {profile.savedProgram
+                  ? programLabel(profile.savedProgram)
+                  : profile.state.profile.curriculumId
+                    ? t("選択肢にないカリキュラム")
+                    : t("所属は未設定です。")}
+              </p>
+              <ProgramCoverage program={profile.savedProgram} />
+            </>
+          )}
           {profile.notice && !expanded ? (
             <p className="profile-saved" role="status">
               <span aria-hidden="true">✓ </span>

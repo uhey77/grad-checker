@@ -3,9 +3,11 @@
 import pytest
 
 from modules.requirements.application.services import evaluation as evaluation_services
+from modules.requirements.application.services.recommendations import (
+    shortage_reductions,
+)
 from modules.subjects.application.dto.subject_data import SubjectOfferingData
-from tests.unit.test_external_allocation import add_external, external_snapshot  # noqa: F401
-from tests.unit.test_requirement_evaluation import grade, snapshot, uid  # noqa: F401
+from tests.support.graduation import add_external, grade, uid
 
 # ruff: noqa: F811
 
@@ -14,6 +16,20 @@ def recommendations(sample):
     rows = evaluation_services.evaluate_graduation(sample).recommendations
     assert rows is not None
     return rows
+
+
+def test_shortage_comparison_matches_conditions_by_id(snapshot):
+    before = evaluation_services.evaluate_graduation(snapshot).requirements
+    changed = before[0].model_copy(update={"shortage": before[0].shortage - 1})
+    after = [changed, *before[1:]]
+    assert shortage_reductions(before, list(reversed(after))) == shortage_reductions(
+        before, after
+    )
+    assert shortage_reductions(before, after)[0].requirement_id == changed.id
+    with pytest.raises(ValueError, match="要件が一致しません"):
+        shortage_reductions(before, after[1:])
+    with pytest.raises(ValueError, match="要件が一致しません"):
+        shortage_reductions(before, [after[0], *after])
 
 
 def test_required_first_then_earliest_semester_id_and_unknown_last(snapshot):

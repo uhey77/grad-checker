@@ -106,7 +106,6 @@ function StudentScreens({
                 curriculumId={profile.state?.profile.curriculumId ?? null}
                 expire={expire}
                 showProfile={() => setScreen("profile")}
-                showGrades={() => setScreen("grades")}
               />
             )
           ) : null}

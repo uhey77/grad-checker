@@ -35,6 +35,15 @@ const attempt = (
   termCode: term,
 });
 
+test("科目ごとの履修回次を元の配列を変えずに順序付ける", () => {
+  const grades = [attempt("a", 2), attempt("b"), attempt("a", 1)];
+  const original = [...grades];
+  const grouped = draft.groupAttemptsByCourse(grades);
+  assert.deepEqual(grouped.get("a"), [grades[2], grades[0]]);
+  assert.deepEqual(grouped.get("b"), [grades[1]]);
+  assert.deepEqual(grades, original);
+});
+
 test("成績の編集は合格・未確定の後に再履修を追加せず、全集合を保持する", () => {
   let grades = [attempt("other", 1, "B")];
   grades = draft.chooseGrade(grades, "c1", 1, "D");

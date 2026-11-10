@@ -87,6 +87,61 @@ test("マイページから成績入力へ移動でき、所属編集中は入�
   assert.doesNotMatch(render(true), /成績入力へ/);
 });
 
+test("所属の編集中は保存済みの所属名を選択欄と重ねて表示しない", () => {
+  const i18n = createSiteI18n({ languages: ["ja"] });
+  const program = {
+    programId: "p1",
+    curriculumId: "c1",
+    facultyName: "テスト学部",
+    departmentName: "テスト学科",
+    specializationName: null,
+    courseName: null,
+    curriculumName: "テストカリキュラム",
+    revision: 1,
+    verificationStatus: "verified",
+    admissionYearFrom: null,
+    admissionYearTo: null,
+    sourceDocument: "",
+    sourcePages: "",
+  };
+  const render = (editing) =>
+    renderToStaticMarkup(
+      createElement(
+        I18nextProvider,
+        { i18n },
+        createElement(ProfilePage, {
+          profile: {
+            editing,
+            state: { profile: { curriculumId: "c1" } },
+            savedProgram: program,
+            selectablePrograms: [program],
+            chosenId: "c1",
+            selected: program,
+            busy: false,
+            dirty: false,
+            conflict: false,
+            error: "",
+            notice: "",
+            edit: () => {},
+            choose: () => {},
+            save: async () => {},
+            cancel: () => {},
+          },
+          loginName: "user",
+          active: true,
+          showDashboard: () => {},
+          showGrades: () => {},
+          showTutorial: () => {},
+          logout: () => {},
+          authBusy: false,
+        }),
+      ),
+    );
+  assert.match(render(false), /class="saved-program"/);
+  assert.doesNotMatch(render(true), /class="saved-program"/);
+  assert.match(render(true), /<select id="profile-program"/);
+});
+
 test("保存済みの選択、ブラウザーの優先言語、日本語フォールバックの順で初期言語を決める", () => {
   assert.equal(initialLanguage("ja", ["en-US"]), "ja");
   assert.equal(initialLanguage("en", ["ja-JP"]), "en");
