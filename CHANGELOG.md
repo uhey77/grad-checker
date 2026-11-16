@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3 (2026-11-16)
+
+## What's Changed
+* Add files via upload by @kanade3256 in https://github.com/uhey77/grad-checker/pull/107
+* refactor: 大学院の修了判定を段階ごとの関数に分割する by @uhey77 in https://github.com/uhey77/grad-checker/pull/108
+
+
+**Full Changelog**: https://github.com/uhey77/grad-checker/compare/v1.0.2...v1.0.3
+
 ## 1.0.2 (2026-11-10)
 
 ## What's Changed
